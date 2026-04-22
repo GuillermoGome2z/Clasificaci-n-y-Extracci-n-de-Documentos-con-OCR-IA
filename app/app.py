@@ -6,7 +6,9 @@ import streamlit as st
 import json
 import os
 import sys
+import tempfile
 from pathlib import Path
+from datetime import datetime
 
 # Agregar src al path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -160,174 +162,322 @@ else:
     with tab1:
         st.header("Procesar Archivo")
         
-        col1, col2 = st.columns([2, 1])
-        
-        with col1:
-            st.subheader("Sube tu archivo")
-            uploaded_file = st.file_uploader(
-                "Selecciona una imagen (JPG, PNG) o PDF",
-                type=["jpg", "jpeg", "png", "pdf", "bmp"],
-                key="file_uploader"
-            )
-        
-        with col2:
-            st.subheader("Opciones")
-            extract_data = st.checkbox("Extraer datos", value=True, help="Extrae emails, teléfonos, etc.")
-            classify_doc = st.checkbox("Clasificar documento", value=True, help="Clasifica el tipo de documento")
-        
-        # Procesar archivo
-        if uploaded_file is not None:
-            with st.spinner("⏳ Procesando archivo..."):
-                # Guardar archivo temporal
-                temp_path = f"/tmp/{uploaded_file.name}"
-                with open(temp_path, "wb") as f:
-                    f.write(uploaded_file.getbuffer())
+        # Verificar si pipeline está inicializado
+        if st.session_state.pipeline is None:
+            st.error("❌ Pipeline no inicializado. Por favor, inicialízalo en la barra lateral.")
+        else:
+            col1, col2 = st.columns([2, 1])
+            
+            with col1:
+                st.subheader("📤 Sube tu archivo")
+                uploaded_file = st.file_uploader(
+                    "Selecciona una imagen (JPG, PNG, BMP) o PDF",
+                    type=["jpg", "jpeg", "png", "pdf", "bmp", "gif"],
+                    key="file_uploader"
+                )
+            
+            with col2:
+                st.subheader("⚙️ Opciones")
+                ocr_lang = st.selectbox(
+                    "Idioma OCR",
+                    options=["spa", "eng", "fra", "deu"],
+                    format_func=lambda x: {
+                        "spa": "🇪🇸 Español",
+                        "eng": "🇬🇧 Inglés",
+                        "fra": "🇫🇷 Francés",
+                        "deu": "🇩🇪 Alemán"
+                    }[x],
+                    key="tab1_ocr_language",
+                    index=0
+                )
+            
+            # Procesar archivo si se cargó uno
+            if uploaded_file is not None:
+                # Mostrar información del archivo
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("📄 Archivo", uploaded_file.name)
+                with col2:
+                    file_size_mb = uploaded_file.size / (1024 * 1024)
+                    st.metric("📊 Tamaño", f"{file_size_mb:.2f} MB")
+                with col3:
+                    st.metric("🔤 Tipo", uploaded_file.name.split('.')[-1].upper())
                 
-                try:
-                    # Procesar
-                    result = st.session_state.pipeline.process_file(
-                        temp_path,
-                        lang=st.session_state.ocr_language
-                    )
-                    st.session_state.last_result = result
+                st.divider()
+                
+                # Botón de procesamiento
+                col_process, col_space = st.columns([1, 4])
+                with col_process:
+                    process_button = st.button("🚀 PROCESAR", use_container_width=True, type="primary")
+                
+                if process_button:
+                    # Usar tempfile para compatibilidad Windows
+                    with tempfile.NamedTemporaryFile(
+                        suffix=f".{uploaded_file.name.split('.')[-1]}",
+                        delete=False
+                    ) as tmp_file:
+                        tmp_file.write(uploaded_file.getbuffer())
+                        temp_path = tmp_file.name
                     
-                    if result["status"] == "success":
-                        st.markdown('<div class="success-box">', unsafe_allow_html=True)
-                        st.success("✅ Archivo procesado exitosamente")
-                        st.markdown('</div>', unsafe_allow_html=True)
+                    try:
+                        # Procesamiento con indicador visual
+                        progress_bar = st.progress(0)
+                        status_text = st.empty()
                         
-                        # Mostrar resumen
-                        with st.expander("📋 Ver Resumen", expanded=True):
+                        status_text.info("⏳ Iniciando OCR...")
+                        progress_bar.progress(25)
+                        
+                        # Procesar archivo
+                        result = st.session_state.pipeline.process_file(
+                            temp_path,
+                            lang=ocr_lang
+                        )
+                        progress_bar.progress(75)
+                        
+                        # Guardar resultado en sesión
+                        st.session_state.last_result = result
+                        progress_bar.progress(100)
+                        
+                        if result["status"] == "success":
+                            status_text.success("✅ ¡Procesamiento completado exitosamente!")
+                            
+                            # Mostrar estadísticas rápidas
+                            st.divider()
+                            st.subheader("📊 Estadísticas de Procesamiento")
+                            
+                            stats_col1, stats_col2, stats_col3, stats_col4 = st.columns(4)
+                            
+                            with stats_col1:
+                                if "steps" in result and "ocr" in result["steps"]:
+                                    confidence = result["steps"]["ocr"].get("confidence", 0)
+                                    st.metric("🔤 Confianza OCR", f"{confidence:.0f}%")
+                            
+                            with stats_col2:
+                                if "extracted_text" in result:
+                                    char_count = len(result["extracted_text"])
+                                    st.metric("📝 Caracteres", f"{char_count:,}")
+                            
+                            with stats_col3:
+                                if "steps" in result and "extraction" in result["steps"]:
+                                    extraction = result["steps"]["extraction"]
+                                    total_items = sum(len(v) for v in extraction.values() if isinstance(v, list))
+                                    st.metric("🔍 Datos Extraídos", f"{total_items}")
+                            
+                            with stats_col4:
+                                if "steps" in result and "classification" in result["steps"]:
+                                    class_name = result["steps"]["classification"].get("class", "N/A")
+                                    st.metric("🏷️ Clasificación", class_name.title())
+                            
+                            # Mostrar texto extraído
+                            st.divider()
+                            st.subheader("📋 Texto Extraído (OCR)")
+                            
                             if "extracted_text" in result:
                                 st.text_area(
-                                    "Texto Extraído (OCR)",
+                                    "Contenido del documento:",
                                     value=result["extracted_text"],
-                                    height=200,
-                                    disabled=True
+                                    height=250,
+                                    disabled=True,
+                                    key="ocr_output"
                                 )
                             else:
-                                # Para PDFs, mostrar primer página
+                                # Para PDFs multipage
                                 if result.get("pages"):
-                                    st.text_area(
-                                        "Texto de la Primera Página",
-                                        value=result["pages"][0]["text"],
-                                        height=200,
-                                        disabled=True
+                                    num_pages = len(result["pages"])
+                                    st.info(f"📑 Documento PDF de {num_pages} página(s)")
+                                    
+                                    page_num = st.slider(
+                                        "Selecciona la página",
+                                        min_value=1,
+                                        max_value=num_pages,
+                                        value=1
                                     )
-                    else:
-                        st.error(f"❌ Error: {result.get('error', 'Error desconocido')}")
-                
-                except Exception as e:
-                    st.error(f"❌ Error durante el procesamiento: {e}")
-                finally:
-                    # Limpiar archivo temporal
-                    if os.path.exists(temp_path):
-                        os.remove(temp_path)
+                                    
+                                    page_text = result["pages"][page_num - 1]["text"]
+                                    st.text_area(
+                                        f"Página {page_num}:",
+                                        value=page_text,
+                                        height=250,
+                                        disabled=True,
+                                        key=f"ocr_page_{page_num}"
+                                    )
+                            
+                            # Navegar a resultados detallados
+                            st.divider()
+                            st.success("💡 Ve a la pestaña **'Resultados'** para ver análisis detallado")
+                        
+                        else:
+                            status_text.error(f"❌ Error durante el procesamiento: {result.get('error', 'Error desconocido')}")
+                    
+                    except Exception as e:
+                        status_text.error(f"❌ Error: {str(e)}")
+                    
+                    finally:
+                        # Limpiar archivo temporal
+                        try:
+                            if os.path.exists(temp_path):
+                                os.remove(temp_path)
+                        except:
+                            pass
     
     # TAB 2: Resultados Detallados
     with tab2:
-        st.header("Resultados del Procesamiento")
+        st.header("📊 Resultados Detallados")
         
         if st.session_state.last_result is None:
-            st.info("💡 Procesa un archivo en la pestaña 'Procesar Archivo' para ver resultados")
+            st.info("💡 Procesa un archivo en la pestaña **'Procesar Archivo'** para ver resultados detallados")
         else:
             result = st.session_state.last_result
             
-            # Mostrar en JSON
-            col1, col2 = st.columns(2)
+            # Información general
+            st.subheader("📋 Información General")
+            gen_col1, gen_col2, gen_col3 = st.columns(3)
             
-            with col1:
-                st.subheader("JSON Completo")
-                json_str = json.dumps(result, indent=2, ensure_ascii=False)
-                st.json(result)
-            
-            with col2:
-                st.subheader("Descarga")
-                st.download_button(
-                    label="📥 Descargar JSON",
-                    data=json_str,
-                    file_name="resultado_ocr.json",
-                    mime="application/json"
-                )
+            with gen_col1:
+                st.metric("📁 Archivo", Path(result.get("input_file", "N/A")).name)
+            with gen_col2:
+                st.metric("🔤 Formato", result.get("format", "N/A").upper())
+            with gen_col3:
+                st.metric("✅ Estado", "Éxito" if result.get("status") == "success" else "Error")
             
             st.divider()
             
-            # Desglose detallado
+            # Desglose por pasos
             if "steps" in result:
-                st.subheader("Desglose del Procesamiento")
+                st.subheader("🔧 Desglose del Procesamiento")
                 
-                # OCR
+                # OCR Results
                 if "ocr" in result["steps"]:
-                    with st.expander("🔤 Resultados OCR"):
+                    with st.expander("🔤 Paso 1: OCR (Reconocimiento Óptico de Caracteres)", expanded=True):
                         ocr_data = result["steps"]["ocr"]
-                        col1, col2 = st.columns(2)
+                        
+                        col1, col2, col3 = st.columns(3)
                         with col1:
-                            st.metric("Confianza", f"{ocr_data.get('confidence', 0)}%")
+                            st.metric("✅ Estado", "Éxito" if ocr_data.get("status") == "success" else "Error")
                         with col2:
-                            st.metric("Idioma", ocr_data.get('language', 'N/A'))
+                            confidence = ocr_data.get("confidence", 0)
+                            color = "🟢" if confidence > 80 else "🟡" if confidence > 60 else "🔴"
+                            st.metric("📊 Confianza", f"{color} {confidence:.0f}%")
+                        with col3:
+                            st.metric("🗣️ Idioma", {
+                                "spa": "🇪🇸 Español",
+                                "eng": "🇬🇧 Inglés",
+                                "fra": "🇫🇷 Francés",
+                                "deu": "🇩🇪 Alemán"
+                            }.get(ocr_data.get("language"), "N/A"))
                 
-                # Extracción
+                # Data Extraction Results
                 if "extraction" in result["steps"]:
-                    with st.expander("📍 Datos Extraídos"):
+                    with st.expander("🔍 Paso 2: Extracción de Datos", expanded=True):
                         extraction = result["steps"]["extraction"]
                         
                         col1, col2 = st.columns(2)
                         
                         with col1:
+                            st.write("**📧 Emails encontrados:**")
                             if extraction.get("emails"):
-                                st.write("**📧 Emails:**")
                                 for email in extraction["emails"]:
-                                    st.write(f"  • {email}")
+                                    st.code(email, language="text")
+                            else:
+                                st.info("Ninguno")
                             
+                            st.write("**📱 Teléfonos encontrados:**")
                             if extraction.get("phones"):
-                                st.write("**📱 Teléfonos:**")
                                 for phone in extraction["phones"]:
-                                    st.write(f"  • {phone}")
+                                    st.code(phone, language="text")
+                            else:
+                                st.info("Ninguno")
                             
+                            st.write("**🔗 URLs encontradas:**")
                             if extraction.get("urls"):
-                                st.write("**🔗 URLs:**")
                                 for url in extraction["urls"]:
-                                    st.write(f"  • {url}")
+                                    st.code(url, language="text")
+                            else:
+                                st.info("Ninguna")
                         
                         with col2:
+                            st.write("**📅 Fechas encontradas:**")
                             if extraction.get("dates"):
-                                st.write("**📅 Fechas:**")
                                 for date in extraction["dates"]:
-                                    st.write(f"  • {date}")
+                                    st.code(date, language="text")
+                            else:
+                                st.info("Ninguna")
                             
+                            st.write("**💰 Valores monetarios:**")
                             if extraction.get("currency"):
-                                st.write("**💰 Valores:**")
                                 for val in extraction["currency"]:
-                                    st.write(f"  • {val}")
+                                    st.code(val, language="text")
+                            else:
+                                st.info("Ninguno")
                             
-                            if extraction.get("dni"):
-                                st.write("**🆔 DNI/NIE:**")
-                                for dni in extraction["dni"]:
-                                    st.write(f"  • {dni}")
+                            st.write("**🆔 DNI/RFC encontrados:**")
+                            if extraction.get("dni") or extraction.get("rfc"):
+                                if extraction.get("dni"):
+                                    for dni in extraction["dni"]:
+                                        st.code(f"DNI: {dni}", language="text")
+                                if extraction.get("rfc"):
+                                    for rfc in extraction["rfc"]:
+                                        st.code(f"RFC: {rfc}", language="text")
+                            else:
+                                st.info("Ninguno")
                 
-                # Clasificación
+                # Classification Results
                 if "classification" in result["steps"]:
-                    with st.expander("🏷️ Clasificación"):
+                    with st.expander("🏷️ Paso 3: Clasificación de Documento", expanded=True):
                         classification = result["steps"]["classification"]
-                        col1, col2 = st.columns(2)
+                        
+                        col1, col2 = st.columns([1, 2])
                         
                         with col1:
-                            st.metric(
-                                "Clase Detectada",
-                                classification.get("class", "desconocida").upper()
-                            )
+                            class_name = classification.get("class", "desconocida").upper()
+                            confidence = classification.get("confidence", 0)
+                            
+                            # Color según confianza
+                            if confidence > 0.8:
+                                color = "🟢"
+                            elif confidence > 0.6:
+                                color = "🟡"
+                            else:
+                                color = "🔴"
+                            
+                            st.metric("🏷️ Clase", class_name)
+                            st.metric("📊 Confianza", f"{color} {confidence * 100:.1f}%")
                         
                         with col2:
-                            st.metric(
-                                "Confianza",
-                                f"{classification.get('confidence', 0) * 100:.1f}%"
-                            )
-                        
-                        if classification.get("probabilities"):
                             st.write("**Probabilidades por Clase:**")
-                            probs = classification["probabilities"]
-                            for cls, prob in sorted(probs.items(), key=lambda x: x[1], reverse=True):
-                                st.write(f"  • {cls}: {prob * 100:.1f}%")
+                            if classification.get("probabilities"):
+                                probs = classification["probabilities"]
+                                # Ordenar por probabilidad
+                                for cls, prob in sorted(probs.items(), key=lambda x: x[1], reverse=True):
+                                    # Barra de progreso para cada clase
+                                    st.write(f"{cls.upper()}")
+                                    st.progress(prob, text=f"{prob * 100:.1f}%")
+            
+            st.divider()
+            
+            # Exportar resultados
+            st.subheader("💾 Exportar Resultados")
+            
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                json_str = json.dumps(result, indent=2, ensure_ascii=False)
+                st.download_button(
+                    label="📥 Descargar JSON",
+                    data=json_str,
+                    file_name=f"resultado_ocr_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                    mime="application/json",
+                    use_container_width=True
+                )
+            
+            with col2:
+                # Copiar JSON al portapapeles
+                st.info("📋 JSON disponible arriba para copiar")
+            
+            with col3:
+                if st.button("🔄 Limpiar Resultados", use_container_width=True):
+                    st.session_state.last_result = None
+                    st.rerun()
     
     # TAB 3: Guía de Uso
     with tab3:
