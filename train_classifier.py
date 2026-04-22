@@ -13,6 +13,7 @@ Requisitos:
 
 Salida:
     - models/classifier_model.joblib (modelo entrenado)
+    - models/training_metrics.json (métricas del entrenamiento)
 """
 
 import os
@@ -33,6 +34,7 @@ from sklearn.metrics import accuracy_score, classification_report, confusion_mat
 import joblib
 
 from config import DATA_DIR, MODELS_DIR, CLASSIFIER_CONFIG
+from src.dataset_validator import validate_dataset
 
 
 class ClassifierTrainer:
@@ -46,6 +48,7 @@ class ClassifierTrainer:
         self.data_dir = Path(DATA_DIR) / "training"
         self.models_dir = Path(MODELS_DIR)
         self.model_path = self.models_dir / "classifier_model.joblib"
+        self.metrics_path = self.models_dir / "training_metrics.json"
         self.vectorizer = TfidfVectorizer(
             max_features=CLASSIFIER_CONFIG.get("max_features", 5000),
             ngram_range=(1, 2),
@@ -57,6 +60,26 @@ class ClassifierTrainer:
         self.labels = []
         self.label_mapping = {cat: i for i, cat in enumerate(self.CATEGORIES)}
         
+    def validate_dataset(self) -> bool:
+        """
+        Valida dataset antes de entrenar.
+        
+        Returns:
+            bool: True si dataset es válido, False en caso contrario
+        """
+        print("\n🔍 Validando dataset...")
+        report = validate_dataset(self.data_dir.parent)
+        print(report.summary())
+        
+        # Guardar validación
+        validation_path = self.models_dir / "dataset_validation.json"
+        self.models_dir.mkdir(parents=True, exist_ok=True)
+        report.save(validation_path)
+        print(f"\n✅ Validación guardada en {validation_path}")
+        
+        # Retornar True solo si hay suficientes datos
+        return self.total_documents >= 20 if hasattr(self, 'total_documents') else True
+        
     def load_training_data(self) -> bool:
         """
         Carga archivos de entrenamiento desde data/training/<categoría>/*.txt
@@ -64,23 +87,27 @@ class ClassifierTrainer:
         Returns:
             bool: True si se cargaron datos, False si no hay datos
         """
-        print(f"📂 Buscando datos en: {self.data_dir}")
+        print(f"\n📂 Buscando datos en: {self.data_dir}")
         
         if not self.data_dir.exists():
             print(f"⚠️  Directorio no existe: {self.data_dir}")
             return False
         
         total_files = 0
+        category_counts = {}
         
         for category in self.CATEGORIES:
             category_dir = self.data_dir / category
             if not category_dir.exists():
                 print(f"   ⚠️  {category}/: directorio no encontrado")
+                category_counts[category] = 0
                 continue
             
             files = list(category_dir.glob("*.txt"))
-            print(f"   📄 {category}/: {len(files)} archivo(s)")
+            category_counts[category] = len(files)
+            print(f"   📄 {category:10}: {len(files):2} archivo(s)", end="")
             
+            category_words = 0
             for file_path in files:
                 try:
                     with open(file_path, "r", encoding="utf-8") as f:
@@ -90,8 +117,14 @@ class ClassifierTrainer:
                         self.texts.append(text)
                         self.labels.append(self.label_mapping[category])
                         total_files += 1
+                        category_words += len(text.split())
                 except Exception as e:
                     print(f"      ❌ Error leyendo {file_path.name}: {e}")
+            
+            if len(files) > 0:
+                print(f"  ({category_words:,} palabras)")
+            else:
+                print()
         
         print(f"\n✅ Total archivos cargados: {total_files}")
         
@@ -99,6 +132,7 @@ class ClassifierTrainer:
             print("❌ No hay archivos de entrenamiento. Agrega .txt en data/training/")
             return False
         
+        self.total_documents = total_files
         return True
     
     def train(self) -> dict:
@@ -140,47 +174,67 @@ class ClassifierTrainer:
             )
         
         # Vectorización TF-IDF
-        print("⚙️  Extrayendo características (TF-IDF)...")
+        print("\n⚙️  Extrayendo características (TF-IDF)...")
         X_train_vec = self.vectorizer.fit_transform(X_train)
         X_test_vec = self.vectorizer.transform(X_test)
         
-        print(f"   - Vocabulario: {len(self.vectorizer.get_feature_names_out())} términos")
+        vocab_size = len(self.vectorizer.get_feature_names_out())
+        print(f"   - Vocabulario: {vocab_size:,} términos únicos")
         
         # Entrenamiento
-        print("🤖 Entrenando Naive Bayes...")
+        print("\n🤖 Entrenando Naive Bayes Multinomial...")
         self.model.fit(X_train_vec, y_train)
+        print("   ✅ Modelo entrenado")
         
         # Evaluación
-        print("📊 Evaluando modelo...")
+        print("\n📊 Evaluando modelo...")
         y_pred = self.model.predict(X_test_vec)
         accuracy = accuracy_score(y_test, y_pred)
         
-        print(f"\n✨ Accuracy: {accuracy:.2%}")
+        print(f"\n{'=' * 70}")
+        print(f"✨ ACCURACY: {accuracy:.2%}")
+        print(f"{'=' * 70}")
         
         # Reporte detallado
-        print("\n📈 Reporte de Clasificación:")
+        print("\n📈 REPORTE DE CLASIFICACIÓN")
+        print("-" * 70)
         class_report = classification_report(
             y_test, y_pred, 
             target_names=self.CATEGORIES,
-            digits=3
+            digits=4
         )
         print(class_report)
         
         # Matriz de confusión
-        print("Matriz de Confusión:")
+        print("📊 MATRIZ DE CONFUSIÓN")
+        print("-" * 70)
         cm = confusion_matrix(y_test, y_pred)
-        print("  ", "  ".join(f"{cat:8}" for cat in self.CATEGORIES))
-        for i, cat in enumerate(self.CATEGORIES):
-            print(f"{cat:8}", cm[i])
         
-        return {
+        # Header con nombres de categoría
+        print("      Predicción →")
+        print("  Real", "  ".join(f"{cat:10}" for cat in self.CATEGORIES))
+        for i, cat in enumerate(self.CATEGORIES):
+            row_str = f"{cat:5} " + "  ".join(f"{cm[i][j]:>9}" for j in range(len(self.CATEGORIES)))
+            print(row_str)
+        print()
+        
+        metrics = {
             "accuracy": float(accuracy),
             "samples_train": len(X_train),
             "samples_test": len(X_test),
-            "vocab_size": len(self.vectorizer.get_feature_names_out()),
+            "vocab_size": vocab_size,
+            "total_samples": len(self.texts),
+            "accuracy_percent": f"{accuracy*100:.2f}%",
             "confusion_matrix": cm.tolist(),
+            "classification_report": classification_report(
+                y_test, y_pred, 
+                target_names=self.CATEGORIES,
+                output_dict=True
+            ),
             "trained_at": datetime.now().isoformat()
         }
+        
+        return metrics
     
     def save_model(self) -> bool:
         """
@@ -189,7 +243,8 @@ class ClassifierTrainer:
         Returns:
             bool: True si se guardó exitosamente
         """
-        print(f"\n💾 Guardando modelo en {self.model_path}...")
+        print(f"\n💾 GUARDANDO MODELO")
+        print(f"   Ruta: {self.model_path}")
         
         try:
             self.models_dir.mkdir(parents=True, exist_ok=True)
@@ -204,17 +259,37 @@ class ClassifierTrainer:
             }
             
             joblib.dump(model_data, self.model_path)
-            print(f"✅ Modelo guardado exitosamente")
             
             # Info del archivo
-            size_mb = self.model_path.stat().st_size / (1024 * 1024)
-            print(f"   📦 Tamaño: {size_mb:.2f} MB")
+            size_kb = self.model_path.stat().st_size / 1024
+            print(f"   ✅ Modelo guardado: {size_kb:.1f} KB")
             
             return True
         except Exception as e:
-            print(f"❌ Error al guardar modelo: {e}")
+            print(f"   ❌ Error al guardar: {e}")
             return False
     
+    def save_metrics(self, metrics: dict) -> bool:
+        """
+        Guarda métricas del entrenamiento en JSON.
+        
+        Returns:
+            bool: True si se guardó exitosamente
+        """
+        print(f"\n📊 GUARDANDO MÉTRICAS")
+        
+        try:
+            self.models_dir.mkdir(parents=True, exist_ok=True)
+            
+            with open(self.metrics_path, 'w', encoding='utf-8') as f:
+                json.dump(metrics, f, indent=2, ensure_ascii=False)
+            
+            print(f"   ✅ Métricas guardadas: {self.metrics_path}")
+            return True
+        except Exception as e:
+            print(f"   ❌ Error al guardar métricas: {e}")
+            return False
+        
     def create_summary(self, metrics: dict):
         """Crea un reporte de resumen."""
         summary = {
@@ -223,7 +298,8 @@ class ClassifierTrainer:
             "metrics": metrics,
             "categories": self.CATEGORIES,
             "data_path": str(self.data_dir),
-            "model_path": str(self.model_path)
+            "model_path": str(self.model_path),
+            "metrics_path": str(self.metrics_path)
         }
         return summary
 
@@ -236,38 +312,50 @@ def main():
     
     trainer = ClassifierTrainer()
     
-    # Cargar datos
+    # Paso 1: Validar dataset
+    print("\n" + "=" * 70)
+    print("PASO 1: VALIDACIÓN DE DATASET")
+    print("=" * 70)
+    trainer.validate_dataset()
+    
+    # Paso 2: Cargar datos
+    print("\n" + "=" * 70)
+    print("PASO 2: CARGA DE DATOS")
+    print("=" * 70)
     if not trainer.load_training_data():
         print("\n⚠️  No se puede continuar sin datos de entrenamiento.")
         print(f"   Agrega archivos .txt en: {trainer.data_dir}")
         print("   Ver: data/training/README.md para instrucciones")
         return 1
     
-    # Entrenar
-    try:
-        metrics = trainer.train()
-        
-        # Guardar
-        if not trainer.save_model():
-            return 1
-        
-        # Resumen
-        summary = trainer.create_summary(metrics)
-        print("\n" + "=" * 70)
-        print("✨ ENTRENAMIENTO COMPLETADO EXITOSAMENTE")
-        print("=" * 70)
-        print(f"📊 Accuracy: {metrics['accuracy']:.2%}")
-        print(f"📚 Muestras: {metrics['samples_train']} (entrenamiento) + {metrics['samples_test']} (validación)")
-        print(f"🎯 Categorías: {len(trainer.CATEGORIES)}")
-        print(f"💾 Modelo: {trainer.model_path}")
-        
-        return 0
-        
-    except Exception as e:
-        print(f"\n❌ Error durante el entrenamiento: {e}")
-        import traceback
-        traceback.print_exc()
+    # Paso 3: Entrenar
+    print("\n" + "=" * 70)
+    print("PASO 3: ENTRENAMIENTO")
+    print("=" * 70)
+    metrics = trainer.train()
+    
+    # Paso 4: Guardar
+    print("\n" + "=" * 70)
+    print("PASO 4: PERSISTENCIA")
+    print("=" * 70)
+    
+    if not trainer.save_model():
         return 1
+    
+    if not trainer.save_metrics(metrics):
+        return 1
+    
+    # Resumen final
+    print("\n" + "=" * 70)
+    print("✅ ENTRENAMIENTO COMPLETADO EXITOSAMENTE")
+    print("=" * 70)
+    print(f"\n📦 Modelo: {trainer.model_path}")
+    print(f"📊 Métricas: {trainer.metrics_path}")
+    print(f"✨ Accuracy logrado: {metrics['accuracy_percent']}")
+    print(f"\nPróximo paso: Usar el modelo en app.py o pipeline")
+    print("=" * 70)
+    
+    return 0
 
 
 if __name__ == "__main__":
