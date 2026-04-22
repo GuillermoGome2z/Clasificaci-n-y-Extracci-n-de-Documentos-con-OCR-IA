@@ -1,0 +1,33 @@
+INFORME DE AUDITORÍA INTERNA
+Empresa: Acme Corporation S.A.
+Período: Trimestre Q1 2024
+Auditor: Deloitte España
+Fecha del informe: 20 de enero de 2024
+
+EJECUTIVO
+Durante el período de auditoría se realizó una revisión completa de los controles internos.
+
+HALLAZGOS PRINCIPALES:
+1. Control de acceso a sistemas - CRÍTICO
+   Se detectaron permisos excesivos en 3 usuarios administrativos.
+   Acción: Remediación en 5 días.
+
+2. Documentación de procesos - IMPORTANTE
+   El 40% de procesos carece de documentación actualizada.
+   Acción: Documentar en 30 días.
+
+3. Segregación de funciones - NORMAL
+   Detectadas 2 infracciones menores en el ciclo de tesorería.
+   Acción: Ajustes operacionales.
+
+RECOMENDACIONES:
+- Implementar MFA en todos los accesos
+- Actualizar manual de procedimientos
+- Realizar capacitación en segregación de funciones
+
+CONCLUSIÓN:
+La organización mantiene un nivel de control razonable. Los hallazgos identificados
+requieren atención dentro de los plazos especificados.
+
+Firmado: _________________
+Auditor Principal

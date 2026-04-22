@@ -1,0 +1,23 @@
+FACTURA #F-2024-001
+Empresa Emisora: Tech Solutions S.A.
+RFC: TSO240101ABC
+NIF: 12.345.678-A
+
+FECHA: 15 de enero de 2024
+CLIENTE: Empresa XYZ S.L.
+
+DETALLES DE LA FACTURA:
+
+Concepto                                    Cantidad    Precio Unit.    Total
+Asesoramiento técnico en TI                    10          100.00       1000.00
+Desarrollo de módulo software                  5         1000.00       5000.00
+Hosting y mantenimiento (1 mes)               1          500.00        500.00
+Licencias de software                          3          200.00        600.00
+
+Subtotal:                                                              7100.00
+IVA (21%):                                                             1491.00
+TOTAL:                                                                8591.00
+
+Forma de pago: Transferencia bancaria
+Términos: Neto a 30 días
+Banco: BBVA - ES91 0182 0181 0301 0005 7107

@@ -25,8 +25,7 @@ def config():
     """
     Módulo de configuración del proyecto.
     """
-    import config
-    return config
+    return sys.modules.get('config') or __import__('config')
 
 
 @pytest.fixture

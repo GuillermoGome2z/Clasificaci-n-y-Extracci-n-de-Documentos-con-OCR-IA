@@ -1,0 +1,33 @@
+RECIBO DE PAGO
+Número: RCP-2024-001
+Fecha: 15 de enero de 2024
+Hora: 14:35
+
+CONCEPTO: Pago por servicios de consultoría técnica
+
+BENEFICIARIO:
+Nombre: Tech Solutions S.A.
+RFC: TSO240101ABC
+Cuenta: ES91 0182 0181 0301 0005 7107
+
+DEUDOR:
+Nombre: Empresa XYZ S.L.
+Dirección: Calle Principal 123, Madrid 28001
+
+MONTO PAGADO: 5,000.00 EUR
+Método: Transferencia bancaria internacional
+Referencia: TRF-2024-001-TECH
+
+DESCRIPCIÓN:
+Servicios profesionales de consultoría en transformación digital, 
+incluye análisis de procesos y recomendaciones de mejora.
+Período: Enero 2024
+
+RECIBIDO POR:
+Firma: ________________________
+Nombre: Juan García López
+Cargo: Gerente Financiero
+Empresa: Tech Solutions S.A.
+
+Certifico que he recibido la cantidad arriba mencionada.
+Válido como justificante de pago.

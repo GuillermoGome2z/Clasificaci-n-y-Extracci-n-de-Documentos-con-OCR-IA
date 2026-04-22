@@ -6,6 +6,7 @@ from typing import Dict, Any
 from .ocr import OCRProcessor
 from .extractor import DataExtractor
 from .classifier import DocumentClassifier
+from config import MODELS_DIR
 
 
 class OCRPipeline:
@@ -15,13 +16,25 @@ class OCRPipeline:
         """
         Inicializa el pipeline.
         
+        Intenta cargar automáticamente el modelo entrenado de models/classifier_model.joblib
+        si no se especifica una ruta diferente.
+        
         Args:
             tesseract_path: Ruta a Tesseract (Windows)
-            classifier_model_path: Ruta al modelo de clasificación entrenado
+            classifier_model_path: Ruta al modelo de clasificación entrenado (opcional)
         """
         self.ocr = OCRProcessor(tesseract_path=tesseract_path)
         self.extractor = DataExtractor()
-        self.classifier = DocumentClassifier(model_path=classifier_model_path)
+        
+        # Cargar modelo entrenado si existe
+        if classifier_model_path:
+            model_path = classifier_model_path
+        else:
+            # Buscar modelo entrenado automáticamente
+            default_model_path = Path(MODELS_DIR) / "classifier_model.joblib"
+            model_path = str(default_model_path) if default_model_path.exists() else None
+        
+        self.classifier = DocumentClassifier(model_path=model_path)
         self.last_result = None
 
     def process_image(self, image_path: str, lang: str = "spa") -> Dict[str, Any]:

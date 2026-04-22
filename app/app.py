@@ -84,7 +84,7 @@ with st.sidebar:
         try:
             st.session_state.pipeline = OCRPipeline(tesseract_path=tesseract_path)
             st.success("✅ Pipeline inicializado correctamente")
-        except Exception as e:
+        except (ValueError, TypeError, FileNotFoundError, OSError) as e:
             st.error(f"❌ Error al inicializar: {e}")
     
     st.divider()
@@ -330,7 +330,7 @@ else:
                         else:
                             status_text.error(f"❌ Error durante el procesamiento: {result.get('error', 'Error desconocido')}")
                     
-                    except Exception as e:
+                    except (ValueError, TypeError, FileNotFoundError, OSError, RuntimeError) as e:
                         status_text.error(f"❌ Error: {str(e)}")
                     
                     finally:
@@ -338,7 +338,7 @@ else:
                         try:
                             if os.path.exists(temp_path):
                                 os.remove(temp_path)
-                        except Exception as cleanup_error:
+                        except (OSError, PermissionError, FileNotFoundError) as cleanup_error:
                             st.warning(f"⚠️ Advertencia: No se pudo limpiar el archivo temporal. {str(cleanup_error)}")
     
     # TAB 2: Resultados Detallados

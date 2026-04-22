@@ -15,16 +15,37 @@ class DocumentClassifier:
         """
         Inicializa el clasificador.
         
+        Intenta cargar modelo entrenado. Si no existe, crea uno por defecto sin entrenar.
+        
         Args:
             model_path: Ruta al modelo entrenado (opcional)
         """
         self.model_path = model_path
-        self.pipeline = None
-        self.classes = None
+        self.model_data = None  # Contiene {model, vectorizer, categories, label_mapping}
+        self.pipeline = None  # Pipeline por defecto (si no hay modelo entrenado)
+        self.classes = ['factura', 'recibo', 'contrato', 'otro']
+        self.is_trained = False
         
+        # Intentar cargar modelo entrenado
         if model_path and Path(model_path).exists():
-            self.load_model(model_path)
+            self._load_trained_model(model_path)
         else:
+            self._create_default_model()
+
+    def _load_trained_model(self, path: str):
+        """
+        Carga un modelo entrenado por train_classifier.py
+        
+        Args:
+            path: Ruta al archivo .joblib del modelo entrenado
+        """
+        try:
+            self.model_data = joblib.load(path)
+            self.classes = self.model_data.get("categories", self.classes)
+            self.is_trained = True
+        except Exception as e:
+            print(f"⚠️  Error cargando modelo entrenado: {e}")
+            print("   Usando modelo por defecto (sin entrenar)")
             self._create_default_model()
 
     def _create_default_model(self):
@@ -34,6 +55,7 @@ class DocumentClassifier:
             ('classifier', MultinomialNB())
         ])
         self.classes = ['factura', 'recibo', 'contrato', 'otro']
+        self.is_trained = False
 
     def train(self, texts: list, labels: list):
         """
@@ -57,33 +79,66 @@ class DocumentClassifier:
             text: Texto del documento
             
         Returns:
-            dict: Clase predicha y confianza
+            dict: Clase predicha, confianza y probabilidades
         """
-        if not self.pipeline:
-            return {
-                "class": "desconocido",
-                "confidence": 0.0,
-                "probabilities": {}
-            }
-        
         try:
-            # Predicción
-            predicted_class = self.pipeline.predict([text])[0]
+            if self.is_trained and self.model_data:
+                # Usar modelo entrenado
+                model = self.model_data.get("model")
+                vectorizer = self.model_data.get("vectorizer")
+                categories = self.model_data.get("categories", self.classes)
+                
+                X = vectorizer.transform([text])
+                predicted_idx = model.predict(X)[0]
+                probabilities = model.predict_proba(X)[0]
+                
+                # Convertir índice a nombre de categoría
+                predicted_class = categories[predicted_idx] if predicted_idx < len(categories) else str(predicted_idx)
+                
+                prob_dict = {
+                    categories[i]: float(prob)
+                    for i, prob in enumerate(probabilities)
+                }
+                
+                return {
+                    "class": predicted_class,
+                    "confidence": float(max(probabilities)),
+                    "probabilities": prob_dict,
+                    "model_type": "trained"
+                }
             
-            # Probabilidades
-            probabilities = self.pipeline.predict_proba([text])[0]
-            
-            # Crear diccionario de probabilidades
-            prob_dict = {
-                cls: float(prob)
-                for cls, prob in zip(self.pipeline.classes_, probabilities)
-            }
-            
-            return {
-                "class": predicted_class,
-                "confidence": float(max(probabilities)),
-                "probabilities": prob_dict
-            }
+            elif self.pipeline:
+                # Usar pipeline por defecto
+                try:
+                    predicted_class = self.pipeline.predict([text])[0]
+                    probabilities = self.pipeline.predict_proba([text])[0]
+                    
+                    prob_dict = {
+                        cls: float(prob)
+                        for cls, prob in zip(self.pipeline.classes_, probabilities)
+                    }
+                    
+                    return {
+                        "class": predicted_class,
+                        "confidence": float(max(probabilities)),
+                        "probabilities": prob_dict,
+                        "model_type": "default (not trained)"
+                    }
+                except (AttributeError, ValueError):
+                    # Pipeline no entrenado
+                    return {
+                        "class": "desconocido",
+                        "confidence": 0.0,
+                        "probabilities": {cls: 0.0 for cls in self.classes},
+                        "model_type": "untrained"
+                    }
+            else:
+                return {
+                    "class": "error",
+                    "confidence": 0.0,
+                    "error": "No hay modelo disponible"
+                }
+                
         except Exception as e:
             return {
                 "class": "error",
@@ -110,9 +165,10 @@ class DocumentClassifier:
         Args:
             path: Ruta para guardar el modelo
         """
-        if self.pipeline:
+        if self.model_data:
+            joblib.dump(self.model_data, path)
+        elif self.pipeline:
             joblib.dump(self.pipeline, path)
-            joblib.dump(self.classes, path.replace('.pkl', '_classes.pkl'))
 
     def load_model(self, path: str):
         """
@@ -121,14 +177,8 @@ class DocumentClassifier:
         Args:
             path: Ruta al modelo
         """
-        try:
-            self.pipeline = joblib.load(path)
-            classes_path = path.replace('.pkl', '_classes.pkl')
-            if Path(classes_path).exists():
-                self.classes = joblib.load(classes_path)
-        except Exception as e:
-            print(f"Error al cargar modelo: {e}")
-            self._create_default_model()
+        if Path(path).exists():
+            self._load_trained_model(path)
 
     def get_feature_importance(self, class_label: str = None, top_n: int = 10) -> dict:
         """
