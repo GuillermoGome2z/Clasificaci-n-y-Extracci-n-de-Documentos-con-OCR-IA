@@ -248,42 +248,56 @@ else:
                             stats_col1, stats_col2, stats_col3, stats_col4 = st.columns(4)
                             
                             with stats_col1:
-                                if "steps" in result and "ocr" in result["steps"]:
-                                    confidence = result["steps"]["ocr"].get("confidence", 0)
+                                ocr_data = result.get("steps", {}).get("ocr", {})
+                                if ocr_data:
+                                    confidence = ocr_data.get("confidence", 0)
                                     st.metric("🔤 Confianza OCR", f"{confidence:.0f}%")
+                                else:
+                                    st.metric("🔤 Confianza OCR", "N/A")
                             
                             with stats_col2:
-                                if "extracted_text" in result:
-                                    char_count = len(result["extracted_text"])
+                                extracted_text = result.get("extracted_text", "")
+                                if extracted_text:
+                                    char_count = len(extracted_text.strip())
                                     st.metric("📝 Caracteres", f"{char_count:,}")
+                                else:
+                                    st.metric("📝 Caracteres", "0")
                             
                             with stats_col3:
-                                if "steps" in result and "extraction" in result["steps"]:
-                                    extraction = result["steps"]["extraction"]
+                                extraction = result.get("steps", {}).get("extraction", {})
+                                if extraction:
                                     total_items = sum(len(v) for v in extraction.values() if isinstance(v, list))
                                     st.metric("🔍 Datos Extraídos", f"{total_items}")
+                                else:
+                                    st.metric("🔍 Datos Extraídos", "0")
                             
                             with stats_col4:
-                                if "steps" in result and "classification" in result["steps"]:
-                                    class_name = result["steps"]["classification"].get("class", "N/A")
+                                classification = result.get("steps", {}).get("classification", {})
+                                if classification:
+                                    class_name = classification.get("class", "N/A")
                                     st.metric("🏷️ Clasificación", class_name.title())
+                                else:
+                                    st.metric("🏷️ Clasificación", "N/A")
                             
                             # Mostrar texto extraído
                             st.divider()
                             st.subheader("📋 Texto Extraído (OCR)")
                             
-                            if "extracted_text" in result:
+                            extracted_text = result.get("extracted_text", "").strip()
+                            
+                            if extracted_text:
                                 st.text_area(
                                     "Contenido del documento:",
-                                    value=result["extracted_text"],
+                                    value=extracted_text,
                                     height=250,
                                     disabled=True,
                                     key="ocr_output"
                                 )
                             else:
                                 # Para PDFs multipage
-                                if result.get("pages"):
-                                    num_pages = len(result["pages"])
+                                pages = result.get("pages", [])
+                                if pages and len(pages) > 0:
+                                    num_pages = len(pages)
                                     st.info(f"📑 Documento PDF de {num_pages} página(s)")
                                     
                                     page_num = st.slider(
@@ -293,14 +307,21 @@ else:
                                         value=1
                                     )
                                     
-                                    page_text = result["pages"][page_num - 1]["text"]
-                                    st.text_area(
-                                        f"Página {page_num}:",
-                                        value=page_text,
-                                        height=250,
-                                        disabled=True,
-                                        key=f"ocr_page_{page_num}"
-                                    )
+                                    page_text = pages[page_num - 1].get("text", "").strip()
+                                    
+                                    if page_text:
+                                        st.text_area(
+                                            f"Página {page_num}:",
+                                            value=page_text,
+                                            height=250,
+                                            disabled=True,
+                                            key=f"ocr_page_{page_num}"
+                                        )
+                                    else:
+                                        st.warning(f"⚠️ No se extrajo texto en la página {page_num}")
+                                else:
+                                    st.warning("⚠️ OCR no extrajo texto del documento")
+                                    st.info("Posibles razones:\n- Imagen de muy baja calidad\n- PDF sin contenido de texto\n- Idioma no soportado")
                             
                             # Navegar a resultados detallados
                             st.divider()
@@ -313,12 +334,12 @@ else:
                         status_text.error(f"❌ Error: {str(e)}")
                     
                     finally:
-                        # Limpiar archivo temporal
+                        # Limpiar archivo temporal de forma segura
                         try:
                             if os.path.exists(temp_path):
                                 os.remove(temp_path)
-                        except:
-                            pass
+                        except Exception as cleanup_error:
+                            st.warning(f"⚠️ Advertencia: No se pudo limpiar el archivo temporal. {str(cleanup_error)}")
     
     # TAB 2: Resultados Detallados
     with tab2:
@@ -334,23 +355,29 @@ else:
             gen_col1, gen_col2, gen_col3 = st.columns(3)
             
             with gen_col1:
-                st.metric("📁 Archivo", Path(result.get("input_file", "N/A")).name)
+                input_file = result.get("input_file", "N/A")
+                if input_file and input_file != "N/A":
+                    file_name = Path(input_file).name
+                else:
+                    file_name = "N/A"
+                st.metric("📁 Archivo", file_name)
             with gen_col2:
-                st.metric("🔤 Formato", result.get("format", "N/A").upper())
+                st.metric("🔤 Formato", result.get("format", "N/A").upper() if result.get("format") else "N/A")
             with gen_col3:
-                st.metric("✅ Estado", "Éxito" if result.get("status") == "success" else "Error")
+                status = "✅ Éxito" if result.get("status") == "success" else "❌ Error"
+                st.metric("✅ Estado", status)
             
             st.divider()
             
             # Desglose por pasos
-            if "steps" in result:
+            steps = result.get("steps", {})
+            if steps:
                 st.subheader("🔧 Desglose del Procesamiento")
                 
                 # OCR Results
-                if "ocr" in result["steps"]:
+                ocr_data = steps.get("ocr", {})
+                if ocr_data:
                     with st.expander("🔤 Paso 1: OCR (Reconocimiento Óptico de Caracteres)", expanded=True):
-                        ocr_data = result["steps"]["ocr"]
-                        
                         col1, col2, col3 = st.columns(3)
                         with col1:
                             st.metric("✅ Estado", "Éxito" if ocr_data.get("status") == "success" else "Error")
@@ -365,67 +392,76 @@ else:
                                 "fra": "🇫🇷 Francés",
                                 "deu": "🇩🇪 Alemán"
                             }.get(ocr_data.get("language"), "N/A"))
+                else:
+                    st.warning("⚠️ Datos de OCR no disponibles")
                 
                 # Data Extraction Results
-                if "extraction" in result["steps"]:
+                extraction = result.get("steps", {}).get("extraction", {})
+                if extraction:
                     with st.expander("🔍 Paso 2: Extracción de Datos", expanded=True):
-                        extraction = result["steps"]["extraction"]
-                        
                         col1, col2 = st.columns(2)
                         
                         with col1:
                             st.write("**📧 Emails encontrados:**")
-                            if extraction.get("emails"):
-                                for email in extraction["emails"]:
+                            emails = extraction.get("emails", [])
+                            if emails:
+                                for email in emails:
                                     st.code(email, language="text")
                             else:
-                                st.info("Ninguno")
+                                st.info("No se encontraron emails")
                             
                             st.write("**📱 Teléfonos encontrados:**")
-                            if extraction.get("phones"):
-                                for phone in extraction["phones"]:
+                            phones = extraction.get("phones", [])
+                            if phones:
+                                for phone in phones:
                                     st.code(phone, language="text")
                             else:
-                                st.info("Ninguno")
+                                st.info("No se encontraron teléfonos")
                             
                             st.write("**🔗 URLs encontradas:**")
-                            if extraction.get("urls"):
-                                for url in extraction["urls"]:
+                            urls = extraction.get("urls", [])
+                            if urls:
+                                for url in urls:
                                     st.code(url, language="text")
                             else:
-                                st.info("Ninguna")
+                                st.info("No se encontraron URLs")
                         
                         with col2:
                             st.write("**📅 Fechas encontradas:**")
-                            if extraction.get("dates"):
-                                for date in extraction["dates"]:
+                            dates = extraction.get("dates", [])
+                            if dates:
+                                for date in dates:
                                     st.code(date, language="text")
                             else:
-                                st.info("Ninguna")
+                                st.info("No se encontraron fechas")
                             
                             st.write("**💰 Valores monetarios:**")
-                            if extraction.get("currency"):
-                                for val in extraction["currency"]:
+                            currency = extraction.get("currency", [])
+                            if currency:
+                                for val in currency:
                                     st.code(val, language="text")
                             else:
-                                st.info("Ninguno")
+                                st.info("No se encontraron valores")
                             
                             st.write("**🆔 DNI/RFC encontrados:**")
-                            if extraction.get("dni") or extraction.get("rfc"):
-                                if extraction.get("dni"):
-                                    for dni in extraction["dni"]:
+                            dni_list = extraction.get("dni", [])
+                            rfc_list = extraction.get("rfc", [])
+                            if dni_list or rfc_list:
+                                if dni_list:
+                                    for dni in dni_list:
                                         st.code(f"DNI: {dni}", language="text")
-                                if extraction.get("rfc"):
-                                    for rfc in extraction["rfc"]:
+                                if rfc_list:
+                                    for rfc in rfc_list:
                                         st.code(f"RFC: {rfc}", language="text")
                             else:
-                                st.info("Ninguno")
+                                st.info("No se encontraron DNI/RFC")
+                else:
+                    st.warning("⚠️ Extracción de datos no disponible")
                 
                 # Classification Results
-                if "classification" in result["steps"]:
+                classification = result.get("steps", {}).get("classification", {})
+                if classification:
                     with st.expander("🏷️ Paso 3: Clasificación de Documento", expanded=True):
-                        classification = result["steps"]["classification"]
-                        
                         col1, col2 = st.columns([1, 2])
                         
                         with col1:
@@ -445,13 +481,17 @@ else:
                         
                         with col2:
                             st.write("**Probabilidades por Clase:**")
-                            if classification.get("probabilities"):
-                                probs = classification["probabilities"]
+                            probabilities = classification.get("probabilities", {})
+                            if probabilities:
                                 # Ordenar por probabilidad
-                                for cls, prob in sorted(probs.items(), key=lambda x: x[1], reverse=True):
+                                for cls, prob in sorted(probabilities.items(), key=lambda x: x[1], reverse=True):
                                     # Barra de progreso para cada clase
                                     st.write(f"{cls.upper()}")
                                     st.progress(prob, text=f"{prob * 100:.1f}%")
+                            else:
+                                st.info("Probabilidades no disponibles")
+                else:
+                    st.warning("⚠️ Clasificación no disponible")
             
             st.divider()
             
