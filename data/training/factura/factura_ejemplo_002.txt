@@ -1,0 +1,22 @@
+FACTURA #F-2024-002
+Empresa Emisora: Soluciones Integrales S.L.
+RFC: SIN240101DEF
+CIF: 98.765.432-B
+
+FECHA: 20 de enero de 2024
+CLIENTE: Centro Comercial Plaza Mayor
+
+DETALLES:
+
+Ítem                                       Cantidad    P.U.        Total
+Instalación de sistemas de seguridad         1         3500.00     3500.00
+Cableado estructurado CAT6                  200m         25.00     5000.00
+Configuración de servidores                  2         1200.00     2400.00
+Mantenimiento preventivo (12 meses)          1         1000.00     1000.00
+
+Base imponible:                                                    11900.00
+IVA 21%:                                                           2499.00
+TOTAL A PAGAR:                                                    14399.00
+
+Vencimiento: 45 días
+Condiciones: Neto a 45 días. Descuento 2% pronto pago.

@@ -1,0 +1,42 @@
+CONTRATO DE TRABAJO A TÉRMINO INDEFINIDO
+
+EMPRESA CONTRATANTE:
+Razón Social: Tech Solutions S.A.
+RFC: TSO240101ABC
+Representante: María García López
+
+EMPLEADO:
+Nombre completo: Miguel Ángel López Sánchez
+Documento de identidad: 45.123.456-Z
+Domicilio: Calle de la Paz 789, Madrid 28005
+
+1. CARGO Y FUNCIONES
+Cargo: Ingeniero de Software Senior
+Departamento: Desarrollo
+Función: Liderazgo técnico y desarrollo de soluciones backend
+
+2. REMUNERACIÓN
+Salario base: 3,500.00 EUR mensuales
+Pago: Mensual, últimos días del mes
+Deposito: Cuenta bancaria empleado
+
+3. JORNADA LABORAL
+Horario: 40 horas semanales
+Turno: De lunes a viernes, 9:00 a 18:00 horas
+Descanso: Sábado y domingo
+
+4. BENEFICIOS
+- Seguro médico privado
+- Programa de formación anual
+- Bono de rendimiento semestral
+- 30 días de vacaciones anuales
+
+5. DURACIÓN DEL CONTRATO
+Tipo: Indefinido
+Inicio: 1 de febrero de 2024
+
+6. CLÁUSULA DE CONFIDENCIALIDAD
+El empleado se compromete a mantener confidencialidad total sobre la información empresarial.
+
+Firma Empresa: _______________  Fecha: ____________
+Firma Empleado: _______________  Fecha: ____________

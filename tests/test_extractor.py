@@ -15,7 +15,6 @@ Cobertura:
 
 Total: 40 tests
 """
-import pytest
 
 
 class TestExtractorEmails:

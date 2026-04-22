@@ -8,7 +8,6 @@ Cobertura:
 
 Total: 7 tests
 """
-import pytest
 
 
 class TestConfigImport:

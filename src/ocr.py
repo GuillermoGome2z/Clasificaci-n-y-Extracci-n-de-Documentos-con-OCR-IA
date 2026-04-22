@@ -4,7 +4,6 @@ import pytesseract
 from PIL import Image
 import cv2
 import numpy as np
-from pathlib import Path
 
 
 class OCRProcessor:
@@ -52,7 +51,7 @@ class OCRProcessor:
                 "confidence": round(avg_confidence, 2),
                 "language": lang
             }
-        except Exception as e:
+        except (FileNotFoundError, ValueError, TypeError, OSError) as e:
             return {
                 "status": "error",
                 "text": "",
@@ -117,7 +116,7 @@ class OCRProcessor:
                 "total_pages": len(texts),
                 "language": lang
             }
-        except Exception as e:
+        except (FileNotFoundError, ValueError, TypeError, OSError) as e:
             return {
                 "status": "error",
                 "pages": [],
