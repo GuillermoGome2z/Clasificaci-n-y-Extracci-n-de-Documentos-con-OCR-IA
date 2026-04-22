@@ -1,11 +1,12 @@
 """Módulo de clasificación de documentos con ML."""
 
+from pathlib import Path
+
+import joblib
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.pipeline import Pipeline
-import joblib
-from pathlib import Path
 
 
 class DocumentClassifier:

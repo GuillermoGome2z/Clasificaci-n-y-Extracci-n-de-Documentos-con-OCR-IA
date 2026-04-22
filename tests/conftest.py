@@ -1,9 +1,10 @@
 """
 Configuración central de pytest con fixtures compartidas.
 """
-import pytest
 import sys
 from pathlib import Path
+
+import pytest
 
 # Agregar el directorio raíz al path para imports
 project_root = Path(__file__).parent.parent

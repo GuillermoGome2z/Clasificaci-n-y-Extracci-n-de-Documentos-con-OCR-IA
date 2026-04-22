@@ -2,13 +2,14 @@
 Aplicación Streamlit para OCR IA Project
 """
 
-import streamlit as st
 import json
 import os
 import sys
 import tempfile
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+
+import streamlit as st
 
 # Agregar src al path
 sys.path.insert(0, str(Path(__file__).parent.parent))
