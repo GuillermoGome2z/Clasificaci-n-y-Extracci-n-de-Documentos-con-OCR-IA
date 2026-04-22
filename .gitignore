@@ -61,3 +61,11 @@ config.local.py
 # Resultados temporales
 results/
 outputs/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+*.cover
