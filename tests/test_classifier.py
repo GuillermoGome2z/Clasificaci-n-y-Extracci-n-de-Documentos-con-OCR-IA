@@ -226,8 +226,6 @@ class TestClassifierIntegration:
         """Pipeline carga modelo automáticamente si existe."""
         try:
             from src.pipeline import OCRPipeline
-            from pathlib import Path
-            from config import MODELS_DIR
             
             model_path = Path(MODELS_DIR) / "classifier_model.joblib"
             

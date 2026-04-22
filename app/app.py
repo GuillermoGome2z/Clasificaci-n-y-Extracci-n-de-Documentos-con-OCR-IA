@@ -83,7 +83,7 @@ with st.sidebar:
     # Inicializar pipeline
     if st.button("🚀 Inicializar Pipeline", use_container_width=True):
         try:
-            st.session_state.pipeline = OCRPipeline(tesseract_path=tesseract_path)
+            st.session_state.pipeline = OCRPipeline(tesseract_path=tesseract_path)  # type: ignore
             st.success("✅ Pipeline inicializado correctamente")
         except (ValueError, TypeError, FileNotFoundError, OSError) as e:
             st.error(f"❌ Error al inicializar: {e}")

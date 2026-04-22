@@ -1,6 +1,7 @@
 """Módulo de clasificación de documentos con ML."""
 
 from pathlib import Path
+from typing import Optional
 
 import joblib
 import numpy as np
@@ -12,7 +13,7 @@ from sklearn.pipeline import Pipeline
 class DocumentClassifier:
     """Clasifica documentos según su contenido."""
 
-    def __init__(self, model_path: str = None):
+    def __init__(self, model_path: Optional[str] = None):
         """
         Inicializa el clasificador.
         
@@ -44,7 +45,7 @@ class DocumentClassifier:
             self.model_data = joblib.load(path)
             self.classes = self.model_data.get("categories", self.classes)
             self.is_trained = True
-        except Exception as e:
+        except (OSError, ValueError, EOFError) as e:
             print(f"⚠️  Error cargando modelo entrenado: {e}")
             print("   Usando modelo por defecto (sin entrenar)")
             self._create_default_model()
@@ -70,7 +71,7 @@ class DocumentClassifier:
             self._create_default_model()
         
         self.classes = list(set(labels))
-        self.pipeline.fit(texts, labels)
+        self.pipeline.fit(texts, labels)  # type: ignore
 
     def predict(self, text: str) -> dict:
         """
@@ -140,7 +141,7 @@ class DocumentClassifier:
                     "error": "No hay modelo disponible"
                 }
                 
-        except Exception as e:
+        except (ValueError, AttributeError, IndexError) as e:
             return {
                 "class": "error",
                 "confidence": 0.0,
@@ -181,7 +182,7 @@ class DocumentClassifier:
         if Path(path).exists():
             self._load_trained_model(path)
 
-    def get_feature_importance(self, class_label: str = None, top_n: int = 10) -> dict:
+    def get_feature_importance(self, class_label: Optional[str] = None, top_n: int = 10) -> dict:
         """
         Obtiene las palabras más importantes para cada clase.
         
