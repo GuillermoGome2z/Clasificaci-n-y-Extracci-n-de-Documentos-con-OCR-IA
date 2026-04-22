@@ -1,0 +1,38 @@
+[MASTER]
+init-hook='import sys; sys.path.insert(0, ".")'
+
+[MESSAGES CONTROL]
+disable=
+    missing-module-docstring,
+    missing-function-docstring,
+    missing-class-docstring,
+    too-many-lines,
+    invalid-name,
+    redefined-outer-name,
+    too-few-public-methods,
+    too-many-arguments,
+    too-many-instance-attributes,
+    duplicate-code,
+    unused-argument
+
+[FORMAT]
+max-line-length=100
+indent-string='    '
+
+[DESIGN]
+max-attributes=10
+max-args=7
+max-locals=20
+
+[VARIABLES]
+additional-builtins=
+
+[TYPECHECK]
+ignored-modules=
+    cv2,
+    numpy,
+    sklearn,
+    joblib
+
+[REPORTS]
+output-format=parseable

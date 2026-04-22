@@ -1,0 +1,16 @@
+{
+  "include": ["src", "tests", "train_classifier.py", "config.py", "app"],
+  "exclude": ["models", "data", "**/node_modules", "**/__pycache__"],
+  "pythonVersion": "3.13",
+  "pythonPlatform": "Windows",
+  "typeCheckingMode": "basic",
+  "useLibraryCodeForTypes": true,
+  "diagnosticSeverityOverrides": {
+    "reportMissingImports": "none",
+    "reportGeneralTypeIssues": "warning",
+    "reportOptionalMemberAccess": "warning",
+    "reportOptionalSubscript": "warning",
+    "reportOptionalCall": "warning",
+    "reportPrivateImportUsage": "warning"
+  }
+}

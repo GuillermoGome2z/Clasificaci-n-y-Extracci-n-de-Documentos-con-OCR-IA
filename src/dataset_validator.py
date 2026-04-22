@@ -15,10 +15,10 @@ Uso:
     print(report.summary())
 """
 
-from pathlib import Path
-from typing import Dict, List, Tuple
-from dataclasses import dataclass, asdict
 import json
+from dataclasses import asdict, dataclass
+from pathlib import Path
+from typing import Dict, List
 
 
 @dataclass
