@@ -18,7 +18,7 @@ Uso:
 import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 
 @dataclass
@@ -48,8 +48,8 @@ class DatasetValidator:
     MIN_VIABLE_PER_CATEGORY = 20  # Mínimo para entrenar
     MIN_WORDS_PER_FILE = 50  # Archivo muy corto
     MAX_WORDS_PER_FILE = 50000  # Archivo muy largo (probablemente error)
-    
-    def __init__(self, data_dir: Path = None):
+
+    def __init__(self, data_dir: Optional[Path] = None):
         """
         Args:
             data_dir: Ruta a data/training/. Si no se proporciona, auto-detecta.
@@ -169,7 +169,7 @@ class DatasetValidator:
                         message=f"{txt_file.name}: muy largo ({word_count} palabras)"
                     ))
                 
-            except Exception as e:
+            except (OSError, UnicodeDecodeError, FileNotFoundError) as e:  # type: ignore[misc]
                 self.issues.append(ValidationIssue(
                     severity="error",
                     category=category,
@@ -335,7 +335,7 @@ class ValidationReport:
 
 
 # Función de utilidad
-def validate_dataset(data_dir: Path = None) -> ValidationReport:
+def validate_dataset(data_dir: Optional[Path] = None) -> ValidationReport:
     """Función helper para validar dataset rápidamente."""
     validator = DatasetValidator(data_dir)
     return validator.validate()

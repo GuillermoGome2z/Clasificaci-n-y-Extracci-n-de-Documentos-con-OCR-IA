@@ -18,7 +18,7 @@ class OCRProcessor:
             tesseract_path: Ruta al ejecutable de Tesseract (opcional)
         """
         if tesseract_path:
-            pytesseract.pytesseract.pytesseract_cmd = tesseract_path
+            pytesseract.pytesseract_cmd = tesseract_path  # type: ignore
 
     def extract_text_from_image(self, image_path: str, lang: str = "spa") -> dict:
         """

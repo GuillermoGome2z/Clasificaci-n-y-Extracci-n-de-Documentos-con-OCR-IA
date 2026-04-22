@@ -25,7 +25,6 @@ from datetime import datetime
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
-import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.model_selection import train_test_split
@@ -58,6 +57,7 @@ class ClassifierTrainer:
         self.texts = []
         self.labels = []
         self.label_mapping = {cat: i for i, cat in enumerate(self.CATEGORIES)}
+        self.total_documents = 0
         
     def validate_dataset(self) -> bool:
         """
@@ -117,7 +117,7 @@ class ClassifierTrainer:
                         self.labels.append(self.label_mapping[category])
                         total_files += 1
                         category_words += len(text.split())
-                except Exception as e:
+                except (OSError, UnicodeDecodeError) as e:
                     print(f"      ❌ Error leyendo {file_path.name}: {e}")
             
             if len(files) > 0:
@@ -242,7 +242,7 @@ class ClassifierTrainer:
         Returns:
             bool: True si se guardó exitosamente
         """
-        print(f"\n💾 GUARDANDO MODELO")
+        print("\n💾 GUARDANDO MODELO")
         print(f"   Ruta: {self.model_path}")
         
         try:
@@ -264,7 +264,7 @@ class ClassifierTrainer:
             print(f"   ✅ Modelo guardado: {size_kb:.1f} KB")
             
             return True
-        except Exception as e:
+        except (OSError, ValueError) as e:
             print(f"   ❌ Error al guardar: {e}")
             return False
     
@@ -275,7 +275,7 @@ class ClassifierTrainer:
         Returns:
             bool: True si se guardó exitosamente
         """
-        print(f"\n📊 GUARDANDO MÉTRICAS")
+        print("\n📊 GUARDANDO MÉTRICAS")
         
         try:
             self.models_dir.mkdir(parents=True, exist_ok=True)
@@ -285,7 +285,7 @@ class ClassifierTrainer:
             
             print(f"   ✅ Métricas guardadas: {self.metrics_path}")
             return True
-        except Exception as e:
+        except (OSError, TypeError) as e:
             print(f"   ❌ Error al guardar métricas: {e}")
             return False
         
@@ -351,7 +351,7 @@ def main():
     print(f"\n📦 Modelo: {trainer.model_path}")
     print(f"📊 Métricas: {trainer.metrics_path}")
     print(f"✨ Accuracy logrado: {metrics['accuracy_percent']}")
-    print(f"\nPróximo paso: Usar el modelo en app.py o pipeline")
+    print("\nPróximo paso: Usar el modelo en app.py o pipeline")
     print("=" * 70)
     
     return 0

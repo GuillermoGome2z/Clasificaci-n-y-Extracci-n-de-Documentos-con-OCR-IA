@@ -10,11 +10,10 @@ Cobertura:
 
 Total: 10 tests
 """
-import pytest
-from pathlib import Path
 import sys
-import tempfile
-import shutil
+from pathlib import Path
+
+import pytest
 
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
@@ -87,7 +86,7 @@ class TestTrainerTraining:
                 assert metrics is not None
                 assert "accuracy" in metrics
                 assert 0.0 <= metrics["accuracy"] <= 1.0
-            except Exception as e:
+            except (ValueError, IndexError) as e:
                 pytest.skip(f"Entrenamiento requiere datos suficientes: {str(e)}")
 
     def test_trainer_returns_valid_metrics(self):
@@ -106,7 +105,7 @@ class TestTrainerTraining:
                 
                 assert metrics["samples_train"] > 0
                 assert metrics["vocab_size"] > 0
-            except Exception as e:
+            except (ValueError, IndexError) as e:
                 pytest.skip(f"Entrenamiento requiere datos suficientes: {str(e)}")
 
     def test_trainer_creates_vectorizer(self):
@@ -118,7 +117,7 @@ class TestTrainerTraining:
                 trainer.train()
                 assert trainer.vectorizer is not None
                 assert hasattr(trainer.vectorizer, 'transform')
-            except Exception as e:
+            except (ValueError, IndexError) as e:
                 pytest.skip(f"Entrenamiento requiere datos suficientes: {str(e)}")
 
     def test_trainer_creates_model(self):
@@ -131,7 +130,7 @@ class TestTrainerTraining:
                 assert trainer.model is not None
                 assert hasattr(trainer.model, 'predict')
                 assert hasattr(trainer.model, 'predict_proba')
-            except Exception as e:
+            except (ValueError, IndexError) as e:
                 pytest.skip(f"Entrenamiento requiere datos suficientes: {str(e)}")
 
 
@@ -149,7 +148,7 @@ class TestTrainerModelPersistence:
                 
                 assert result is True
                 assert trainer.model_path.exists()
-            except Exception as e:
+            except (ValueError, IndexError, OSError) as e:
                 pytest.skip(f"Entrenamiento requiere datos suficientes: {str(e)}")
 
     def test_saved_model_has_valid_size(self):
@@ -164,7 +163,7 @@ class TestTrainerModelPersistence:
                 size_bytes = trainer.model_path.stat().st_size
                 assert size_bytes > 0  # No debe estar vacío
                 assert size_bytes < 100 * 1024 * 1024  # Menos de 100MB
-            except Exception as e:
+            except (ValueError, IndexError, OSError) as e:
                 pytest.skip(f"Entrenamiento requiere datos suficientes: {str(e)}")
 
     def test_model_can_be_loaded_after_saving(self):
@@ -184,7 +183,7 @@ class TestTrainerModelPersistence:
                 assert "model" in loaded
                 assert "vectorizer" in loaded
                 assert "categories" in loaded
-            except Exception as e:
+            except (ValueError, IndexError, OSError) as e:
                 pytest.skip(f"Entrenamiento requiere datos suficientes: {str(e)}")
 
 
@@ -204,7 +203,7 @@ class TestTrainerSummary:
                 assert "timestamp" in summary
                 assert "metrics" in summary
                 assert "categories" in summary
-            except Exception as e:
+            except (ValueError, IndexError) as e:
                 pytest.skip(f"Entrenamiento requiere datos suficientes: {str(e)}")
 
     def test_summary_has_all_fields(self):
@@ -227,7 +226,7 @@ class TestTrainerSummary:
                 
                 for field in expected_fields:
                     assert field in summary
-            except Exception as e:
+            except (ValueError, IndexError) as e:
                 pytest.skip(f"Entrenamiento requiere datos suficientes: {str(e)}")
 
 
@@ -242,9 +241,9 @@ class TestTrainerEdgeCases:
         
         # No debe crashear, debe manejar gracefully
         try:
-            metrics = trainer.train()
+            trainer.train()
             # Podría fallar, pero no debe crash
-        except (ValueError, Exception):
+        except ValueError:
             pass  # Es aceptable que falle
         
         assert True  # Si llegamos aquí, no crasheó

@@ -2,17 +2,19 @@
 
 import json
 from pathlib import Path
-from typing import Dict, Any
-from .ocr import OCRProcessor
-from .extractor import DataExtractor
-from .classifier import DocumentClassifier
+from typing import Any, Dict, Optional
+
 from config import MODELS_DIR
+
+from .classifier import DocumentClassifier
+from .extractor import DataExtractor
+from .ocr import OCRProcessor
 
 
 class OCRPipeline:
     """Pipeline completo de OCR, extracción y clasificación."""
 
-    def __init__(self, tesseract_path: str = None, classifier_model_path: str = None):
+    def __init__(self, tesseract_path: Optional[str] = None, classifier_model_path: Optional[str] = None):
         """
         Inicializa el pipeline.
         
@@ -137,22 +139,22 @@ class OCRPipeline:
         Returns:
             dict: Resultado del pipeline
         """
-        file_path = Path(file_path)
+        file_path_obj = Path(file_path)
         
-        if not file_path.exists():
+        if not file_path_obj.exists():
             return {
                 "status": "error",
                 "error": f"Archivo no encontrado: {file_path}"
             }
 
-        if file_path.suffix.lower() == '.pdf':
+        if file_path_obj.suffix.lower() == '.pdf':
             return self.process_pdf(str(file_path), lang=lang)
-        elif file_path.suffix.lower() in ['.jpg', '.jpeg', '.png', '.bmp', '.gif']:
+        elif file_path_obj.suffix.lower() in ['.jpg', '.jpeg', '.png', '.bmp', '.gif']:
             return self.process_image(str(file_path), lang=lang)
         else:
             return {
                 "status": "error",
-                "error": f"Formato no soportado: {file_path.suffix}"
+                "error": f"Formato no soportado: {file_path_obj.suffix}"
             }
 
     def get_last_result_json(self) -> str:
