@@ -16,10 +16,9 @@ Salida:
     - models/training_metrics.json (métricas del entrenamiento)
 """
 
-import os
 import sys
-from pathlib import Path
 import json
+from pathlib import Path
 from datetime import datetime
 
 # Agregar raíz al path
