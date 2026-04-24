@@ -155,11 +155,10 @@ class OCRPipeline:
             return self.process_pdf(str(file_path), lang=lang)
         if file_path_obj.suffix.lower() in ['.jpg', '.jpeg', '.png', '.bmp', '.gif']:
             return self.process_image(str(file_path), lang=lang)
-        else:
-            return {
-                "status": "error",
-                "error": f"Formato no soportado: {file_path_obj.suffix}"
-            }
+        return {
+            "status": "error",
+            "error": f"Formato no soportado: {file_path_obj.suffix}"
+        }
 
     def get_last_result_json(self) -> str:
         """
