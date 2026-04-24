@@ -2,7 +2,6 @@
 
 import re
 from typing import List, Dict, Any
-import json
 
 
 class DataExtractor:
@@ -12,9 +11,12 @@ class DataExtractor:
         """Inicializa los patrones de regex."""
         self.patterns = {
             "email": r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',
-            "phone": r'\b(?:\+?1[-.\s]?)?\(?([0-9]{3})\)?[-.\s]?([0-9]{3})[-.\s]?([0-9]{4})\b',
+            "phone": r'\b(?:\+?1[-.\.\s])?\(?([0-9]{3})\)?[-.\.\s]?([0-9]{3})[-.\.\s]?([0-9]{4})\b',
             "date": r'\b(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\b',
-            "url": r'https?://(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&/=]*)',
+            "url": (
+                r'https?://(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}'
+                r'\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&/=]*)'
+            ),
             "currency": r'\$\s?[\d,]+\.?\d{0,2}|\b(?:USD|EUR|MXN)\s?[\d,]+\.?\d{0,2}',
             "dni": r'\b[0-9]{1,2}\.?[0-9]{3}\.?[0-9]{3}(?:-[A-Z])?\b',
             "rfc": r'\b[A-ZÑ&]{3,4}\d{6}(?:[A-Z0-9]{3})?\b',
@@ -52,11 +54,11 @@ class DataExtractor:
     def extract_custom_pattern(self, text: str, pattern: str) -> List[str]:
         """
         Extrae datos usando un patrón regex personalizado.
-        
+
         Args:
             text: Texto a procesar
             pattern: Patrón regex
-            
+
         Returns:
             Lista de coincidencias
         """
@@ -68,10 +70,10 @@ class DataExtractor:
     def extract_all(self, text: str) -> Dict[str, Any]:
         """
         Extrae todos los tipos de datos del texto.
-        
+
         Args:
             text: Texto a procesar
-            
+
         Returns:
             Diccionario con todas las extracciones
         """
@@ -88,10 +90,10 @@ class DataExtractor:
     def extract_lines(self, text: str) -> List[str]:
         """
         Limpia y extrae líneas significativas del texto.
-        
+
         Args:
             text: Texto a procesar
-            
+
         Returns:
             Lista de líneas sin espacios en blanco
         """
@@ -101,20 +103,20 @@ class DataExtractor:
     def extract_tables(self, text: str) -> List[List[str]]:
         """
         Intenta extraer tablas del texto.
-        
+
         Args:
             text: Texto con formato de tabla
-            
+
         Returns:
             Lista de filas (cada fila es una lista de celdas)
         """
         lines = self.extract_lines(text)
         table = []
-        
+
         for line in lines:
             # Dividir por espacios múltiples (posibles separadores de columna)
             cells = [cell.strip() for cell in re.split(r'\s{2,}', line)]
             if len(cells) > 1:
                 table.append(cells)
-        
+
         return table
