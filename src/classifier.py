@@ -16,9 +16,9 @@ class DocumentClassifier:
     def __init__(self, model_path: Optional[str] = None):
         """
         Inicializa el clasificador.
-        
+
         Intenta cargar modelo entrenado. Si no existe, crea uno por defecto sin entrenar.
-        
+
         Args:
             model_path: Ruta al modelo entrenado (opcional)
         """
@@ -27,7 +27,7 @@ class DocumentClassifier:
         self.pipeline = None  # Pipeline por defecto (si no hay modelo entrenado)
         self.classes = ['factura', 'recibo', 'contrato', 'otro']
         self.is_trained = False
-        
+
         # Intentar cargar modelo entrenado
         if model_path and Path(model_path).exists():
             self._load_trained_model(model_path)
@@ -37,7 +37,7 @@ class DocumentClassifier:
     def _load_trained_model(self, path: str):
         """
         Carga un modelo entrenado por train_classifier.py
-        
+
         Args:
             path: Ruta al archivo .joblib del modelo entrenado
         """
@@ -62,24 +62,24 @@ class DocumentClassifier:
     def train(self, texts: list, labels: list):
         """
         Entrena el modelo con textos etiquetados.
-        
+
         Args:
             texts: Lista de textos de entrenamiento
             labels: Lista de etiquetas correspondientes
         """
         if not self.pipeline:
             self._create_default_model()
-        
+
         self.classes = list(set(labels))
         self.pipeline.fit(texts, labels)  # type: ignore
 
     def predict(self, text: str) -> dict:
         """
         Predice la clase de un documento.
-        
+
         Args:
             text: Texto del documento
-            
+
         Returns:
             dict: Clase predicha, confianza y probabilidades
         """
@@ -89,37 +89,40 @@ class DocumentClassifier:
                 model = self.model_data.get("model")
                 vectorizer = self.model_data.get("vectorizer")
                 categories = self.model_data.get("categories", self.classes)
-                
+
                 X = vectorizer.transform([text])
                 predicted_idx = model.predict(X)[0]
                 probabilities = model.predict_proba(X)[0]
-                
+
                 # Convertir índice a nombre de categoría
-                predicted_class = categories[predicted_idx] if predicted_idx < len(categories) else str(predicted_idx)
-                
+                if predicted_idx < len(categories):
+                    predicted_class = categories[predicted_idx]
+                else:
+                    predicted_class = str(predicted_idx)
+
                 prob_dict = {
                     categories[i]: float(prob)
                     for i, prob in enumerate(probabilities)
                 }
-                
+
                 return {
                     "class": predicted_class,
                     "confidence": float(max(probabilities)),
                     "probabilities": prob_dict,
                     "model_type": "trained"
                 }
-            
-            elif self.pipeline:
+
+            if self.pipeline:
                 # Usar pipeline por defecto
                 try:
                     predicted_class = self.pipeline.predict([text])[0]
                     probabilities = self.pipeline.predict_proba([text])[0]
-                    
+
                     prob_dict = {
                         cls: float(prob)
                         for cls, prob in zip(self.pipeline.classes_, probabilities)
                     }
-                    
+
                     return {
                         "class": predicted_class,
                         "confidence": float(max(probabilities)),
@@ -140,7 +143,7 @@ class DocumentClassifier:
                     "confidence": 0.0,
                     "error": "No hay modelo disponible"
                 }
-                
+
         except (ValueError, AttributeError, IndexError) as e:
             return {
                 "class": "error",
@@ -151,10 +154,10 @@ class DocumentClassifier:
     def predict_batch(self, texts: list) -> list:
         """
         Predice clases para múltiples textos.
-        
+
         Args:
             texts: Lista de textos
-            
+
         Returns:
             Lista de predicciones
         """
@@ -163,7 +166,7 @@ class DocumentClassifier:
     def save_model(self, path: str):
         """
         Guarda el modelo entrenado.
-        
+
         Args:
             path: Ruta para guardar el modelo
         """
@@ -175,7 +178,7 @@ class DocumentClassifier:
     def load_model(self, path: str):
         """
         Carga un modelo entrenado.
-        
+
         Args:
             path: Ruta al modelo
         """
@@ -185,22 +188,22 @@ class DocumentClassifier:
     def get_feature_importance(self, class_label: Optional[str] = None, top_n: int = 10) -> dict:
         """
         Obtiene las palabras más importantes para cada clase.
-        
+
         Args:
             class_label: Clase específica (opcional)
             top_n: Número de palabras a retornar
-            
+
         Returns:
             dict: Palabras importantes por clase
         """
         if not self.pipeline or not hasattr(self.pipeline.named_steps['classifier'], 'coef_'):
             return {}
-        
+
         feature_names = self.pipeline.named_steps['tfidf'].get_feature_names_out()
         coef = self.pipeline.named_steps['classifier'].coef_
-        
+
         importance = {}
-        
+
         if class_label:
             class_idx = list(self.pipeline.classes_).index(class_label)
             top_indices = np.argsort(coef[class_idx])[-top_n:]
@@ -209,5 +212,5 @@ class DocumentClassifier:
             for i, cls in enumerate(self.pipeline.classes_):
                 top_indices = np.argsort(coef[i])[-top_n:]
                 importance[cls] = [feature_names[idx] for idx in reversed(top_indices)]
-        
+
         return importance
