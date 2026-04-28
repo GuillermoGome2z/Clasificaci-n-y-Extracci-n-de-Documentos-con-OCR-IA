@@ -1,24 +1,42 @@
 """Módulo OCR con Pytesseract."""
 
-import cv2
+import logging
+from pathlib import Path
 
+import cv2
 import numpy as np
 import pytesseract
 from PIL import Image
+
+from config import TESSERACT_PATH
+
+logger = logging.getLogger(__name__)
+
+# Configurar ruta de Tesseract si se encontró
+if TESSERACT_PATH:
+    pytesseract.pytesseract.tesseract_cmd = TESSERACT_PATH
+    logger.info("Tesseract encontrado en: %s", TESSERACT_PATH)
+else:
+    logger.warning(
+        "Tesseract no encontrado. OCR no funcionará. "
+        "Instala Tesseract o define la variable de entorno TESSERACT_PATH."
+    )
 
 
 class OCRProcessor:
     """Clase para procesar OCR en imágenes y PDFs."""
 
-    def __init__(self, tesseract_path=None):
+    def __init__(self, tesseract_path: str | None = None):
         """
         Inicializa el procesador OCR.
 
         Args:
-            tesseract_path: Ruta al ejecutable de Tesseract (opcional)
+            tesseract_path: Ruta al ejecutable de Tesseract (opcional - usa config.TESSERACT_PATH por defecto)
         """
         if tesseract_path:
-            pytesseract.pytesseract_cmd = tesseract_path  # type: ignore
+            # Permitir override por parámetro
+            pytesseract.pytesseract.tesseract_cmd = tesseract_path
+            logger.debug("Tesseract path sobrescrito: %s", tesseract_path)
 
     def extract_text_from_image(self, image_path: str, lang: str = "spa") -> dict:
         """
@@ -32,6 +50,7 @@ class OCRProcessor:
             dict: Diccionario con texto extraído y confianza
         """
         try:
+            logger.debug("Procesando imagen: %s (idioma: %s)", image_path, lang)
             image = Image.open(image_path)
             text = pytesseract.image_to_string(image, lang=lang)
 
@@ -46,6 +65,7 @@ class OCRProcessor:
             confidences = [int(conf) for conf in data['conf'] if int(conf) > 0]
             avg_confidence = np.mean(confidences) if confidences else 0
 
+            logger.info("OCR imagen completado: confianza %.2f", avg_confidence)
             return {
                 "status": "success",
                 "text": text.strip(),
@@ -53,6 +73,7 @@ class OCRProcessor:
                 "language": lang
             }
         except (FileNotFoundError, ValueError, TypeError, OSError) as e:
+            logger.error("Error en OCR de imagen: %s", e)
             return {
                 "status": "error",
                 "text": "",
@@ -100,9 +121,12 @@ class OCRProcessor:
         try:
             import pdfplumber
 
+            logger.debug("Procesando PDF: %s", pdf_path)
             texts = []
             with pdfplumber.open(pdf_path) as pdf:
+                logger.info("PDF abierto: %d páginas", len(pdf.pages))
                 for i, page in enumerate(pdf.pages):
+                    logger.debug("Procesando página %d", i + 1)
                     # Convertir página a imagen
                     img = page.to_image()
                     text = pytesseract.image_to_string(img.original, lang=lang)
@@ -111,6 +135,7 @@ class OCRProcessor:
                         "text": text.strip()
                     })
 
+            logger.info("OCR PDF completado: %d páginas procesadas", len(texts))
             return {
                 "status": "success",
                 "pages": texts,
@@ -118,6 +143,7 @@ class OCRProcessor:
                 "language": lang
             }
         except (FileNotFoundError, ValueError, TypeError, OSError) as e:
+            logger.error("Error en OCR de PDF: %s", e)
             return {
                 "status": "error",
                 "pages": [],

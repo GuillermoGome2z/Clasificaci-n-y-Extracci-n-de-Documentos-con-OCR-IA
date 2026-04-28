@@ -1,7 +1,11 @@
 """Módulo de extracción de datos con regex y patrones."""
 
+import logging
 import re
 from typing import List, Dict, Any
+
+logger = logging.getLogger(__name__)
+
 
 
 class DataExtractor:
@@ -77,15 +81,32 @@ class DataExtractor:
         Returns:
             Diccionario con todas las extracciones
         """
-        return {
-            "emails": self.extract_emails(text),
-            "phones": self.extract_phones(text),
-            "dates": self.extract_dates(text),
-            "urls": self.extract_urls(text),
-            "currency": self.extract_currency(text),
-            "dni": self.extract_dni(text),
-            "rfc": self.extract_rfc(text),
-        }
+        try:
+            logger.debug("Iniciando extracción de todos los datos (texto: %d caracteres)", len(text))
+            result = {
+                "emails": self.extract_emails(text),
+                "phones": self.extract_phones(text),
+                "dates": self.extract_dates(text),
+                "urls": self.extract_urls(text),
+                "currency": self.extract_currency(text),
+                "dni": self.extract_dni(text),
+                "rfc": self.extract_rfc(text),
+            }
+            total_items = sum(len(v) if isinstance(v, list) else 1 for v in result.values())
+            logger.info("Extracción completada: %d items extraídos", total_items)
+            return result
+        except Exception as e:
+            logger.error("Error en extracción: %s", e)
+            return {
+                "emails": [],
+                "phones": [],
+                "dates": [],
+                "urls": [],
+                "currency": [],
+                "dni": [],
+                "rfc": [],
+                "error": str(e)
+            }
 
     def extract_lines(self, text: str) -> List[str]:
         """
@@ -97,8 +118,15 @@ class DataExtractor:
         Returns:
             Lista de líneas sin espacios en blanco
         """
-        lines = text.split('\n')
-        return [line.strip() for line in lines if line.strip()]
+        try:
+            logger.debug("Extrayendo líneas del texto")
+            lines = text.split('\n')
+            cleaned_lines = [line.strip() for line in lines if line.strip()]
+            logger.debug("Líneas extraídas: %d", len(cleaned_lines))
+            return cleaned_lines
+        except Exception as e:
+            logger.error("Error extrayendo líneas: %s", e)
+            return []
 
     def extract_tables(self, text: str) -> List[List[str]]:
         """
@@ -110,13 +138,19 @@ class DataExtractor:
         Returns:
             Lista de filas (cada fila es una lista de celdas)
         """
-        lines = self.extract_lines(text)
-        table = []
+        try:
+            logger.debug("Extrayendo tablas del texto")
+            lines = self.extract_lines(text)
+            table = []
 
-        for line in lines:
-            # Dividir por espacios múltiples (posibles separadores de columna)
-            cells = [cell.strip() for cell in re.split(r'\s{2,}', line)]
-            if len(cells) > 1:
-                table.append(cells)
+            for line in lines:
+                # Dividir por espacios múltiples (posibles separadores de columna)
+                cells = [cell.strip() for cell in re.split(r'\s{2,}', line)]
+                if len(cells) > 1:
+                    table.append(cells)
 
-        return table
+            logger.debug("Tablas extraídas: %d filas", len(table))
+            return table
+        except Exception as e:
+            logger.error("Error extrayendo tablas: %s", e)
+            return []
