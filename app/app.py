@@ -250,7 +250,7 @@ else:
                         st.session_state.last_result = result
                         progress_bar.progress(100)
 
-                        if result["status"] == "success":
+                        if result.get("status") == "success":
                             status_text.success("✅ ¡Procesamiento completado exitosamente!")
 
                             # Mostrar estadísticas rápidas

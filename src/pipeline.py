@@ -71,7 +71,7 @@ class OCRPipeline:
             ocr_result = self.ocr.extract_text_from_image(image_path, lang=lang)
             result["steps"]["ocr"] = ocr_result
 
-            if ocr_result["status"] != "success":
+            if ocr_result.get("status") != "success":
                 error_msg = ocr_result.get("error", "OCR failed")
                 result["errors"].append(f"OCR: {error_msg}")
                 logger.error("OCR falló: %s", error_msg)
@@ -152,7 +152,7 @@ class OCRPipeline:
             ocr_result = self.ocr.extract_text_from_pdf(pdf_path, lang=lang)
             result["steps"] = {"ocr": ocr_result}
 
-            if ocr_result["status"] != "success":
+            if ocr_result.get("status") != "success":
                 error_msg = ocr_result.get("error", "PDF OCR failed")
                 result["errors"].append(f"OCR: {error_msg}")
                 logger.error("OCR PDF falló: %s", error_msg)
