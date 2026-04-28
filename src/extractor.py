@@ -15,13 +15,13 @@ class DataExtractor:
         """Inicializa los patrones de regex."""
         self.patterns = {
             "email": r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',
-            "phone": r'\b(?:\+?1[-.\.\s])?\(?([0-9]{3})\)?[-.\.\s]?([0-9]{3})[-.\.\s]?([0-9]{4})\b',
+            "phone": r'\(\d{2,3}\)[\s.-]?\d{3}[\s.-]?\d{4}|\d{3}[\s.-]?\d{3}[\s.-]?\d{4}|\d{4}[\s.-]?\d{4}',
             "date": r'\b(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\b',
             "url": (
                 r'https?://(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}'
                 r'\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&/=]*)'
             ),
-            "currency": r'\$\s?[\d,]+\.?\d{0,2}|\b(?:USD|EUR|MXN)\s?[\d,]+\.?\d{0,2}',
+            "currency": r'Q\s?[\d,]+(?:\.\d{2})?|GTQ\s?[\d,]+(?:\.\d{2})?|\$\s?[\d,]+(?:\.\d{2})?|€\s?[\d,]+(?:\.\d{2})?|£\s?[\d,]+(?:\.\d{2})?|\b(?:USD|EUR|MXN)\s?[\d,]+(?:\.\d{2})?',
             "dni": r'\b[0-9]{1,2}\.?[0-9]{3}\.?[0-9]{3}(?:-[A-Z])?\b',
             "rfc": r'\b[A-ZÑ&]{3,4}\d{6}(?:[A-Z0-9]{3})?\b',
         }
@@ -33,7 +33,9 @@ class DataExtractor:
     def extract_phones(self, text: str) -> List[str]:
         """Extrae números telefónicos del texto."""
         matches = re.findall(self.patterns["phone"], text)
-        return [f"({m[0]}) {m[1]}-{m[2]}" for m in matches]
+        # Filtrar vacíos y limpiar duplicados
+        result = [m.strip() for m in matches if isinstance(m, str) and m.strip()]
+        return list(set(result))
 
     def extract_dates(self, text: str) -> List[str]:
         """Extrae fechas del texto."""

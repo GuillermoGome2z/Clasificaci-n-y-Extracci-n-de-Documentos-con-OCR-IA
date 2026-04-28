@@ -1,0 +1,34 @@
+FACTURA ELECTRONICA
+Distribuidora Central S.A.
+NIT: 7823401-5
+Documento Tributario Electronico - Serie A - Correlativo 0428
+Autorizado por SAT Guatemala
+
+Numero de Factura:     FAC-2026-0428
+Fecha de Emision:      22/04/2026
+Fecha de Vencimiento:  22/05/2026
+
+Cliente:               Carlos Mendoza
+NIT Cliente:           C/F
+Correo:                carlos.mendoza@correo.gt
+Telefono:              5543-2109
+
+DETALLE DE LA FACTURA:
+Descripcion                    Cantidad   Precio Unit.   Subtotal
+Servicio de Consultoria TI     1          Q 6,500.00     Q 6,500.00
+Licencia de Software Anual     2          Q 1,200.00     Q 2,400.00
+Mantenimiento de Equipos       1          Q 850.00       Q 850.00
+
+                                          Subtotal:      Q 9,750.00
+                                          IVA (12%):     Q 1,170.00
+                                          TOTAL:         Q 10,920.00
+
+Forma de Pago: Transferencia Bancaria
+Banco: Banco Industrial
+Cuenta No.: 123-456789-0
+Referencia: TRX-20260422
+
+Este documento es una Factura Electronica autorizada por la
+Superintendencia de Administracion Tributaria (SAT) de Guatemala.
+Contribuyente registrado. Serie y correlativo validos.
+URL de verificacion: https://fel.sat.gob.gt/verify/FAC-2026-0428
