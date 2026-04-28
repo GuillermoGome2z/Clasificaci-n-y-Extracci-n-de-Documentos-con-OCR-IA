@@ -52,14 +52,26 @@ class OCRProcessor:
         try:
             logger.debug("Procesando imagen: %s (idioma: %s)", image_path, lang)
             image = Image.open(image_path)
-            text = pytesseract.image_to_string(image, lang=lang)
+            try:
+                text = pytesseract.image_to_string(image, lang=lang)
+            except pytesseract.TesseractError:
+                logger.warning("Idioma '%s' no disponible, usando 'eng'", lang)
+                text = pytesseract.image_to_string(image, lang='eng')
 
             # Obtener datos detallados incluyendo confianza
-            data = pytesseract.image_to_data(
-                image,
-                lang=lang,
-                output_type=pytesseract.Output.DICT
-            )
+            try:
+                data = pytesseract.image_to_data(
+                    image,
+                    lang=lang,
+                    output_type=pytesseract.Output.DICT
+                )
+            except pytesseract.TesseractError:
+                logger.warning("Idioma '%s' no disponible para data, usando 'eng'", lang)
+                data = pytesseract.image_to_data(
+                    image,
+                    lang='eng',
+                    output_type=pytesseract.Output.DICT
+                )
 
             # Calcular confianza promedio
             confidences = [int(conf) for conf in data['conf'] if int(conf) > 0]
@@ -129,7 +141,11 @@ class OCRProcessor:
                     logger.debug("Procesando página %d", i + 1)
                     # Convertir página a imagen
                     img = page.to_image()
-                    text = pytesseract.image_to_string(img.original, lang=lang)
+                    try:
+                        text = pytesseract.image_to_string(img.original, lang=lang)
+                    except pytesseract.TesseractError:
+                        logger.warning("Idioma '%s' no disponible, usando 'eng'", lang)
+                        text = pytesseract.image_to_string(img.original, lang='eng')
                     texts.append({
                         "page": i + 1,
                         "text": text.strip()

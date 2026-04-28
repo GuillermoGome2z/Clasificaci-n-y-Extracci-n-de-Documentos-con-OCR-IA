@@ -90,22 +90,25 @@ def main():
         check(False, "", "pdfplumber NO instalado", es_critico=False)
 
     # ─ BLOQUE 3: Tesseract OCR ─────────────────────────────────────────
-    print("\n[3] TESSERACT OCR (OPCIONAL)")
+    print("\n[3] TESSERACT OCR")
     print("-" * 70)
+    tess_ok = False
     try:
         from config import TESSERACT_PATH
+        import pytesseract
+
         if TESSERACT_PATH:
-            check(True, f"Tesseract en: {TESSERACT_PATH}", "")
-            try:
-                import pytesseract
-                ver = pytesseract.get_tesseract_version()
-                check(True, f"Tesseract version: {ver}", "")
-            except Exception as e:
-                check(False, "", f"Tesseract no responde: {e}", es_critico=False)
+            pytesseract.pytesseract.tesseract_cmd = TESSERACT_PATH
+            ver = pytesseract.get_tesseract_version()
+            langs = pytesseract.get_languages()
+            check(True, f"Tesseract {ver}", "")
+            check('eng' in langs, f"Idiomas: {', '.join(langs[:3])} (eng disponible)", "eng NO disponible")
+            tess_ok = True
         else:
-            check(False, "", "Tesseract NO detectado — usará Plan B", es_critico=False)
+            criticos_ok &= check(False, "",
+                                 "Tesseract NO detectado — instalar o definir TESSERACT_PATH")
     except Exception as e:
-        print(f"{WARN} Error verificando Tesseract: {e}")
+        criticos_ok &= check(False, "", f"Error verificando Tesseract: {e}")
 
     # ─ BLOQUE 4: Modelo ML ──────────────────────────────────────────────
     print("\n[4] MODELO DE MACHINE LEARNING")
