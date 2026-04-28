@@ -1,0 +1,62 @@
+{
+  "timestamp": "2026-04-27T19:09:36.975661",
+  "total_documents": 0,
+  "total_words": 0,
+  "categories": {
+    "factura": {
+      "name": "factura",
+      "file_count": 0,
+      "total_words": 0,
+      "avg_words_per_file": 0,
+      "min_words": 0,
+      "max_words": 0
+    },
+    "recibo": {
+      "name": "recibo",
+      "file_count": 0,
+      "total_words": 0,
+      "avg_words_per_file": 0,
+      "min_words": 0,
+      "max_words": 0
+    },
+    "contrato": {
+      "name": "contrato",
+      "file_count": 0,
+      "total_words": 0,
+      "avg_words_per_file": 0,
+      "min_words": 0,
+      "max_words": 0
+    },
+    "otro": {
+      "name": "otro",
+      "file_count": 0,
+      "total_words": 0,
+      "avg_words_per_file": 0,
+      "min_words": 0,
+      "max_words": 0
+    }
+  },
+  "issues": [
+    {
+      "severity": "warning",
+      "category": "factura",
+      "message": "Carpeta no existe: C:\\Users\\ACER\\OneDrive\\Escritorio\\ocr-ia-proyecto\\data\\factura"
+    },
+    {
+      "severity": "warning",
+      "category": "recibo",
+      "message": "Carpeta no existe: C:\\Users\\ACER\\OneDrive\\Escritorio\\ocr-ia-proyecto\\data\\recibo"
+    },
+    {
+      "severity": "warning",
+      "category": "contrato",
+      "message": "Carpeta no existe: C:\\Users\\ACER\\OneDrive\\Escritorio\\ocr-ia-proyecto\\data\\contrato"
+    },
+    {
+      "severity": "warning",
+      "category": "otro",
+      "message": "Carpeta no existe: C:\\Users\\ACER\\OneDrive\\Escritorio\\ocr-ia-proyecto\\data\\otro"
+    }
+  ],
+  "recommended_accuracy": 40
+}

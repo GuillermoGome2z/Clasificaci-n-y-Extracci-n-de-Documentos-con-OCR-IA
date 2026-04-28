@@ -113,7 +113,8 @@ class DocumentClassifier:
                 }
 
                 result = {
-                    "class": predicted_class,
+                    "predicted_class": predicted_class,  # Compatibilidad histórica
+                    "class": predicted_class,            # Alias moderno
                     "confidence": float(max(probabilities)),
                     "probabilities": prob_dict,
                     "model_type": "trained",
@@ -135,7 +136,8 @@ class DocumentClassifier:
                     }
 
                     result = {
-                        "class": predicted_class,
+                        "predicted_class": predicted_class,  # Compatibilidad histórica
+                        "class": predicted_class,            # Alias moderno
                         "confidence": float(max(probabilities)),
                         "probabilities": prob_dict,
                         "model_type": "default (not trained)",
@@ -148,7 +150,8 @@ class DocumentClassifier:
                     # Pipeline no entrenado
                     logger.error("Error usando pipeline: %s", e)
                     return {
-                        "class": "desconocido",
+                        "predicted_class": "desconocido",  # Compatibilidad histórica
+                        "class": "desconocido",            # Alias moderno
                         "confidence": 0.0,
                         "probabilities": {cls: 0.0 for cls in self.classes},
                         "model_type": "untrained",
@@ -158,7 +161,8 @@ class DocumentClassifier:
             else:
                 logger.error("No hay modelo disponible en el sistema")
                 return {
-                    "class": "error",
+                    "predicted_class": "error",  # Compatibilidad histórica
+                    "class": "error",            # Alias moderno
                     "confidence": 0.0,
                     "is_trained": False,
                     "error": "No hay modelo disponible"
@@ -167,7 +171,8 @@ class DocumentClassifier:
         except (ValueError, AttributeError, IndexError) as e:
             logger.error("Excepción en predict(): %s", e)
             return {
-                "class": "error",
+                "predicted_class": "error",  # Compatibilidad histórica
+                "class": "error",            # Alias moderno
                 "confidence": 0.0,
                 "is_trained": False,
                 "error": str(e)

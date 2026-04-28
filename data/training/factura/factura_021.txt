@@ -1,0 +1,36 @@
+FACTURA ELECTRONICA
+Numero: FAC-2026-0021
+Fecha: 30/03/2026
+
+Empresa Emisora
+NIT: 2686726-4
+Cliente: Grupo Industrial
+Direccion: Ciudad de Guatemala
+
+Concepto de Venta
+Descripcion de servicio/producto: Articulo 21
+Cantidad: 24 unidades
+Precio unitario: Q48.00
+
+Detalle Tributario
+Subtotal: Q41652.00
+IVA 12%: Q4998.00
+Monto Total: Q46650.00
+
+SAT Guatemala
+SAT Guatemala autorizado
+Documento tributario electronico
+autorizado
+
+Forma de pago: Transferencia Bancaria
+Banco: Banco del Pais
+Cuenta: 1234567890
+Referencia: INV-2026-21
+
+Serie: FAC-2026-0021
+Correlativo: 21
+RFC Guatemala
+Contribuyente activo
+Acreditar IVA
+Moneda GTQ quetzal Q
+Vencimiento: 27/05/2026
