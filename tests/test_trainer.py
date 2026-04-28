@@ -28,7 +28,7 @@ class TestTrainerDataLoading:
         """El entrenador se inicializa correctamente."""
         trainer = ClassifierTrainer()
         assert trainer is not None
-        assert trainer.CATEGORIES == ["factura", "recibo", "contrato", "otro"]
+        assert trainer.CATEGORIES == ["factura", "recibo", "contrato", "constancia", "carta_formal", "identificacion", "otro"]
 
     def test_trainer_finds_training_data(self):
         """El entrenador encuentra datos de entrenamiento."""
@@ -67,7 +67,10 @@ class TestTrainerDataLoading:
             "factura": 0,
             "recibo": 1,
             "contrato": 2,
-            "otro": 3
+            "constancia": 3,
+            "carta_formal": 4,
+            "identificacion": 5,
+            "otro": 6
         }
         assert trainer.label_mapping == expected_mapping
 
@@ -251,8 +254,8 @@ class TestTrainerEdgeCases:
     def test_trainer_categories_immutable(self):
         """Las categorías del entrenador son correctas."""
         trainer = ClassifierTrainer()
-        assert trainer.CATEGORIES == ["factura", "recibo", "contrato", "otro"]
-        assert len(trainer.CATEGORIES) == 4
+        assert trainer.CATEGORIES == ["factura", "recibo", "contrato", "constancia", "carta_formal", "identificacion", "otro"]
+        assert len(trainer.CATEGORIES) == 7
 
     def test_trainer_models_directory_created(self):
         """El directorio de modelos se crea si no existe."""

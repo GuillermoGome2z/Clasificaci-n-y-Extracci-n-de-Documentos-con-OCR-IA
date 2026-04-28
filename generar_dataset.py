@@ -1,18 +1,23 @@
 """
 generar_dataset.py — Generador de dataset sintético de alta calidad.
 
-Genera documentos de entrenamiento para clasificación en 4 categorías:
+Genera documentos de entrenamiento para clasificación en 7 categorías:
   - Facturas (FACTURA ELECTRONICA, tributario, SAT, IVA, NIT)
   - Recibos (RECIBO, recibi de, efectivo, firma, sello)
   - Contratos (CONTRATO, clausula, vigencia, el contratante, convenimos)
+  - Constancias (CONSTANCIA, se hace constar, presto servicios, cargo, fecha_ingreso)
+  - Cartas Formales (CARTA FORMAL, estimado, por este medio, respetuosamente)
+  - Identificaciones (DOCUMENTO PERSONAL, DPI, RENAP, fecha nacimiento)
   - Otros (Comunicado, estimado, informamos, cordialmente, aviso)
 
-Genera 35 archivos por categoría (140 total) con vocabulario diferenciador claro.
+Genera 35 archivos por categoría (245 total) con vocabulario diferenciador claro.
+También genera data/ground_truth.csv con metadata del dataset.
 
 Ejecutar:
     python generar_dataset.py
 """
 import random
+import csv
 from pathlib import Path
 from datetime import datetime, timedelta
 
@@ -35,6 +40,26 @@ KEYWORDS = {
         "el contratante", "el contratado", "convenimos", "a partir de",
         "acuerdo", "incumplimiento", "Guatemala", "suspend", "rescisión",
         "firmamos", "acta", "términos y condiciones"
+    ],
+    "constancia": [
+        "CONSTANCIA", "se hace constar", "hace constar que",
+        "prestó servicios", "laboró en", "tiempo de servicio",
+        "cargo de", "fecha de ingreso", "extendida a solicitud",
+        "para los fines que estime convenientes", "firmo y sello"
+    ],
+    "carta_formal": [
+        "CARTA FORMAL", "estimado señor", "estimada señora",
+        "por este medio", "me dirijo a usted",
+        "respetuosamente", "en atención a", "adjunto encontrará",
+        "quedo a su disposición", "sin otro particular",
+        "atentamente le saluda"
+    ],
+    "identificacion": [
+        "DOCUMENTO PERSONAL DE IDENTIFICACION", "DPI",
+        "Registro Nacional de las Personas", "RENAP",
+        "número de identificación", "municipio de",
+        "lugar de nacimiento", "fecha de nacimiento",
+        "vecino de", "guatemalteco"
     ],
     "otro": [
         "COMUNICADO", "estimado", "por medio de la presente",
@@ -267,78 +292,261 @@ Departamento de Comunicacion
     return texto.strip()
 
 
+def gen_constancia(i):
+    """Genera una constancia de trabajo sintética."""
+    keywords = KEYWORDS["constancia"]
+    keyword1 = random.choice(keywords)
+    keyword2 = random.choice(keywords)
+
+    nombres = ["Juan Carlos Ramirez", "Maria Lopez", "Pedro Gonzalez",
+               "Ana Castillo", "Luis Mendoza", "Sofia Herrera"]
+    cargos = ["Auxiliar Contable", "Asistente Administrativo",
+              "Tecnico en Sistemas", "Secretaria Ejecutiva",
+              "Coordinador de Proyectos", "Analista de Datos"]
+    empresas = ["Distribuidora Central SA", "Servicios Guatemala",
+                "Corporacion Innovacion", "Grupo Empresarial GT"]
+
+    nombre = random.choice(nombres)
+    cargo = random.choice(cargos)
+    empresa = random.choice(empresas)
+    anios = random.randint(1, 10)
+    fecha_ingreso = f"{random.randint(1, 28)}/0{random.randint(1, 9)}/201{random.randint(0, 9)}"
+
+    texto = f"""CONSTANCIA DE TRABAJO
+Numero: CONST-2026-{str(i).zfill(4)}
+
+{empresa}
+Guatemala, {datetime.now().strftime('%d/%m/%Y')}
+
+La Gerencia de Recursos Humanos de {empresa}
+
+HACE CONSTAR QUE:
+
+{keyword1}
+
+El señor(a) {nombre} identificado(a) con DPI numero {random.randint(1000,9999)}-{random.randint(10000,99999)}-{random.randint(1000,9999)}
+ha prestado servicios en nuestra institución desempeñando el cargo de
+{cargo} desde el {fecha_ingreso} hasta la fecha, con una
+antigüedad de {anios} años de servicio continuo.
+
+Durante este tiempo ha demostrado responsabilidad, puntualidad
+y compromiso con sus funciones.
+
+{keyword2}
+
+La presente constancia se extiende a solicitud del interesado
+para los fines que estime convenientes, en la ciudad de Guatemala
+a los {random.randint(1, 28)} días del mes de abril de 2026.
+
+______________________________
+Recursos Humanos
+{empresa}
+Sello: [OFICIAL]
+Firma autorizada
+"""
+    return texto.strip()
+
+
+def gen_carta_formal(i):
+    """Genera una carta formal sintética."""
+    keywords = KEYWORDS["carta_formal"]
+    keyword1 = random.choice(keywords)
+    keyword2 = random.choice(keywords)
+
+    asuntos = [
+        "Solicitud de información",
+        "Notificación de cambio de domicilio",
+        "Solicitud de prórroga de plazo",
+        "Presentación de propuesta comercial",
+        "Confirmación de reunión"
+    ]
+    asunto = random.choice(asuntos)
+    remitentes = ["Lic. Roberto Sandoval", "Ing. Maria Fuentes",
+                  "Dr. Carlos Morales", "Dra. Ana Recinos"]
+    destinatarios = ["Gerente General", "Director Administrativo",
+                     "Jefe de Departamento", "Coordinador de Area"]
+
+    texto = f"""CARTA FORMAL
+Numero de referencia: CF-2026-{str(i).zfill(4)}
+Guatemala, {datetime.now().strftime('%d de %B de %Y')}
+
+Señor(a):
+{random.choice(destinatarios)}
+{random.choice(['Empresa Receptora SA', 'Corporacion Guatemala', 'Servicios Administrativos'])}
+Presente.
+
+Estimado señor(a):
+
+{keyword1} con el respeto que se merece, para exponerle
+lo siguiente en relación al asunto: {asunto}.
+
+Por este medio me dirijo a usted para hacer de su conocimiento
+que {keyword2}, por lo que respetuosamente solicito
+su atención al presente.
+
+En atención a lo anterior, adjunto encontrará la documentación
+correspondiente para su revisión y consideración.
+
+Quedo a su disposición para cualquier consulta adicional
+que estime pertinente.
+
+Sin otro particular por el momento, me suscribo de usted
+atentamente y le saluda,
+
+______________________________
+{random.choice(remitentes)}
+Telefono: {random.randint(2000, 7999)}-{random.randint(1000, 9999)}
+Correo: contacto@empresa.gt
+"""
+    return texto.strip()
+
+
+def gen_identificacion(i):
+    """Genera un documento de identificación sintético (DPI simulado)."""
+    keywords = KEYWORDS["identificacion"]
+    keyword1 = random.choice(keywords)
+
+    nombres = ["Juan", "Maria", "Carlos", "Ana", "Pedro", "Sofia"]
+    apellidos = ["Ramirez", "Lopez", "Gonzalez", "Castillo", "Mendoza"]
+    municipios = ["Guatemala", "Mixco", "Villa Nueva", "San Jose Pinula",
+                  "Amatitlan", "Chinautla"]
+    departamentos = ["Guatemala", "Sacatepequez", "Chimaltenango",
+                     "Escuintla", "Quetzaltenango"]
+
+    nombre = f"{random.choice(nombres)} {random.choice(apellidos)}"
+    dpi = f"{random.randint(1000,9999)} {random.randint(10000,99999)} {random.randint(1000,9999)}"
+    fecha_nac = f"{random.randint(1, 28)}/0{random.randint(1, 9)}/19{random.randint(70, 99)}"
+    municipio = random.choice(municipios)
+    depto = random.choice(departamentos)
+
+    texto = f"""DOCUMENTO PERSONAL DE IDENTIFICACION
+DPI - RENAP Guatemala
+Numero de documento: {str(i).zfill(8)}
+
+{keyword1}
+
+DATOS DEL TITULAR:
+Nombre completo: {nombre}
+Numero DPI: {dpi}
+Fecha de nacimiento: {fecha_nac}
+Lugar de nacimiento: {municipio}, {depto}
+Vecino de: {municipio}
+Municipio: {municipio}
+Departamento: {depto}
+Nacionalidad: Guatemalteco
+
+Registro Nacional de las Personas RENAP
+Guatemala, Centro America
+Este documento es valido en todo el territorio nacional.
+
+Emitido: {datetime.now().strftime('%d/%m/%Y')}
+Vigente hasta: {random.randint(2028, 2035)}/01/01
+"""
+    return texto.strip()
+
+
 def main():
-    """Genera el dataset completo con 35 documentos por categoría."""
+    """Genera el dataset completo con 35 documentos por categoría (7 categorías)."""
     print("=" * 70)
-    print(" GENERADOR DE DATASET — OCR IA PROYECTO")
+    print(" GENERADOR DE DATASET — OCR IA PROYECTO 04 (7 CATEGORÍAS)")
     print("=" * 70)
-    
+
     base_dir = Path("data/training")
     base_dir.mkdir(parents=True, exist_ok=True)
-    
-    categorias = ["factura", "recibo", "contrato", "otro"]
+
+    # 7 categorías según enunciado
+    categorias = ["factura", "recibo", "contrato",
+                  "constancia", "carta_formal", "identificacion", "otro"]
+
     generadores = {
         "factura": gen_factura,
         "recibo": gen_recibo,
         "contrato": gen_contrato,
+        "constancia": gen_constancia,
+        "carta_formal": gen_carta_formal,
+        "identificacion": gen_identificacion,
         "otro": gen_otro
     }
-    
+
+    # Crear ground truth CSV
+    ground_truth_rows = []
+
     stats = {}
-    
     for categoria in categorias:
         carpeta = base_dir / categoria
         carpeta.mkdir(exist_ok=True)
-        
-        # Limpiar archivos antiguos
+
+        # Limpiar archivos anteriores
         for archivo in carpeta.glob("*.txt"):
             archivo.unlink()
-        
+
         generador = generadores[categoria]
         total_generados = 0
-        
-        # Generar 30 documentos base
+
         print(f"\nGenerando {categoria}...")
+
+        # 30 documentos completos
         for i in range(1, 31):
             try:
                 contenido = generador(i)
                 archivo = carpeta / f"{categoria}_{str(i).zfill(3)}.txt"
                 archivo.write_text(contenido, encoding="utf-8")
                 total_generados += 1
+
+                # Agregar al ground truth
+                ground_truth_rows.append({
+                    "archivo": str(archivo),
+                    "categoria": categoria,
+                    "num_palabras": len(contenido.split()),
+                    "tipo": "completo"
+                })
             except Exception as e:
-                print(f"  ❌ Error generando {categoria}_{i}: {e}")
-        
-        # Generar 5 documentos cortos adicionales (índices 31-35)
+                print(f"  ❌ Error en {categoria}_{i}: {e}")
+
+        # 5 documentos cortos
         for i in range(31, 36):
+            shorts = {
+                "factura": f"FACTURA ELECTRONICA No.{i} SAT Guatemala NIT IVA 12% Total Q{random.randint(100,5000)} contribuyente documento tributario",
+                "recibo": f"RECIBO No.{i} Recibi de cliente Q{random.randint(50,1000)} efectivo pago concepto sello firma cobros",
+                "contrato": f"CONTRATO clausula el contratante el contratado vigencia {random.randint(6,24)} meses convenimos obligaciones Guatemala",
+                "constancia": f"CONSTANCIA se hace constar que laboró en cargo de servicio tiempo antigüedad firmo sello recursos humanos",
+                "carta_formal": f"CARTA FORMAL estimado señor por este medio me dirijo a usted respetuosamente atentamente sin otro particular",
+                "identificacion": f"DPI RENAP documento personal identificacion guatemalteco municipio departamento fecha nacimiento numero identificacion",
+                "otro": f"COMUNICADO estimado informamos cordialmente atentamente la administracion aviso horario contactenos",
+            }
             try:
-                if categoria == "factura":
-                    contenido = f"FACTURA ELECTRONICA No.{i} SAT Guatemala Documento tributario Total Q{random.randint(100, 5000)} NIT Contribuyente IVA 12% Monto Q{random.randint(50, 3000)}"
-                elif categoria == "recibo":
-                    contenido = f"RECIBO Numero REC-{i} Recibi de cliente cantidad Q{random.randint(50, 1000)} por concepto de pago forma efectivo transferencia sello firma departamento cobros"
-                elif categoria == "contrato":
-                    contenido = f"CONTRATO Clausula el contratante el contratado Obligaciones vigencia {random.randint(6, 24)} meses convenimos a partir de acuerdo incumplimiento Guatemala"
-                else:
-                    contenido = f"COMUNICADO Estimado por medio de la presente le informamos aviso horario agradecemos atentamente cordialmente la administracion informacion contactenos"
-                
+                contenido = shorts[categoria]
                 archivo = carpeta / f"{categoria}_corto_{str(i-30).zfill(2)}.txt"
                 archivo.write_text(contenido, encoding="utf-8")
                 total_generados += 1
+                ground_truth_rows.append({
+                    "archivo": str(archivo),
+                    "categoria": categoria,
+                    "num_palabras": len(contenido.split()),
+                    "tipo": "corto"
+                })
             except Exception as e:
-                print(f"  ❌ Error generando {categoria} corto_{i-30}: {e}")
-        
+                print(f"  ❌ Error corto {categoria}_{i-30}: {e}")
+
         stats[categoria] = total_generados
         print(f"  ✅ {total_generados} archivos generados")
-    
+
+    # Guardar ground truth CSV
+    gt_path = Path("data/ground_truth.csv")
+    with open(gt_path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=["archivo", "categoria", "num_palabras", "tipo"])
+        writer.writeheader()
+        writer.writerows(ground_truth_rows)
+
     print(f"\n{'=' * 70}")
     print(" RESUMEN")
     print("=" * 70)
     total = sum(stats.values())
     for cat, count in stats.items():
-        print(f"  {cat:12s}: {count:2d} archivos")
-    print(f"  {'TOTAL':12s}: {total:3d} archivos")
-    print(f"{'=' * 70}")
-    print(f"\n✅ Dataset generado exitosamente en data/training/")
-    print(f"Próximo paso: python train_classifier.py")
+        print(f"  {cat:20s}: {count:2d} archivos")
+    print(f"  {'TOTAL':20s}: {total:3d} archivos")
+    print(f"\nGround truth guardado en: {gt_path}")
+    print(f"Siguiente paso: python train_classifier.py")
     print()
 
 

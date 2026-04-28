@@ -29,7 +29,7 @@ class TestClassifierInitialization:
         """El clasificador se inicializa correctamente sin modelo entrenado."""
         classifier = DocumentClassifier()
         assert classifier is not None
-        assert classifier.classes == ['factura', 'recibo', 'contrato', 'otro']
+        assert classifier.classes == ['factura', 'recibo', 'contrato', 'constancia', 'carta_formal', 'identificacion', 'otro']
         assert classifier.is_trained is False
 
     def test_classifier_initializes_with_default_pipeline(self):
@@ -115,7 +115,7 @@ class TestClassifierPrediction:
 
             # Debe ser string con nombre, no número
             assert isinstance(result["class"], str)
-            assert result["class"] in ['factura', 'recibo', 'contrato', 'otro']
+            assert result["class"] in ['factura', 'recibo', 'contrato', 'constancia', 'carta_formal', 'identificacion', 'otro']
         else:
             pytest.skip("Modelo entrenado no disponible")
 

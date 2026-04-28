@@ -1,26 +1,26 @@
 FACTURA ELECTRONICA
 Numero: FAC-2026-0010
-Fecha: 22/04/2026
+Fecha: 09/03/2026
 
 Empresa Emisora
-NIT: 2896196-6
+NIT: 5445973-2
 Cliente: Grupo Industrial
 Direccion: Ciudad de Guatemala
 
 Concepto de Venta
 Descripcion de servicio/producto: Articulo 10
-Cantidad: 59 unidades
-Precio unitario: Q118.00
+Cantidad: 37 unidades
+Precio unitario: Q444.00
 
 Detalle Tributario
-Subtotal: Q20786.00
-IVA 12%: Q2494.00
-Monto Total: Q23280.00
+Subtotal: Q29462.00
+IVA 12%: Q3535.00
+Monto Total: Q32997.00
 
-serie
+monto total
 SAT Guatemala autorizado
 Documento tributario electronico
-SAT autorizado
+GTQ
 
 Forma de pago: Transferencia Bancaria
 Banco: Banco del Pais
@@ -33,4 +33,4 @@ RFC Guatemala
 Contribuyente activo
 Acreditar IVA
 Moneda GTQ quetzal Q
-Vencimiento: 27/05/2026
+Vencimiento: 28/05/2026

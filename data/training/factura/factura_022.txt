@@ -1,26 +1,26 @@
 FACTURA ELECTRONICA
 Numero: FAC-2026-0022
-Fecha: 01/04/2026
+Fecha: 21/03/2026
 
 Empresa Emisora
-NIT: 6694859-4
-Cliente: Servicios Globales
+NIT: 5193800-7
+Cliente: Distribuidora Guatemalteca
 Direccion: Ciudad de Guatemala
 
 Concepto de Venta
 Descripcion de servicio/producto: Articulo 22
-Cantidad: 79 unidades
-Precio unitario: Q55.00
+Cantidad: 33 unidades
+Precio unitario: Q66.00
 
 Detalle Tributario
-Subtotal: Q43120.00
-IVA 12%: Q5174.00
-Monto Total: Q48294.00
+Subtotal: Q35077.00
+IVA 12%: Q4209.00
+Monto Total: Q39286.00
 
-GTQ
+Q
 SAT Guatemala autorizado
 Documento tributario electronico
-documento tributario
+serie
 
 Forma de pago: Transferencia Bancaria
 Banco: Banco del Pais
@@ -33,4 +33,4 @@ RFC Guatemala
 Contribuyente activo
 Acreditar IVA
 Moneda GTQ quetzal Q
-Vencimiento: 27/05/2026
+Vencimiento: 28/05/2026

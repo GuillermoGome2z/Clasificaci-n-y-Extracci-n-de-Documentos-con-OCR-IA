@@ -7,7 +7,8 @@ from typing import Optional
 import joblib
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.naive_bayes import MultinomialNB
+from sklearn.svm import LinearSVC
+from sklearn.calibration import CalibratedClassifierCV
 from sklearn.pipeline import Pipeline
 
 logger = logging.getLogger(__name__)
@@ -29,7 +30,8 @@ class DocumentClassifier:
         self.model_path = model_path
         self.model_data = None  # Contiene {model, vectorizer, categories, label_mapping}
         self.pipeline = None  # Pipeline por defecto (si no hay modelo entrenado)
-        self.classes = ['factura', 'recibo', 'contrato', 'otro']
+        self.classes = ['factura', 'recibo', 'contrato',
+                        'constancia', 'carta_formal', 'identificacion', 'otro']
         self.is_trained = False
 
         # Intentar cargar modelo entrenado
@@ -57,12 +59,14 @@ class DocumentClassifier:
             self._create_default_model()
 
     def _create_default_model(self):
-        """Crea un modelo por defecto sin entrenar."""
+        """Crea un modelo por defecto sin entrenar (LinearSVC)."""
+        svc = LinearSVC(C=1.0, max_iter=2000, random_state=42)
         self.pipeline = Pipeline([
-            ('tfidf', TfidfVectorizer(max_features=1000, stop_words='spanish')),
-            ('classifier', MultinomialNB())
+            ('tfidf', TfidfVectorizer(max_features=5000, ngram_range=(1, 2))),
+            ('classifier', CalibratedClassifierCV(svc, cv=3))
         ])
-        self.classes = ['factura', 'recibo', 'contrato', 'otro']
+        self.classes = ['factura', 'recibo', 'contrato',
+                        'constancia', 'carta_formal', 'identificacion', 'otro']
         self.is_trained = False
 
     def train(self, texts: list, labels: list):
