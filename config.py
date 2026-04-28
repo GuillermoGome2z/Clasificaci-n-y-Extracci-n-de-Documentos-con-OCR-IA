@@ -1,6 +1,8 @@
 """Configuración del proyecto OCR IA."""
 
 import os
+import shutil
+import logging as _logging
 from pathlib import Path
 
 # Rutas principales
@@ -14,11 +16,43 @@ MODELS_DIR = PROJECT_ROOT / "models"
 for directory in [DATA_DIR, MODELS_DIR]:
     directory.mkdir(exist_ok=True)
 
-# Configuración de Tesseract (Windows)
-# Cambiar esta ruta según tu instalación
-TESSERACT_PATH = os.getenv(
-    "TESSERACT_PATH",
-    r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+
+def find_tesseract_path() -> str | None:
+    """
+    Busca Tesseract en 3 lugares por orden de prioridad:
+    1. Variable de entorno TESSERACT_PATH
+    2. PATH del sistema operativo (shutil.which)
+    3. Ruta por defecto de Windows
+
+    Returns:
+        str con la ruta si se encuentra, None si no.
+    """
+    # Prioridad 1: variable de entorno
+    env_path = os.getenv("TESSERACT_PATH")
+    if env_path and Path(env_path).exists():
+        return env_path
+
+    # Prioridad 2: PATH del sistema
+    system_path = shutil.which("tesseract")
+    if system_path:
+        return system_path
+
+    # Prioridad 3: ruta por defecto Windows
+    windows_default = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+    if Path(windows_default).exists():
+        return windows_default
+
+    return None
+
+
+# Configuración de Tesseract (auto-detección)
+TESSERACT_PATH = find_tesseract_path()
+
+# Configuración de logging
+_logging.basicConfig(
+    level=_logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%H:%M:%S"
 )
 
 # Configuración de OCR

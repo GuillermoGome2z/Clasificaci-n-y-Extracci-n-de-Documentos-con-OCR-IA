@@ -1,5 +1,6 @@
 """Módulo de clasificación de documentos con ML."""
 
+import logging
 from pathlib import Path
 from typing import Optional
 
@@ -8,6 +9,9 @@ import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.pipeline import Pipeline
+
+logger = logging.getLogger(__name__)
+
 
 
 class DocumentClassifier:
@@ -42,12 +46,14 @@ class DocumentClassifier:
             path: Ruta al archivo .joblib del modelo entrenado
         """
         try:
+            logger.debug("Intentando cargar modelo desde: %s", path)
             self.model_data = joblib.load(path)
             self.classes = self.model_data.get("categories", self.classes)
             self.is_trained = True
+            logger.info("Modelo entrenado cargado exitosamente")
         except (OSError, ValueError, EOFError) as e:
-            print(f"⚠️  Error cargando modelo entrenado: {e}")
-            print("   Usando modelo por defecto (sin entrenar)")
+            logger.warning("Error cargando modelo entrenado: %s", e)
+            logger.info("Usando modelo por defecto (sin entrenar)")
             self._create_default_model()
 
     def _create_default_model(self):
@@ -81,11 +87,12 @@ class DocumentClassifier:
             text: Texto del documento
 
         Returns:
-            dict: Clase predicha, confianza y probabilidades
+            dict: Clase predicha, confianza, probabilidades y estado del modelo
         """
         try:
             if self.is_trained and self.model_data:
                 # Usar modelo entrenado
+                logger.debug("Usando modelo ENTRENADO para predicción")
                 model = self.model_data.get("model")
                 vectorizer = self.model_data.get("vectorizer")
                 categories = self.model_data.get("categories", self.classes)
@@ -105,15 +112,19 @@ class DocumentClassifier:
                     for i, prob in enumerate(probabilities)
                 }
 
-                return {
+                result = {
                     "class": predicted_class,
                     "confidence": float(max(probabilities)),
                     "probabilities": prob_dict,
-                    "model_type": "trained"
+                    "model_type": "trained",
+                    "is_trained": True
                 }
+                logger.info("Predicción exitosa: %s (confianza: %.2f)", predicted_class, result["confidence"])
+                return result
 
             if self.pipeline:
-                # Usar pipeline por defecto
+                # Usar pipeline por defecto (sin entrenar)
+                logger.warning("Modelo NO ENTRENADO. Usando pipeline por defecto (predicciones poco confiables)")
                 try:
                     predicted_class = self.pipeline.predict([text])[0]
                     probabilities = self.pipeline.predict_proba([text])[0]
@@ -123,31 +134,42 @@ class DocumentClassifier:
                         for cls, prob in zip(self.pipeline.classes_, probabilities)
                     }
 
-                    return {
+                    result = {
                         "class": predicted_class,
                         "confidence": float(max(probabilities)),
                         "probabilities": prob_dict,
-                        "model_type": "default (not trained)"
+                        "model_type": "default (not trained)",
+                        "is_trained": False,
+                        "warning": "Modelo no entrenado. Esta predicción tiene baja confianza. Por favor, entrena el modelo con train_classifier.py"
                     }
-                except (AttributeError, ValueError):
+                    logger.debug("Predicción por defecto devuelta (NO ENTRENADO)")
+                    return result
+                except (AttributeError, ValueError) as e:
                     # Pipeline no entrenado
+                    logger.error("Error usando pipeline: %s", e)
                     return {
                         "class": "desconocido",
                         "confidence": 0.0,
                         "probabilities": {cls: 0.0 for cls in self.classes},
-                        "model_type": "untrained"
+                        "model_type": "untrained",
+                        "is_trained": False,
+                        "warning": "Error: No hay modelo disponible. Por favor, entrena el modelo."
                     }
             else:
+                logger.error("No hay modelo disponible en el sistema")
                 return {
                     "class": "error",
                     "confidence": 0.0,
+                    "is_trained": False,
                     "error": "No hay modelo disponible"
                 }
 
         except (ValueError, AttributeError, IndexError) as e:
+            logger.error("Excepción en predict(): %s", e)
             return {
                 "class": "error",
                 "confidence": 0.0,
+                "is_trained": False,
                 "error": str(e)
             }
 
