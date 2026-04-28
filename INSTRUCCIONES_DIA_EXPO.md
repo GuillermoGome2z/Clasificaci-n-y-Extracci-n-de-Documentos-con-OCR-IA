@@ -1,9 +1,10 @@
 # 🎯 INSTRUCCIONES DÍA DE EXPO — OCR IA CLASIFICADOR
 
 **Fecha Última Actualización:** 2026-04-27  
-**Status:** ✅ **LISTO PARA EXPO**  
-**Confianza del Sistema:** 92.4%  
-**Plan:** Plan B (Sin Tesseract OCR)
+**Status:** ✅ **LISTO PARA EXPO CON TESSERACT 5.5.0**  
+**Confianza del Sistema:** 92.4% - 98.3%  
+**Demo Oficial:** app/app.py con OCR Real  
+**Tesseract:** Instalado en C:\Program Files\Tesseract-OCR\
 
 ---
 
@@ -24,14 +25,20 @@ python verificar_expo.py
 ### Paso 3: Arranque Automático (Recomendado)
 ```powershell
 python arrancar_expo.py
-# Se abre automáticamente en http://localhost:8502 (Plan B)
+# Auto-detecta Tesseract y abre: http://localhost:8501 (App Principal con OCR Real)
 # Espera 3-5 segundos a que cargue el navegador
 ```
 
-### Paso 4 ALTERNATIVA: Arranque Manual Plan B
+### Paso 4 ALTERNATIVA: Arranque Manual App Principal
+```powershell
+streamlit run app/app.py --server.port 8501
+# Abre en http://localhost:8501 con OCR real
+```
+
+### Paso 5 EMERGENCIA: Plan B (si app falla)
 ```powershell
 streamlit run demo_plan_b.py --server.port 8502
-# Abre en http://localhost:8502
+# Abre en http://localhost:8502 (respaldo sin OCR)
 ```
 
 ---
@@ -40,10 +47,10 @@ streamlit run demo_plan_b.py --server.port 8502
 
 | Opción | URL | Estado |
 |--------|-----|--------|
-| **Plan B (RECOMENDADO)** | http://localhost:8502 | ✅ Activo |
-| App Principal | http://localhost:8501 | ⚠️ Requiere Tesseract |
+| **App Principal (OCR Real)** | http://localhost:8501 | ✅ ESTA ES LA DEMO |
+| Plan B (Respaldo) | http://localhost:8502 | ⚠️ Si app falla |
 
-**Nota:** Con Tesseract NO instalado, SOLO Plan B funcionará.
+**Nota:** Tesseract 5.5.0 está instalado y funcionando. App Principal es la demo oficial.
 
 ---
 

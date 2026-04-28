@@ -27,15 +27,17 @@ def verificar_tesseract():
     """Verifica disponibilidad de Tesseract para OCR."""
     try:
         from config import TESSERACT_PATH
+        import pytesseract
+
         if TESSERACT_PATH:
-            print(f"[OK]  Tesseract: {TESSERACT_PATH}")
             try:
-                import pytesseract
+                pytesseract.pytesseract.tesseract_cmd = TESSERACT_PATH
                 ver = pytesseract.get_tesseract_version()
-                print(f"[OK]  Version Tesseract: {ver}")
-            except Exception:
-                print("[WARN] Tesseract detectado pero no responde correctamente")
-            return True
+                print(f"[OK]  Tesseract {ver} en: {TESSERACT_PATH}")
+                return True
+            except Exception as e:
+                print(f"[WARN] Tesseract encontrado pero falla: {e}")
+                return False
         else:
             print("[WARN] Tesseract NO detectado — usará Plan B")
             return False
@@ -112,7 +114,7 @@ def main():
 
     print()
     if tess_ok:
-        print("[OK] Todo está listo. Lanzando aplicación principal...")
+        print("[OK] Tesseract disponible. Lanzando aplicación principal con OCR real...")
         print()
         print("      URL principal:    http://localhost:8501")
         print("      Para detener:     Ctrl + C")
@@ -127,7 +129,7 @@ def main():
             print()
             print("Aplicación cerrada.")
     else:
-        print("[INFO] Tesseract no disponible. Lanzando Plan B...")
+        print("[WARN] Tesseract no disponible. Lanzando Plan B (respaldo)...")
         print()
         print("      URL Plan B:       http://localhost:8502")
         print("      Para detener:     Ctrl + C")
