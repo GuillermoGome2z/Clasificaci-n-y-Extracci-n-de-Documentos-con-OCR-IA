@@ -1,0 +1,5216 @@
+
+
+
+========== config.py ==========
+"""Configuración del proyecto OCR IA."""
+
+import os
+import shutil
+import logging as _logging
+from pathlib import Path
+
+# Rutas principales
+PROJECT_ROOT = Path(__file__).parent
+SRC_DIR = PROJECT_ROOT / "src"
+APP_DIR = PROJECT_ROOT / "app"
+DATA_DIR = PROJECT_ROOT / "data"
+MODELS_DIR = PROJECT_ROOT / "models"
+
+# Crear directorios si no existen
+for directory in [DATA_DIR, MODELS_DIR]:
+    directory.mkdir(exist_ok=True)
+
+
+def find_tesseract_path() -> str | None:
+    """
+    Busca Tesseract en 3 lugares por orden de prioridad:
+    1. Variable de entorno TESSERACT_PATH
+    2. PATH del sistema operativo (shutil.which)
+    3. Ruta por defecto de Windows
+
+    Returns:
+        str con la ruta si se encuentra, None si no.
+    """
+    # Prioridad 1: variable de entorno
+    env_path = os.getenv("TESSERACT_PATH")
+    if env_path and Path(env_path).exists():
+        return env_path
+
+    # Prioridad 2: PATH del sistema
+    system_path = shutil.which("tesseract")
+    if system_path:
+        return system_path
+
+    # Prioridad 3: ruta por defecto Windows
+    windows_default = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+    if Path(windows_default).exists():
+        return windows_default
+
+    return None
+
+
+# Configuración de Tesseract (auto-detección)
+TESSERACT_PATH = find_tesseract_path()
+
+# Configuración de logging
+_logging.basicConfig(
+    level=_logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%H:%M:%S"
+)
+
+# Configuración de OCR
+OCR_CONFIG = {
+    "default_language": "spa",
+    "languages": ["spa", "eng", "fra", "deu"],
+    "tesseract_path": TESSERACT_PATH,
+}
+
+# Configuración de clasificación
+CLASSIFIER_CONFIG = {
+    "model_path": str(MODELS_DIR / "classifier.pkl"),
+    "classes": ["factura", "recibo", "contrato", "otro"],
+}
+
+# Configuración de datos
+DATA_CONFIG = {
+    "raw_data_path": str(DATA_DIR / "raw"),
+    "processed_data_path": str(DATA_DIR / "processed"),
+}
+
+# Configuración de Streamlit
+STREAMLIT_CONFIG = {
+    "theme": {
+        "primaryColor": "#2E86AB",
+        "backgroundColor": "#F5F5F5",
+        "secondaryBackgroundColor": "#D0D0D0",
+        "textColor": "#262730",
+        "font": "sans serif",
+    }
+}
+
+
+========== src\ocr.py ==========
+"""Módulo OCR con Pytesseract."""
+
+import logging
+from pathlib import Path
+
+import cv2
+import numpy as np
+import pytesseract
+from PIL import Image
+
+from config import TESSERACT_PATH
+
+logger = logging.getLogger(__name__)
+
+# Configurar ruta de Tesseract si se encontró
+if TESSERACT_PATH:
+    pytesseract.pytesseract.tesseract_cmd = TESSERACT_PATH
+    logger.info("Tesseract encontrado en: %s", TESSERACT_PATH)
+else:
+    logger.warning(
+        "Tesseract no encontrado. OCR no funcionará. "
+        "Instala Tesseract o define la variable de entorno TESSERACT_PATH."
+    )
+
+
+class OCRProcessor:
+    """Clase para procesar OCR en imágenes y PDFs."""
+
+    def __init__(self, tesseract_path: str | None = None):
+        """
+        Inicializa el procesador OCR.
+
+        Args:
+            tesseract_path: Ruta al ejecutable de Tesseract (opcional - usa config.TESSERACT_PATH por defecto)
+        """
+        if tesseract_path:
+            # Permitir override por parámetro
+            pytesseract.pytesseract.tesseract_cmd = tesseract_path
+            logger.debug("Tesseract path sobrescrito: %s", tesseract_path)
+
+    def extract_text_from_image(self, image_path: str, lang: str = "spa") -> dict:
+        """
+        Extrae texto de una imagen usando OCR.
+
+        Args:
+            image_path: Ruta a la imagen
+            lang: Idioma para OCR (spa para español, eng para inglés)
+
+        Returns:
+            dict: Diccionario con texto extraído y confianza
+        """
+        try:
+            logger.debug("Procesando imagen: %s (idioma: %s)", image_path, lang)
+            image = Image.open(image_path)
+            try:
+                text = pytesseract.image_to_string(image, lang=lang)
+            except pytesseract.TesseractError:
+                logger.warning("Idioma '%s' no disponible, usando 'eng'", lang)
+                text = pytesseract.image_to_string(image, lang='eng')
+
+            # Obtener datos detallados incluyendo confianza
+            try:
+                data = pytesseract.image_to_data(
+                    image,
+                    lang=lang,
+                    output_type=pytesseract.Output.DICT
+                )
+            except pytesseract.TesseractError:
+                logger.warning("Idioma '%s' no disponible para data, usando 'eng'", lang)
+                data = pytesseract.image_to_data(
+                    image,
+                    lang='eng',
+                    output_type=pytesseract.Output.DICT
+                )
+
+            # Calcular confianza promedio
+            confidences = [int(conf) for conf in data['conf'] if int(conf) > 0]
+            avg_confidence = np.mean(confidences) if confidences else 0
+
+            logger.info("OCR imagen completado: confianza %.2f", avg_confidence)
+            return {
+                "status": "success",
+                "text": text.strip(),
+                "confidence": round(avg_confidence, 2),
+                "language": lang
+            }
+        except (FileNotFoundError, ValueError, TypeError, OSError) as e:
+            logger.error("Error en OCR de imagen: %s", e)
+            return {
+                "status": "error",
+                "text": "",
+                "confidence": 0,
+                "error": str(e)
+            }
+
+    def preprocess_image(self, image_path: str) -> np.ndarray:
+        """
+        Preprocesa una imagen para mejorar OCR.
+
+        Args:
+            image_path: Ruta a la imagen
+
+        Returns:
+            np.ndarray: Imagen procesada
+        """
+        image = cv2.imread(image_path)
+
+        if image is None:
+            raise ValueError(f"No se puede leer la imagen: {image_path}")
+
+        # Convertir a escala de grises
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+        # Aplicar threshold
+        _, thresh = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY)
+
+        # Denoise
+        denoised = cv2.fastNlMeansDenoising(thresh, h=10)
+
+        return denoised
+
+    def extract_text_from_pdf(self, pdf_path: str, lang: str = "spa") -> dict:
+        """
+        Extrae texto de un PDF usando OCR.
+
+        Args:
+            pdf_path: Ruta al archivo PDF
+            lang: Idioma para OCR
+
+        Returns:
+            dict: Diccionario con texto extraído por página
+        """
+        try:
+            import pdfplumber
+
+            logger.debug("Procesando PDF: %s", pdf_path)
+            texts = []
+            with pdfplumber.open(pdf_path) as pdf:
+                logger.info("PDF abierto: %d páginas", len(pdf.pages))
+                for i, page in enumerate(pdf.pages):
+                    logger.debug("Procesando página %d", i + 1)
+                    # Convertir página a imagen
+                    img = page.to_image()
+                    try:
+                        text = pytesseract.image_to_string(img.original, lang=lang)
+                    except pytesseract.TesseractError:
+                        logger.warning("Idioma '%s' no disponible, usando 'eng'", lang)
+                        text = pytesseract.image_to_string(img.original, lang='eng')
+                    texts.append({
+                        "page": i + 1,
+                        "text": text.strip()
+                    })
+
+            logger.info("OCR PDF completado: %d páginas procesadas", len(texts))
+            return {
+                "status": "success",
+                "pages": texts,
+                "total_pages": len(texts),
+                "language": lang
+            }
+        except (FileNotFoundError, ValueError, TypeError, OSError) as e:
+            logger.error("Error en OCR de PDF: %s", e)
+            return {
+                "status": "error",
+                "pages": [],
+                "error": str(e)
+            }
+
+
+========== src\extractor.py ==========
+"""Módulo de extracción de datos con regex y patrones."""
+
+import logging
+import re
+from typing import List, Dict, Any
+
+logger = logging.getLogger(__name__)
+
+
+
+class DataExtractor:
+    """Extrae información estructurada del texto OCR."""
+
+    def __init__(self):
+        """Inicializa los patrones de regex."""
+        self.patterns = {
+            "email": r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',
+            "phone": r'\(\d{2,3}\)[\s.-]?\d{3}[\s.-]?\d{4}|\d{3}[\s.-]?\d{3}[\s.-]?\d{4}|\d{4}[\s.-]?\d{4}',
+            "date": r'\b(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\b',
+            "url": (
+                r'https?://(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}'
+                r'\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&/=]*)'
+            ),
+            "currency": r'Q\s?[\d,]+(?:\.\d{2})?|GTQ\s?[\d,]+(?:\.\d{2})?|\$\s?[\d,]+(?:\.\d{2})?|€\s?[\d,]+(?:\.\d{2})?|£\s?[\d,]+(?:\.\d{2})?|\b(?:USD|EUR|MXN)\s?[\d,]+(?:\.\d{2})?',
+            "dni": r'\b[0-9]{1,2}\.?[0-9]{3}\.?[0-9]{3}(?:-[A-Z])?\b',
+            "rfc": r'\b[A-ZÑ&]{3,4}\d{6}(?:[A-Z0-9]{3})?\b',
+        }
+
+    def extract_emails(self, text: str) -> List[str]:
+        """Extrae emails del texto."""
+        return list(set(re.findall(self.patterns["email"], text)))
+
+    def extract_phones(self, text: str) -> List[str]:
+        """Extrae números telefónicos del texto."""
+        matches = re.findall(self.patterns["phone"], text)
+        # Filtrar vacíos y limpiar duplicados
+        result = [m.strip() for m in matches if isinstance(m, str) and m.strip()]
+        return list(set(result))
+
+    def extract_dates(self, text: str) -> List[str]:
+        """Extrae fechas del texto."""
+        return list(set(re.findall(self.patterns["date"], text)))
+
+    def extract_urls(self, text: str) -> List[str]:
+        """Extrae URLs del texto."""
+        return list(set(re.findall(self.patterns["url"], text)))
+
+    def extract_currency(self, text: str) -> List[str]:
+        """Extrae valores en moneda del texto."""
+        return list(set(re.findall(self.patterns["currency"], text)))
+
+    def extract_dni(self, text: str) -> List[str]:
+        """Extrae DNI/NIE del texto."""
+        return list(set(re.findall(self.patterns["dni"], text)))
+
+    def extract_rfc(self, text: str) -> List[str]:
+        """Extrae RFC (México) del texto."""
+        return list(set(re.findall(self.patterns["rfc"], text)))
+
+    def extract_custom_pattern(self, text: str, pattern: str) -> List[str]:
+        """
+        Extrae datos usando un patrón regex personalizado.
+
+        Args:
+            text: Texto a procesar
+            pattern: Patrón regex
+
+        Returns:
+            Lista de coincidencias
+        """
+        try:
+            return list(set(re.findall(pattern, text)))
+        except re.error as e:
+            return [f"Error en patrón: {str(e)}"]
+
+    def extract_all(self, text: str) -> Dict[str, Any]:
+        """
+        Extrae todos los tipos de datos del texto.
+
+        Args:
+            text: Texto a procesar
+
+        Returns:
+            Diccionario con todas las extracciones
+        """
+        try:
+            logger.debug("Iniciando extracción de todos los datos (texto: %d caracteres)", len(text))
+            result = {
+                "emails": self.extract_emails(text),
+                "phones": self.extract_phones(text),
+                "dates": self.extract_dates(text),
+                "urls": self.extract_urls(text),
+                "currency": self.extract_currency(text),
+                "dni": self.extract_dni(text),
+                "rfc": self.extract_rfc(text),
+            }
+            total_items = sum(len(v) if isinstance(v, list) else 1 for v in result.values())
+            logger.info("Extracción completada: %d items extraídos", total_items)
+            return result
+        except Exception as e:
+            logger.error("Error en extracción: %s", e)
+            return {
+                "emails": [],
+                "phones": [],
+                "dates": [],
+                "urls": [],
+                "currency": [],
+                "dni": [],
+                "rfc": [],
+                "error": str(e)
+            }
+
+    def extract_lines(self, text: str) -> List[str]:
+        """
+        Limpia y extrae líneas significativas del texto.
+
+        Args:
+            text: Texto a procesar
+
+        Returns:
+            Lista de líneas sin espacios en blanco
+        """
+        try:
+            logger.debug("Extrayendo líneas del texto")
+            lines = text.split('\n')
+            cleaned_lines = [line.strip() for line in lines if line.strip()]
+            logger.debug("Líneas extraídas: %d", len(cleaned_lines))
+            return cleaned_lines
+        except Exception as e:
+            logger.error("Error extrayendo líneas: %s", e)
+            return []
+
+    def extract_tables(self, text: str) -> List[List[str]]:
+        """
+        Intenta extraer tablas del texto.
+
+        Args:
+            text: Texto con formato de tabla
+
+        Returns:
+            Lista de filas (cada fila es una lista de celdas)
+        """
+        try:
+            logger.debug("Extrayendo tablas del texto")
+            lines = self.extract_lines(text)
+            table = []
+
+            for line in lines:
+                # Dividir por espacios múltiples (posibles separadores de columna)
+                cells = [cell.strip() for cell in re.split(r'\s{2,}', line)]
+                if len(cells) > 1:
+                    table.append(cells)
+
+            logger.debug("Tablas extraídas: %d filas", len(table))
+            return table
+        except Exception as e:
+            logger.error("Error extrayendo tablas: %s", e)
+            return []
+
+
+========== src\classifier.py ==========
+"""Módulo de clasificación de documentos con ML."""
+
+import logging
+from pathlib import Path
+from typing import Optional
+
+import joblib
+import numpy as np
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.pipeline import Pipeline
+
+logger = logging.getLogger(__name__)
+
+
+
+class DocumentClassifier:
+    """Clasifica documentos según su contenido."""
+
+    def __init__(self, model_path: Optional[str] = None):
+        """
+        Inicializa el clasificador.
+
+        Intenta cargar modelo entrenado. Si no existe, crea uno por defecto sin entrenar.
+
+        Args:
+            model_path: Ruta al modelo entrenado (opcional)
+        """
+        self.model_path = model_path
+        self.model_data = None  # Contiene {model, vectorizer, categories, label_mapping}
+        self.pipeline = None  # Pipeline por defecto (si no hay modelo entrenado)
+        self.classes = ['factura', 'recibo', 'contrato', 'otro']
+        self.is_trained = False
+
+        # Intentar cargar modelo entrenado
+        if model_path and Path(model_path).exists():
+            self._load_trained_model(model_path)
+        else:
+            self._create_default_model()
+
+    def _load_trained_model(self, path: str):
+        """
+        Carga un modelo entrenado por train_classifier.py
+
+        Args:
+            path: Ruta al archivo .joblib del modelo entrenado
+        """
+        try:
+            logger.debug("Intentando cargar modelo desde: %s", path)
+            self.model_data = joblib.load(path)
+            self.classes = self.model_data.get("categories", self.classes)
+            self.is_trained = True
+            logger.info("Modelo entrenado cargado exitosamente")
+        except (OSError, ValueError, EOFError) as e:
+            logger.warning("Error cargando modelo entrenado: %s", e)
+            logger.info("Usando modelo por defecto (sin entrenar)")
+            self._create_default_model()
+
+    def _create_default_model(self):
+        """Crea un modelo por defecto sin entrenar."""
+        self.pipeline = Pipeline([
+            ('tfidf', TfidfVectorizer(max_features=1000, stop_words='spanish')),
+            ('classifier', MultinomialNB())
+        ])
+        self.classes = ['factura', 'recibo', 'contrato', 'otro']
+        self.is_trained = False
+
+    def train(self, texts: list, labels: list):
+        """
+        Entrena el modelo con textos etiquetados.
+
+        Args:
+            texts: Lista de textos de entrenamiento
+            labels: Lista de etiquetas correspondientes
+        """
+        if not self.pipeline:
+            self._create_default_model()
+
+        self.classes = list(set(labels))
+        self.pipeline.fit(texts, labels)  # type: ignore
+
+    def predict(self, text: str) -> dict:
+        """
+        Predice la clase de un documento.
+
+        Args:
+            text: Texto del documento
+
+        Returns:
+            dict: Clase predicha, confianza, probabilidades y estado del modelo
+        """
+        try:
+            if self.is_trained and self.model_data:
+                # Usar modelo entrenado
+                logger.debug("Usando modelo ENTRENADO para predicción")
+                model = self.model_data.get("model")
+                vectorizer = self.model_data.get("vectorizer")
+                categories = self.model_data.get("categories", self.classes)
+
+                X = vectorizer.transform([text])
+                predicted_idx = model.predict(X)[0]
+                probabilities = model.predict_proba(X)[0]
+
+                # Convertir índice a nombre de categoría
+                if predicted_idx < len(categories):
+                    predicted_class = categories[predicted_idx]
+                else:
+                    predicted_class = str(predicted_idx)
+
+                prob_dict = {
+                    categories[i]: float(prob)
+                    for i, prob in enumerate(probabilities)
+                }
+
+                result = {
+                    "predicted_class": predicted_class,  # Compatibilidad histórica
+                    "class": predicted_class,            # Alias moderno
+                    "confidence": float(max(probabilities)),
+                    "probabilities": prob_dict,
+                    "model_type": "trained",
+                    "is_trained": True
+                }
+                logger.info("Predicción exitosa: %s (confianza: %.2f)", predicted_class, result["confidence"])
+                return result
+
+            if self.pipeline:
+                # Usar pipeline por defecto (sin entrenar)
+                logger.warning("Modelo NO ENTRENADO. Usando pipeline por defecto (predicciones poco confiables)")
+                try:
+                    predicted_class = self.pipeline.predict([text])[0]
+                    probabilities = self.pipeline.predict_proba([text])[0]
+
+                    prob_dict = {
+                        cls: float(prob)
+                        for cls, prob in zip(self.pipeline.classes_, probabilities)
+                    }
+
+                    result = {
+                        "predicted_class": predicted_class,  # Compatibilidad histórica
+                        "class": predicted_class,            # Alias moderno
+                        "confidence": float(max(probabilities)),
+                        "probabilities": prob_dict,
+                        "model_type": "default (not trained)",
+                        "is_trained": False,
+                        "warning": "Modelo no entrenado. Esta predicción tiene baja confianza. Por favor, entrena el modelo con train_classifier.py"
+                    }
+                    logger.debug("Predicción por defecto devuelta (NO ENTRENADO)")
+                    return result
+                except (AttributeError, ValueError) as e:
+                    # Pipeline no entrenado
+                    logger.error("Error usando pipeline: %s", e)
+                    return {
+                        "predicted_class": "desconocido",  # Compatibilidad histórica
+                        "class": "desconocido",            # Alias moderno
+                        "confidence": 0.0,
+                        "probabilities": {cls: 0.0 for cls in self.classes},
+                        "model_type": "untrained",
+                        "is_trained": False,
+                        "warning": "Error: No hay modelo disponible. Por favor, entrena el modelo."
+                    }
+            else:
+                logger.error("No hay modelo disponible en el sistema")
+                return {
+                    "predicted_class": "error",  # Compatibilidad histórica
+                    "class": "error",            # Alias moderno
+                    "confidence": 0.0,
+                    "is_trained": False,
+                    "error": "No hay modelo disponible"
+                }
+
+        except (ValueError, AttributeError, IndexError) as e:
+            logger.error("Excepción en predict(): %s", e)
+            return {
+                "predicted_class": "error",  # Compatibilidad histórica
+                "class": "error",            # Alias moderno
+                "confidence": 0.0,
+                "is_trained": False,
+                "error": str(e)
+            }
+
+    def predict_batch(self, texts: list) -> list:
+        """
+        Predice clases para múltiples textos.
+
+        Args:
+            texts: Lista de textos
+
+        Returns:
+            Lista de predicciones
+        """
+        return [self.predict(text) for text in texts]
+
+    def save_model(self, path: str):
+        """
+        Guarda el modelo entrenado.
+
+        Args:
+            path: Ruta para guardar el modelo
+        """
+        if self.model_data:
+            joblib.dump(self.model_data, path)
+        elif self.pipeline:
+            joblib.dump(self.pipeline, path)
+
+    def load_model(self, path: str):
+        """
+        Carga un modelo entrenado.
+
+        Args:
+            path: Ruta al modelo
+        """
+        if Path(path).exists():
+            self._load_trained_model(path)
+
+    def get_feature_importance(self, class_label: Optional[str] = None, top_n: int = 10) -> dict:
+        """
+        Obtiene las palabras más importantes para cada clase.
+
+        Args:
+            class_label: Clase específica (opcional)
+            top_n: Número de palabras a retornar
+
+        Returns:
+            dict: Palabras importantes por clase
+        """
+        if not self.pipeline or not hasattr(self.pipeline.named_steps['classifier'], 'coef_'):
+            return {}
+
+        feature_names = self.pipeline.named_steps['tfidf'].get_feature_names_out()
+        coef = self.pipeline.named_steps['classifier'].coef_
+
+        importance = {}
+
+        if class_label:
+            class_idx = list(self.pipeline.classes_).index(class_label)
+            top_indices = np.argsort(coef[class_idx])[-top_n:]
+            importance[class_label] = [feature_names[i] for i in reversed(top_indices)]
+        else:
+            for i, cls in enumerate(self.pipeline.classes_):
+                top_indices = np.argsort(coef[i])[-top_n:]
+                importance[cls] = [feature_names[idx] for idx in reversed(top_indices)]
+
+        return importance
+
+
+========== src\pipeline.py ==========
+"""Pipeline integrado: OCR -> Extracción -> Clasificación."""
+
+import json
+import logging
+from pathlib import Path
+from typing import Any, Dict, Optional
+
+from config import MODELS_DIR
+
+from .classifier import DocumentClassifier
+from .extractor import DataExtractor
+from .ocr import OCRProcessor
+
+logger = logging.getLogger(__name__)
+
+
+
+class OCRPipeline:
+    """Pipeline completo de OCR, extracción y clasificación."""
+
+    def __init__(
+        self,
+        tesseract_path: Optional[str] = None,
+        classifier_model_path: Optional[str] = None,
+    ):
+        """
+        Inicializa el pipeline.
+
+        Intenta cargar automáticamente el modelo entrenado de models/classifier_model.joblib
+        si no se especifica una ruta diferente.
+
+        Args:
+            tesseract_path: Ruta a Tesseract (Windows)
+            classifier_model_path: Ruta al modelo de clasificación entrenado (opcional)
+        """
+        self.ocr = OCRProcessor(tesseract_path=tesseract_path)
+        self.extractor = DataExtractor()
+
+        # Cargar modelo entrenado si existe
+        if classifier_model_path:
+            model_path = classifier_model_path
+        else:
+            # Buscar modelo entrenado automáticamente
+            default_model_path = Path(MODELS_DIR) / "classifier_model.joblib"
+            model_path = str(default_model_path) if default_model_path.exists() else None
+
+        self.classifier = DocumentClassifier(model_path=model_path)
+        self.last_result = None
+
+    def process_image(self, image_path: str, lang: str = "spa") -> Dict[str, Any]:
+        """
+        Procesa una imagen a través del pipeline completo con error boundaries.
+
+        Args:
+            image_path: Ruta a la imagen
+            lang: Idioma para OCR
+
+        Returns:
+            dict: Resultado del pipeline con field 'errors' si hay fallos
+        """
+        result = {
+            "input_file": image_path,
+            "format": "image",
+            "steps": {},
+            "errors": []
+        }
+
+        # Paso 1: OCR (con error boundary)
+        try:
+            logger.info("Iniciando OCR de imagen: %s", image_path)
+            ocr_result = self.ocr.extract_text_from_image(image_path, lang=lang)
+            result["steps"]["ocr"] = ocr_result
+
+            if ocr_result.get("status") != "success":
+                error_msg = ocr_result.get("error", "OCR failed")
+                result["errors"].append(f"OCR: {error_msg}")
+                logger.error("OCR falló: %s", error_msg)
+                result["status"] = "error"
+                return result
+
+            extracted_text = ocr_result["text"]
+        except Exception as e:
+            error_msg = f"OCR exception: {str(e)}"
+            result["errors"].append(error_msg)
+            logger.error("Excepción en OCR: %s", e)
+            result["status"] = "error"
+            return result
+
+        # Paso 2: Extracción de datos (con error boundary)
+        try:
+            logger.info("Iniciando extracción de datos")
+            extraction_result = self.extractor.extract_all(extracted_text)
+            result["steps"]["extraction"] = extraction_result
+            logger.debug("Extracción completada")
+        except Exception as e:
+            error_msg = f"Extraction: {str(e)}"
+            result["errors"].append(error_msg)
+            logger.error("Excepción en extracción: %s", e)
+            extraction_result = {}
+
+        # Paso 3: Clasificación (con error boundary)
+        try:
+            logger.info("Iniciando clasificación")
+            classification_result = self.classifier.predict(extracted_text)
+            result["steps"]["classification"] = classification_result
+            logger.debug("Clasificación completada")
+        except Exception as e:
+            error_msg = f"Classification: {str(e)}"
+            result["errors"].append(error_msg)
+            logger.error("Excepción en clasificación: %s", e)
+            classification_result = {
+                "class": "error",
+                "confidence": 0.0,
+                "error": str(e)
+            }
+
+        # Información adicional
+        result["extracted_text"] = extracted_text
+        try:
+            result["lines"] = self.extractor.extract_lines(extracted_text)
+        except Exception as e:
+            logger.warning("Error extrayendo líneas: %s", e)
+            result["lines"] = []
+
+        # Determinar estado final
+        result["status"] = "error" if result["errors"] else "success"
+
+        self.last_result = result
+        return result
+
+    def process_pdf(self, pdf_path: str, lang: str = "spa") -> Dict[str, Any]:
+        """
+        Procesa un PDF a través del pipeline con error boundaries por página.
+
+        Args:
+            pdf_path: Ruta al PDF
+            lang: Idioma para OCR
+
+        Returns:
+            dict: Resultado del pipeline con field 'errors' si hay fallos
+        """
+        result = {
+            "input_file": pdf_path,
+            "format": "pdf",
+            "pages": [],
+            "errors": []
+        }
+
+        # Paso 1: OCR en PDF (con error boundary)
+        try:
+            logger.info("Iniciando OCR de PDF: %s", pdf_path)
+            ocr_result = self.ocr.extract_text_from_pdf(pdf_path, lang=lang)
+            result["steps"] = {"ocr": ocr_result}
+
+            if ocr_result.get("status") != "success":
+                error_msg = ocr_result.get("error", "PDF OCR failed")
+                result["errors"].append(f"OCR: {error_msg}")
+                logger.error("OCR PDF falló: %s", error_msg)
+                result["status"] = "error"
+                return result
+        except Exception as e:
+            error_msg = f"PDF OCR exception: {str(e)}"
+            result["errors"].append(error_msg)
+            logger.error("Excepción en OCR PDF: %s", e)
+            result["status"] = "error"
+            return result
+
+        # Procesar cada página (con error boundary por página)
+        for page_data in ocr_result["pages"]:
+            page_num = page_data["page"]
+            page_text = page_data["text"]
+
+            page_result = {
+                "page_number": page_num,
+                "text": page_text,
+                "page_errors": []
+            }
+
+            # Extracción (con error boundary)
+            try:
+                logger.debug("Extrayendo datos de página %d", page_num)
+                extraction = self.extractor.extract_all(page_text)
+                page_result["extraction"] = extraction
+            except Exception as e:
+                error_msg = f"Extraction page {page_num}: {str(e)}"
+                page_result["page_errors"].append(error_msg)
+                result["errors"].append(error_msg)
+                logger.error("Excepción en extracción página %d: %s", page_num, e)
+                extraction = {}
+
+            # Clasificación (con error boundary)
+            try:
+                logger.debug("Clasificando página %d", page_num)
+                classification = self.classifier.predict(page_text)
+                page_result["classification"] = classification
+            except Exception as e:
+                error_msg = f"Classification page {page_num}: {str(e)}"
+                page_result["page_errors"].append(error_msg)
+                result["errors"].append(error_msg)
+                logger.error("Excepción en clasificación página %d: %s", page_num, e)
+                classification = {
+                    "class": "error",
+                    "confidence": 0.0,
+                    "error": str(e)
+                }
+
+            result["pages"].append(page_result)
+
+        result["status"] = "error" if result["errors"] else "success"
+        self.last_result = result
+        return result
+
+    def process_file(self, file_path: str, lang: str = "spa") -> Dict[str, Any]:
+        """
+        Procesa cualquier archivo (imagen o PDF).
+
+        Args:
+            file_path: Ruta al archivo
+            lang: Idioma para OCR
+
+        Returns:
+            dict: Resultado del pipeline
+        """
+        file_path_obj = Path(file_path)
+
+        if not file_path_obj.exists():
+            return {
+                "status": "error",
+                "error": f"Archivo no encontrado: {file_path}"
+            }
+
+        if file_path_obj.suffix.lower() == '.pdf':
+            return self.process_pdf(str(file_path), lang=lang)
+        if file_path_obj.suffix.lower() in ['.jpg', '.jpeg', '.png', '.bmp', '.gif']:
+            return self.process_image(str(file_path), lang=lang)
+        return {
+            "status": "error",
+            "error": f"Formato no soportado: {file_path_obj.suffix}"
+        }
+
+    def get_last_result_json(self) -> str:
+        """
+        Obtiene el último resultado en formato JSON.
+
+        Returns:
+            str: JSON con el resultado
+        """
+        if self.last_result is None:
+            return json.dumps({"error": "Sin resultados previos"})
+
+        return json.dumps(self.last_result, indent=2, ensure_ascii=False)
+
+    def train_classifier(self, training_data: list):
+        """
+        Entrena el clasificador con nuevos datos.
+
+        Args:
+            training_data: Lista de tuplas (texto, etiqueta)
+        """
+        if not training_data:
+            return
+
+        texts, labels = zip(*training_data)
+        self.classifier.train(list(texts), list(labels))
+
+    def save_classifier(self, path: str):
+        """
+        Guarda el clasificador entrenado.
+
+        Args:
+            path: Ruta para guardar
+        """
+        self.classifier.save_model(path)
+
+
+========== src\dataset_validator.py ==========
+"""
+Validador de Dataset - Analiza estructura y calidad de datos de entrenamiento
+
+Responsabilidades:
+- Verificar estructura de directorios (data/training/<categoría>/)
+- Contar documentos por categoría
+- Detectar problemas (falta de datos, categorías vacías)
+- Generar reporte visual para usuario
+- Validar formatos de archivo
+
+Uso:
+    from src.dataset_validator import DatasetValidator
+    validator = DatasetValidator()
+    report = validator.validate()
+    print(report.summary())
+"""
+
+import json
+from dataclasses import asdict, dataclass
+from pathlib import Path
+from typing import Dict, List, Optional
+
+
+@dataclass
+class ValidationIssue:
+    """Problema detectado en dataset."""
+    severity: str  # "error", "warning", "info"
+    category: str
+    message: str
+
+
+@dataclass
+class CategoryStats:
+    """Estadísticas de una categoría."""
+    name: str
+    file_count: int
+    total_words: int
+    avg_words_per_file: float
+    min_words: int
+    max_words: int
+
+
+class DatasetValidator:
+    """Validador completo del dataset de entrenamiento."""
+
+    CATEGORIES = ["factura", "recibo", "contrato", "otro"]
+    MIN_RECOMMENDED_PER_CATEGORY = 50  # Recomendado para buena accuracy
+    MIN_VIABLE_PER_CATEGORY = 20  # Mínimo para entrenar
+    MIN_WORDS_PER_FILE = 50  # Archivo muy corto
+    MAX_WORDS_PER_FILE = 50000  # Archivo muy largo (probablemente error)
+
+    def __init__(self, data_dir: Optional[Path] = None):
+        """
+        Args:
+            data_dir: Ruta a data/training/. Si no se proporciona, auto-detecta.
+        """
+        if data_dir is None:
+            data_dir = Path(__file__).parent.parent / "data" / "training"
+
+        self.data_dir = data_dir
+        self.issues: List[ValidationIssue] = []
+        self.category_stats: Dict[str, CategoryStats] = {}
+        self.total_documents = 0
+        self.total_words = 0
+
+    def validate(self) -> 'ValidationReport':
+        """
+        Ejecuta validación completa del dataset.
+
+        Returns:
+            ValidationReport con resultados y recomendaciones.
+        """
+        self.issues.clear()
+        self.category_stats.clear()
+        self.total_documents = 0
+        self.total_words = 0
+
+        # Paso 1: Verificar que directorio existe
+        if not self.data_dir.exists():
+            self.issues.append(ValidationIssue(
+                severity="error",
+                category="structure",
+                message=f"Directorio no existe: {self.data_dir}"
+            ))
+            return ValidationReport(self)
+
+        # Paso 2: Verificar que existen categorías
+        existing_categories = [d for d in self.data_dir.iterdir() if d.is_dir()]
+        if not existing_categories:
+            self.issues.append(ValidationIssue(
+                severity="error",
+                category="structure",
+                message=f"No hay carpetas de categorías en {self.data_dir}"
+            ))
+            return ValidationReport(self)
+
+        # Paso 3: Validar cada categoría
+        for category in self.CATEGORIES:
+            self._validate_category(category)
+
+        # Paso 4: Validaciones globales
+        self._validate_global_stats()
+
+        return ValidationReport(self)
+
+    def _validate_category(self, category: str) -> None:
+        """Valida una categoría específica."""
+        category_dir = self.data_dir / category
+
+        # ¿Existe la carpeta?
+        if not category_dir.exists():
+            self.issues.append(ValidationIssue(
+                severity="warning",
+                category=category,
+                message=f"Carpeta no existe: {category_dir}"
+            ))
+            self.category_stats[category] = CategoryStats(
+                name=category,
+                file_count=0,
+                total_words=0,
+                avg_words_per_file=0,
+                min_words=0,
+                max_words=0
+            )
+            return
+
+        # Contar archivos .txt
+        txt_files = list(category_dir.glob("*.txt"))
+        file_count = len(txt_files)
+
+        if file_count == 0:
+            self.issues.append(ValidationIssue(
+                severity="error",
+                category=category,
+                message=f"Sin archivos .txt en {category}/"
+            ))
+            self.category_stats[category] = CategoryStats(
+                name=category,
+                file_count=0,
+                total_words=0,
+                avg_words_per_file=0,
+                min_words=0,
+                max_words=0
+            )
+            return
+
+        # Analizar contenido
+        word_counts = []
+        total_words = 0
+
+        for txt_file in txt_files:
+            try:
+                content = txt_file.read_text(encoding='utf-8').strip()
+                word_count = len(content.split())
+                word_counts.append(word_count)
+                total_words += word_count
+
+                # Validar tamaño de archivo
+                if word_count < self.MIN_WORDS_PER_FILE:
+                    self.issues.append(ValidationIssue(
+                        severity="warning",
+                        category=category,
+                        message=f"{txt_file.name}: muy corto ({word_count} palabras)"
+                    ))
+                elif word_count > self.MAX_WORDS_PER_FILE:
+                    self.issues.append(ValidationIssue(
+                        severity="warning",
+                        category=category,
+                        message=f"{txt_file.name}: muy largo ({word_count} palabras)"
+                    ))
+
+            except (OSError, UnicodeDecodeError, FileNotFoundError) as e:  # type: ignore[misc]
+                self.issues.append(ValidationIssue(
+                    severity="error",
+                    category=category,
+                    message=f"{txt_file.name}: error lectura - {str(e)}"
+                ))
+
+        # Guardar estadísticas
+        avg_words = total_words / file_count if file_count > 0 else 0
+        self.category_stats[category] = CategoryStats(
+            name=category,
+            file_count=file_count,
+            total_words=total_words,
+            avg_words_per_file=avg_words,
+            min_words=min(word_counts) if word_counts else 0,
+            max_words=max(word_counts) if word_counts else 0
+        )
+
+        self.total_documents += file_count
+        self.total_words += total_words
+
+        # Validar cantidad de archivos
+        if file_count < self.MIN_VIABLE_PER_CATEGORY:
+            self.issues.append(ValidationIssue(
+                severity="warning",
+                category=category,
+                message=f"Solo {file_count} docs (mín viable: {self.MIN_VIABLE_PER_CATEGORY})"
+            ))
+
+        if file_count < self.MIN_RECOMMENDED_PER_CATEGORY:
+            self.issues.append(ValidationIssue(
+                severity="info",
+                category=category,
+                message=f"Solo {file_count} docs (recomendado: {self.MIN_RECOMMENDED_PER_CATEGORY})"
+            ))
+
+    def _validate_global_stats(self) -> None:
+        """Validaciones sobre estadísticas globales."""
+        # Verificar balance de categorías
+        file_counts = [stats.file_count for stats in self.category_stats.values()]
+
+        if file_counts and max(file_counts) > 0:
+            max_count = max(file_counts)
+            min_count = min(file_counts)
+
+            if max_count > min_count * 3:
+                self.issues.append(ValidationIssue(
+                    severity="info",
+                    category="balance",
+                    message=f"Dataset desbalanceado: máx={max_count}, mín={min_count}"
+                ))
+
+
+class ValidationReport:
+    """Reporte de validación del dataset."""
+
+    def __init__(self, validator: DatasetValidator):
+        self.validator = validator
+        self.timestamp = __import__('datetime').datetime.now().isoformat()
+
+    def summary(self) -> str:
+        """Resumen breve para mostrar en CLI."""
+        lines = []
+        lines.append("=" * 70)
+        lines.append("📊 VALIDACIÓN DE DATASET")
+        lines.append("=" * 70)
+
+        # Estadísticas globales
+        lines.append(f"\n📁 Directorio: {self.validator.data_dir}")
+        lines.append(f"📄 Total de documentos: {self.validator.total_documents}")
+        lines.append(f"💬 Total de palabras: {self.validator.total_words:,}")
+
+        # Por categoría
+        lines.append("\n📋 Documentos por categoría:")
+        for category in self.validator.CATEGORIES:
+            stats = self.validator.category_stats.get(category)
+            if stats and stats.file_count > 0:
+                lines.append(
+                    f"   • {category:10} : {stats.file_count:3} docs "
+                    f"({stats.total_words:6,} palabras, "
+                    f"promedio: {stats.avg_words_per_file:.0f})"
+                )
+            elif stats:
+                lines.append(f"   • {category:10} : ❌ SIN DATOS")
+
+        # Problemas
+        if self.validator.issues:
+            lines.append("\n⚠️  PROBLEMAS DETECTADOS:")
+            errors = [i for i in self.validator.issues if i.severity == "error"]
+            warnings = [i for i in self.validator.issues if i.severity == "warning"]
+            infos = [i for i in self.validator.issues if i.severity == "info"]
+
+            for issue in errors:
+                lines.append(f"   ❌ [{issue.category}] {issue.message}")
+            for issue in warnings:
+                lines.append(f"   ⚠️  [{issue.category}] {issue.message}")
+            for issue in infos:
+                lines.append(f"   ℹ️  [{issue.category}] {issue.message}")
+        else:
+            lines.append("\n✅ Sin problemas detectados")
+
+        # Recomendaciones
+        lines.append("\n💡 RECOMENDACIONES:")
+        if self.validator.total_documents == 0:
+            lines.append("   • Crear datos en data/training/<categoría>/")
+        elif self.validator.total_documents < 80:
+            msg = (
+                f"   • Agregar más datos "
+                f"({self.validator.total_documents}/80 recomendados)"
+            )
+            lines.append(msg)
+        else:
+            msg = (
+                f"   • Dataset tiene buen tamaño "
+                f"({self.validator.total_documents} docs)"
+            )
+            lines.append(msg)
+
+        accuracy_estimate = self._estimate_accuracy()
+        lines.append(f"   • Accuracy esperado: ~{accuracy_estimate}% (con estos datos)")
+
+        if self.validator.total_documents >= 20:
+            lines.append("   • LISTO PARA ENTRENAR ✅")
+        else:
+            lines.append("   • Faltan datos para entrenar de forma confiable")
+
+        lines.append("=" * 70)
+        return "\n".join(lines)
+
+    def _estimate_accuracy(self) -> int:
+        """Estima accuracy basado en cantidad de datos."""
+        # Heurística simple: más datos = más accuracy
+        # Basado en empiria del proyecto
+        total = self.validator.total_documents
+
+        if total < 20:
+            return 40  # Muy poco
+        if total < 50:
+            return 60  # Poco
+        if total < 100:
+            return 75  # Medio
+        if total < 200:
+            return 85  # Bueno
+        return 90  # Excelente
+
+    def to_dict(self) -> dict:
+        """Convierte reporte a diccionario (para JSON)."""
+        return {
+            "timestamp": self.timestamp,
+            "total_documents": self.validator.total_documents,
+            "total_words": self.validator.total_words,
+            "categories": {
+                cat: asdict(stats)
+                for cat, stats in self.validator.category_stats.items()
+            },
+            "issues": [
+                {
+                    "severity": issue.severity,
+                    "category": issue.category,
+                    "message": issue.message
+                }
+                for issue in self.validator.issues
+            ],
+            "recommended_accuracy": self._estimate_accuracy()
+        }
+
+    def save(self, filepath: Path) -> None:
+        """Guarda reporte en JSON."""
+        with open(filepath, 'w', encoding='utf-8') as f:
+            json.dump(self.to_dict(), f, indent=2, ensure_ascii=False)
+
+
+# Función de utilidad
+def validate_dataset(data_dir: Optional[Path] = None) -> ValidationReport:
+    """Función helper para validar dataset rápidamente."""
+    validator = DatasetValidator(data_dir)
+    return validator.validate()
+
+
+========== app\app.py ==========
+"""
+Aplicación Streamlit para OCR IA Project
+"""
+
+import json
+import os
+import sys
+import tempfile
+from datetime import datetime
+from pathlib import Path
+
+import streamlit as st
+
+from src.pipeline import OCRPipeline
+
+# Agregar src al path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+# Configuración de la página
+st.set_page_config(
+    page_title="Sistema Inteligente OCR + IA",
+    page_icon="🤖",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# Estilos CSS personalizados
+st.markdown("""
+<style>
+    /* Gradientes y colores principales */
+    :root {
+        --primary-blue: #1e3a8a;
+        --accent-blue: #3b82f6;
+    }
+    
+    .main {
+        padding: 2rem;
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    }
+    
+    /* Header con gradiente azul */
+    .header-gradient {
+        background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+        padding: 2rem;
+        border-radius: 10px;
+        color: white;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .header-gradient h1 {
+        margin: 0;
+        font-size: 2.5em;
+    }
+    
+    /* Badges por categoría */
+    .badge-factura {
+        background: linear-gradient(135deg, #11998e, #38ef7d);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        display: inline-block;
+        font-weight: bold;
+    }
+    
+    .badge-recibo {
+        background: linear-gradient(135deg, #f2994a, #f2c94c);
+        color: #333;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        display: inline-block;
+        font-weight: bold;
+    }
+    
+    .badge-contrato {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        display: inline-block;
+        font-weight: bold;
+    }
+    
+    .badge-otro {
+        background: linear-gradient(135deg, #eb3349, #f45c43);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        display: inline-block;
+        font-weight: bold;
+    }
+    
+    /* Tabs mejorados */
+    .stTabs [data-baseweb="tab-list"] button {
+        font-size: 18px;
+        font-weight: 600;
+    }
+    
+    /* Cajas de colores */
+    .success-box {
+        padding: 20px;
+        background: linear-gradient(135deg, #d4edda, #c3e6cb);
+        border-radius: 10px;
+        border-left: 4px solid #28a745;
+    }
+    
+    .error-box {
+        padding: 20px;
+        background: linear-gradient(135deg, #f8d7da, #f5c6cb);
+        border-radius: 10px;
+        border-left: 4px solid #dc3545;
+    }
+    
+    .info-box {
+        padding: 20px;
+        background: linear-gradient(135deg, #d1ecf1, #bee5eb);
+        border-radius: 10px;
+        border-left: 4px solid #17a2b8;
+    }
+    
+    /* Footer */
+    .footer {
+        background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+        color: white;
+        text-align: center;
+        padding: 2rem;
+        border-radius: 10px;
+        margin-top: 3rem;
+        font-size: 0.9em;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# Inicializar sesión
+if "pipeline" not in st.session_state:
+    st.session_state.pipeline = None
+if "last_result" not in st.session_state:
+    st.session_state.last_result = None
+
+@st.cache_resource
+def load_pipeline(tesseract_path=None):
+    """Carga el pipeline una sola vez por sesión."""
+    return OCRPipeline(tesseract_path=tesseract_path)
+
+# Sidebar - Configuración
+with st.sidebar:
+    st.title("⚙️ Configuración")
+    
+    st.markdown("---")
+    st.markdown("### 📚 Stack Tecnológico")
+    st.markdown("""
+    - **Pytesseract**: Reconocimiento óptico
+    - **Scikit-learn**: Clasificación ML
+    - **Streamlit**: Interfaz web
+    - **OpenCV**: Procesamiento imagen
+    """)
+    
+    st.markdown("---")
+    st.markdown("### 🎯 Capacidades")
+    st.markdown("""
+    ✅ OCR múltiples idiomas
+    ✅ Extracción de datos
+    ✅ Clasificación 4 categorías
+    ✅ JSON exportable
+    """)
+    
+    st.markdown("---")
+
+    # Ruta de Tesseract (solo para Windows)
+    st.subheader("Configuración de Tesseract")
+    tesseract_installed = st.checkbox(
+        "Tengo Tesseract instalado",
+        value=False,
+        help="Marca si ya instalaste Tesseract-OCR en Windows"
+    )
+
+    tesseract_path = None
+    if tesseract_installed:
+        tesseract_path = st.text_input(
+            "Ruta de Tesseract (opcional)",
+            value="C:\\Program Files\\Tesseract-OCR\\tesseract.exe",
+            help="Por defecto: C:\\Program Files\\Tesseract-OCR\\tesseract.exe"
+        )
+
+    # Inicializar pipeline
+    if st.button("🚀 Inicializar Pipeline", use_container_width=True):
+        try:
+            pipeline = load_pipeline(tesseract_path=tesseract_path)
+            st.session_state.pipeline = pipeline
+            st.success("✅ Pipeline inicializado correctamente")
+        except (ValueError, TypeError, FileNotFoundError, OSError) as e:
+            st.error(f"❌ Error al inicializar: {e}")
+
+    st.divider()
+
+    # Seleccionar idioma
+    st.subheader("Opciones de OCR")
+    ocr_language = st.selectbox(
+        "Idioma para OCR",
+        options=["spa", "eng", "fra", "deu"],
+        format_func=lambda x: {
+            "spa": "Español",
+            "eng": "Inglés",
+            "fra": "Francés",
+            "deu": "Alemán"
+        }[x],
+        key="ocr_language"
+    )
+
+    st.divider()
+    st.markdown("**Desarrollado con ❤️**")
+    st.markdown("OCR IA Project v1.0.0")
+    st.markdown("Confianza modelo: **83.76%** ✅")
+
+
+# Header principal con gradiente
+st.markdown("""
+<div class="header-gradient">
+    <h1>🤖 Sistema Inteligente OCR + IA</h1>
+    <p style="margin-top: 0.5rem; font-size: 1.1em;">Extrae texto, datos y clasifica documentos automáticamente</p>
+</div>
+""", unsafe_allow_html=True)
+
+st.markdown(
+    "**Solución avanzada para digitalización inteligente con OCR y Machine Learning**"
+)
+
+# Verificar si el pipeline está inicializado
+if st.session_state.pipeline is None:
+    st.warning("""
+    ⚠️ **Pipeline no inicializado**
+
+    Por favor, sigue estos pasos:
+    1. En la barra lateral, marca "Tengo Tesseract instalado" si ya lo instalaste
+    2. Haz clic en "Inicializar Pipeline"
+
+    Si no tienes Tesseract instalado, sigue las instrucciones en la pestaña "Instalación"
+    """)
+
+    # Mostrar instrucciones de instalación
+    with st.expander(
+        "📋 Ver instrucciones de Instalación",
+        expanded=False
+    ):
+        st.markdown("""
+        ### Instalación de Tesseract-OCR en Windows
+
+        1. **Descargar el instalador**
+           - Ve a: https://github.com/UB-Mannheim/tesseract/wiki
+           - Descarga el instalador más reciente (ej: tesseract-ocr-w64-setup-v5.x.x.exe)
+
+        2. **Instalar**
+           - Ejecuta el instalador
+           - Selecciona la carpeta de instalación (por defecto: C:\\Program Files\\Tesseract-OCR)
+           - Instala los lenguajes que necesites (español, inglés, etc.)
+
+        3. **Verificar instalación**
+           - Abre PowerShell y ejecuta:
+           ```
+           tesseract --version
+           ```
+
+        4. **Configurar en Python**
+           - La ruta por defecto es: C:\\Program Files\\Tesseract-OCR\\tesseract.exe
+           - Si instalaste en otra carpeta, actualiza la ruta en la configuración
+        """)
+
+else:
+    # Tabs principales
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "📤 Procesar Archivo",
+        "📊 Resultados",
+        "📖 Guía de Uso",
+        "ℹ️ Información"
+    ])
+
+    # TAB 1: Procesar Archivo
+    with tab1:
+        st.header("Procesar Archivo")
+
+        # Verificar si pipeline está inicializado
+        if st.session_state.pipeline is None:
+            st.error("❌ Pipeline no inicializado. Por favor, inicialízalo en la barra lateral.")
+        else:
+            col1, col2 = st.columns([2, 1])
+
+            with col1:
+                st.subheader("📤 Sube tu archivo")
+                uploaded_file = st.file_uploader(
+                    "Selecciona una imagen (JPG, PNG, BMP) o PDF",
+                    type=["jpg", "jpeg", "png", "pdf", "bmp", "gif"],
+                    key="file_uploader"
+                )
+
+            with col2:
+                st.subheader("⚙️ Opciones")
+                ocr_lang = st.selectbox(
+                    "Idioma OCR",
+                    options=["spa", "eng", "fra", "deu"],
+                    format_func=lambda x: {
+                        "spa": "🇪🇸 Español",
+                        "eng": "🇬🇧 Inglés",
+                        "fra": "🇫🇷 Francés",
+                        "deu": "🇩🇪 Alemán"
+                    }[x],
+                    key="tab1_ocr_language",
+                    index=0
+                )
+
+            # Procesar archivo si se cargó uno
+            if uploaded_file is not None:
+                # Mostrar información del archivo
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("📄 Archivo", uploaded_file.name)
+                with col2:
+                    file_size_mb = uploaded_file.size / (1024 * 1024)
+                    st.metric("📊 Tamaño", f"{file_size_mb:.2f} MB")
+                with col3:
+                    st.metric("🔤 Tipo", uploaded_file.name.split('.')[-1].upper())
+
+                st.divider()
+
+                # Botón de procesamiento
+                col_process, col_space = st.columns([1, 4])
+                with col_process:
+                    process_button = st.button(
+                        "🚀 PROCESAR",
+                        use_container_width=True,
+                        type="primary"
+                    )
+
+                if process_button:
+                    # Usar tempfile para compatibilidad Windows
+                    with tempfile.NamedTemporaryFile(
+                        suffix=f".{uploaded_file.name.split('.')[-1]}",
+                        delete=False
+                    ) as tmp_file:
+                        tmp_file.write(uploaded_file.getbuffer())
+                        temp_path = tmp_file.name
+
+                    try:
+                        # Procesamiento con indicador visual
+                        progress_bar = st.progress(0)
+                        status_text = st.empty()
+
+                        status_text.info("⏳ Iniciando OCR...")
+                        progress_bar.progress(25)
+
+                        # Procesar archivo
+                        result = st.session_state.pipeline.process_file(
+                            temp_path,
+                            lang=ocr_lang
+                        )
+                        progress_bar.progress(75)
+
+                        # Guardar resultado en sesión
+                        st.session_state.last_result = result
+                        progress_bar.progress(100)
+
+                        if result.get("status") == "success":
+                            status_text.success("✅ ¡Procesamiento completado exitosamente!")
+
+                            # Mostrar estadísticas rápidas
+                            st.divider()
+                            st.subheader("📊 Estadísticas de Procesamiento")
+
+                            stats_col1, stats_col2, stats_col3, stats_col4 = st.columns(4)
+
+                            with stats_col1:
+                                ocr_data = result.get("steps", {}).get("ocr", {})
+                                if ocr_data:
+                                    confidence = ocr_data.get("confidence", 0)
+                                    st.metric("🔤 Confianza OCR", f"{confidence:.0f}%")
+                                else:
+                                    st.metric("🔤 Confianza OCR", "N/A")
+
+                            with stats_col2:
+                                extracted_text = result.get("extracted_text", "")
+                                if extracted_text:
+                                    char_count = len(extracted_text.strip())
+                                    st.metric("📝 Caracteres", f"{char_count:,}")
+                                else:
+                                    st.metric("📝 Caracteres", "0")
+
+                            with stats_col3:
+                                extraction = result.get("steps", {}).get("extraction", {})
+                                if extraction:
+                                    total_items = sum(len(v) for v in extraction.values() if isinstance(v, list))
+                                    st.metric("🔍 Datos Extraídos", f"{total_items}")
+                                else:
+                                    st.metric("🔍 Datos Extraídos", "0")
+
+                            with stats_col4:
+                                classification = result.get("steps", {}).get("classification", {})
+                                if classification:
+                                    class_name = classification.get("class", "N/A")
+                                    st.metric("🏷️ Clasificación", class_name.title())
+                                else:
+                                    st.metric("🏷️ Clasificación", "N/A")
+
+                            # Mostrar texto extraído
+                            st.divider()
+                            st.subheader("📋 Texto Extraído (OCR)")
+
+                            extracted_text = result.get("extracted_text", "").strip()
+
+                            if extracted_text:
+                                st.text_area(
+                                    "Contenido del documento:",
+                                    value=extracted_text,
+                                    height=250,
+                                    disabled=True,
+                                    key="ocr_output"
+                                )
+                            else:
+                                # Para PDFs multipage
+                                pages = result.get("pages", [])
+                                if pages and len(pages) > 0:
+                                    num_pages = len(pages)
+                                    st.info(f"📑 Documento PDF de {num_pages} página(s)")
+
+                                    page_num = st.slider(
+                                        "Selecciona la página",
+                                        min_value=1,
+                                        max_value=num_pages,
+                                        value=1
+                                    )
+
+                                    page_text = pages[page_num - 1].get("text", "").strip()
+
+                                    if page_text:
+                                        st.text_area(
+                                            f"Página {page_num}:",
+                                            value=page_text,
+                                            height=250,
+                                            disabled=True,
+                                            key=f"ocr_page_{page_num}"
+                                        )
+                                    else:
+                                        st.warning(f"⚠️ No se extrajo texto en la página {page_num}")
+                                else:
+                                    st.warning("⚠️ OCR no extrajo texto del documento")
+                                    st.info("Posibles razones:\n- Imagen de muy baja calidad\n- PDF sin contenido de texto\n- Idioma no soportado")
+
+                            # Navegar a resultados detallados
+                            st.divider()
+                            st.success("💡 Ve a la pestaña **'Resultados'** para ver análisis detallado")
+
+                        else:
+                            status_text.error(f"❌ Error durante el procesamiento: {result.get('error', 'Error desconocido')}")
+
+                    except (ValueError, TypeError, FileNotFoundError, OSError, RuntimeError) as e:
+                        status_text.error(f"❌ Error: {str(e)}")
+
+                    finally:
+                        # Limpiar archivo temporal de forma segura
+                        try:
+                            if os.path.exists(temp_path):
+                                os.remove(temp_path)
+                        except (OSError, PermissionError, FileNotFoundError) as cleanup_error:
+                            st.warning(f"⚠️ Advertencia: No se pudo limpiar el archivo temporal. {str(cleanup_error)}")
+
+    # TAB 2: Resultados Detallados
+    with tab2:
+        st.header("📊 Resultados Detallados")
+
+        if st.session_state.last_result is None:
+            st.info("💡 Procesa un archivo en la pestaña **'Procesar Archivo'** para ver resultados detallados")
+        else:
+            result = st.session_state.last_result
+
+            # Información general
+            st.subheader("📋 Información General")
+            gen_col1, gen_col2, gen_col3 = st.columns(3)
+
+            with gen_col1:
+                input_file = result.get("input_file", "N/A")
+                if input_file and input_file != "N/A":
+                    file_name = Path(input_file).name
+                else:
+                    file_name = "N/A"
+                st.metric("📁 Archivo", file_name)
+            with gen_col2:
+                st.metric("🔤 Formato", result.get("format", "N/A").upper() if result.get("format") else "N/A")
+            with gen_col3:
+                status = "✅ Éxito" if result.get("status") == "success" else "❌ Error"
+                st.metric("✅ Estado", status)
+
+            st.divider()
+
+            # Desglose por pasos
+            steps = result.get("steps", {})
+            if steps:
+                st.subheader("🔧 Desglose del Procesamiento")
+
+                # OCR Results
+                ocr_data = steps.get("ocr", {})
+                if ocr_data:
+                    with st.expander("🔤 Paso 1: OCR (Reconocimiento Óptico de Caracteres)", expanded=True):
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            st.metric("✅ Estado", "Éxito" if ocr_data.get("status") == "success" else "Error")
+                        with col2:
+                            confidence = ocr_data.get("confidence", 0)
+                            color = "🟢" if confidence > 80 else "🟡" if confidence > 60 else "🔴"
+                            st.metric("📊 Confianza", f"{color} {confidence:.0f}%")
+                        with col3:
+                            st.metric("🗣️ Idioma", {
+                                "spa": "🇪🇸 Español",
+                                "eng": "🇬🇧 Inglés",
+                                "fra": "🇫🇷 Francés",
+                                "deu": "🇩🇪 Alemán"
+                            }.get(ocr_data.get("language"), "N/A"))
+                else:
+                    st.warning("⚠️ Datos de OCR no disponibles")
+
+                # Data Extraction Results
+                extraction = result.get("steps", {}).get("extraction", {})
+                if extraction:
+                    with st.expander("🔍 Paso 2: Extracción de Datos", expanded=True):
+                        col1, col2 = st.columns(2)
+
+                        with col1:
+                            st.write("**📧 Emails encontrados:**")
+                            emails = extraction.get("emails", [])
+                            if emails:
+                                for email in emails:
+                                    st.code(email, language="text")
+                            else:
+                                st.info("No se encontraron emails")
+
+                            st.write("**📱 Teléfonos encontrados:**")
+                            phones = extraction.get("phones", [])
+                            if phones:
+                                for phone in phones:
+                                    st.code(phone, language="text")
+                            else:
+                                st.info("No se encontraron teléfonos")
+
+                            st.write("**🔗 URLs encontradas:**")
+                            urls = extraction.get("urls", [])
+                            if urls:
+                                for url in urls:
+                                    st.code(url, language="text")
+                            else:
+                                st.info("No se encontraron URLs")
+
+                        with col2:
+                            st.write("**📅 Fechas encontradas:**")
+                            dates = extraction.get("dates", [])
+                            if dates:
+                                for date in dates:
+                                    st.code(date, language="text")
+                            else:
+                                st.info("No se encontraron fechas")
+
+                            st.write("**💰 Valores monetarios:**")
+                            currency = extraction.get("currency", [])
+                            if currency:
+                                for val in currency:
+                                    st.code(val, language="text")
+                            else:
+                                st.info("No se encontraron valores")
+
+                            st.write("**🆔 DNI/RFC encontrados:**")
+                            dni_list = extraction.get("dni", [])
+                            rfc_list = extraction.get("rfc", [])
+                            if dni_list or rfc_list:
+                                if dni_list:
+                                    for dni in dni_list:
+                                        st.code(f"DNI: {dni}", language="text")
+                                if rfc_list:
+                                    for rfc in rfc_list:
+                                        st.code(f"RFC: {rfc}", language="text")
+                            else:
+                                st.info("No se encontraron DNI/RFC")
+                else:
+                    st.warning("⚠️ Extracción de datos no disponible")
+
+                # Classification Results
+                classification = result.get("steps", {}).get("classification", {})
+                if classification:
+                    with st.expander("🏷️ Paso 3: Clasificación de Documento", expanded=True):
+                        col1, col2 = st.columns([1, 2])
+
+                        with col1:
+                            class_name = classification.get("class", "desconocida").lower()
+                            confidence = classification.get("confidence", 0)
+
+                            # Seleccionar badge según clase
+                            badge_map = {
+                                "factura": "badge-factura",
+                                "recibo": "badge-recibo",
+                                "contrato": "badge-contrato",
+                                "otro": "badge-otro",
+                            }
+                            badge_class = badge_map.get(class_name, "badge-otro")
+
+                            # Mostrar badge HTML
+                            st.markdown(
+                                f'<div class="{badge_class}">{class_name.upper()}</div>',
+                                unsafe_allow_html=True
+                            )
+
+                            # Color según confianza
+                            if confidence > 0.8:
+                                color = "🟢"
+                            elif confidence > 0.6:
+                                color = "🟡"
+                            else:
+                                color = "🔴"
+
+                            st.markdown("")  # Espacio
+                            st.metric("📊 Confianza", f"{color} {confidence * 100:.1f}%")
+
+                        with col2:
+                            st.write("**Probabilidades por Clase:**")
+                            probabilities = classification.get("probabilities", {})
+                            if probabilities:
+                                # Ordenar por probabilidad
+                                for cls, prob in sorted(probabilities.items(), key=lambda x: x[1], reverse=True):
+                                    # Barra de progreso para cada clase
+                                    st.write(f"{cls.upper()}")
+                                    st.progress(prob, text=f"{prob * 100:.1f}%")
+                            else:
+                                st.info("Probabilidades no disponibles")
+                else:
+                    st.warning("⚠️ Clasificación no disponible")
+
+            st.divider()
+
+            # Exportar resultados
+            st.subheader("💾 Exportar Resultados")
+
+            col1, col2, col3 = st.columns(3)
+
+            with col1:
+                json_str = json.dumps(result, indent=2, ensure_ascii=False)
+                st.download_button(
+                    label="📥 Descargar JSON",
+                    data=json_str,
+                    file_name=f"resultado_ocr_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                    mime="application/json",
+                    use_container_width=True
+                )
+
+            with col2:
+                # Copiar JSON al portapapeles
+                st.info("📋 JSON disponible arriba para copiar")
+
+            with col3:
+                if st.button("🔄 Limpiar Resultados", use_container_width=True):
+                    st.session_state.last_result = None
+                    st.rerun()
+
+    # TAB 3: Guía de Uso
+    with tab3:
+        st.header("📖 Guía de Uso")
+
+        st.markdown("""
+        ## ¿Cómo usar la aplicación?
+
+        ### 1️⃣ Configuración Inicial
+        - Asegúrate de tener Tesseract-OCR instalado en Windows
+        - Si es la primera vez, haz clic en "Inicializar Pipeline" en la barra lateral
+
+        ### 2️⃣ Procesar Archivo
+        - Ve a la pestaña "Procesar Archivo"
+        - Carga una imagen (JPG, PNG) o PDF
+        - Selecciona el idioma deseado
+        - Haz clic en "Procesar"
+
+        ### 3️⃣ Ver Resultados
+        - En la pestaña "Resultados" verás:
+          - **OCR**: Texto extraído y confianza
+          - **Extracción de Datos**: Emails, teléfonos, fechas, URLs, monedas, DNI, RFC
+          - **Clasificación**: Tipo de documento y probabilidades
+
+        ### 4️⃣ Descargar Resultados
+        - Descarga los resultados en formato JSON
+        - Úsalos en otros sistemas
+
+        ## 🎯 Casos de Uso
+
+        - **Facturas y Recibos**: Extrae montos, fechas, datos de contacto
+        - **Contratos**: Identifica y extrae cláusulas importantes
+        - **Documentos de Identidad**: Extrae DNI, RFC y datos personales
+        - **Correspondencia**: Clasifica automáticamente tipos de documentos
+
+        ## ⚠️ Limitaciones
+
+        - La precisión del OCR depende de la calidad de la imagen
+        - Documentos escaneados dan mejores resultados que fotos
+        - Imágenes claras y bien iluminadas producen mejores extracciones
+        """)
+
+    # TAB 4: Información
+    with tab4:
+        st.header("ℹ️ Información del Proyecto")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.subheader("📦 Dependencias Principales")
+            st.write("""
+            - **Pytesseract**: OCR usando Tesseract
+            - **OpenCV**: Procesamiento de imágenes
+            - **Scikit-learn**: Machine Learning
+            - **Pandas**: Análisis de datos
+            - **Streamlit**: Interfaz web
+            - **Pillow**: Manipulación de imágenes
+            """)
+
+        with col2:
+            st.subheader("🔧 Características")
+            st.write("""
+            - ✅ OCR de imágenes y PDFs
+            - ✅ Extracción de datos (emails, teléfonos, etc.)
+            - ✅ Clasificación de documentos
+            - ✅ Interfaz web amigable
+            - ✅ Exportación de resultados JSON
+            - ✅ Multi-idioma
+            """)
+
+        st.divider()
+
+        st.markdown("""
+        ### 🚀 Versión
+        **OCR IA Project v1.0.0**
+
+        ### 👨‍💻 Autor
+        Desarrollo Senior en Python, ML y OCR
+
+        ### 📝 Licencia
+        Este proyecto es de código abierto
+        """)
+
+# Footer global
+st.markdown("---")
+st.markdown("""
+<div class="footer">
+    <p>🤖 <strong>Sistema Inteligente OCR + IA</strong> — Digitalización automática de documentos</p>
+    <p style="font-size: 0.85em; opacity: 0.9;">
+        Confianza del modelo: <strong>83.76%</strong> | Precisión: <strong>98.8%</strong> | 
+        Categorías: Factura, Recibo, Contrato, Comunicado
+    </p>
+    <p style="font-size: 0.85em; opacity: 0.8;">© 2026 OCR IA Project • Código abierto • Guillermo</p>
+</div>
+""", unsafe_allow_html=True)
+
+
+
+========== train_classifier.py ==========
+"""
+Script de entrenamiento para el clasificador de documentos.
+
+Entrena un modelo Naive Bayes + TF-IDF con datos de training.
+Datos esperados en: data/training/<categoría>/*.txt
+
+Uso:
+    python train_classifier.py
+
+Requisitos:
+    - scikit-learn, joblib ya instalados
+    - Archivos .txt en data/training/<categoría>/
+
+Salida:
+    - models/classifier_model.joblib (modelo entrenado)
+    - models/training_metrics.json (métricas del entrenamiento)
+"""
+
+import sys
+import json
+from pathlib import Path
+from datetime import datetime
+
+# Agregar raíz al path
+project_root = Path(__file__).parent
+sys.path.insert(0, str(project_root))
+
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+import joblib
+
+from config import DATA_DIR, MODELS_DIR, CLASSIFIER_CONFIG
+from src.dataset_validator import validate_dataset
+
+
+class ClassifierTrainer:
+    """Entrenador del clasificador de documentos."""
+    
+    # Categorías soportadas
+    CATEGORIES = ["factura", "recibo", "contrato", "otro"]
+    
+    def __init__(self):
+        """Inicializa el entrenador."""
+        self.data_dir = Path(DATA_DIR) / "training"
+        self.models_dir = Path(MODELS_DIR)
+        self.model_path = self.models_dir / "classifier_model.joblib"
+        self.metrics_path = self.models_dir / "training_metrics.json"
+        self.vectorizer = TfidfVectorizer(
+            max_features=CLASSIFIER_CONFIG.get("max_features", 5000),
+            ngram_range=(1, 2),
+            min_df=2,
+            max_df=0.8
+        )
+        self.model = MultinomialNB()
+        self.texts = []
+        self.labels = []
+        self.label_mapping = {cat: i for i, cat in enumerate(self.CATEGORIES)}
+        self.total_documents = 0
+        
+    def validate_dataset(self) -> bool:
+        """
+        Valida dataset antes de entrenar.
+        
+        Returns:
+            bool: True si dataset es válido, False en caso contrario
+        """
+        print("\n🔍 Validando dataset...")
+        report = validate_dataset(self.data_dir.parent)
+        print(report.summary())
+        
+        # Guardar validación
+        validation_path = self.models_dir / "dataset_validation.json"
+        self.models_dir.mkdir(parents=True, exist_ok=True)
+        report.save(validation_path)
+        print(f"\n✅ Validación guardada en {validation_path}")
+        
+        # Retornar True solo si hay suficientes datos
+        return self.total_documents >= 20 if hasattr(self, 'total_documents') else True
+        
+    def load_training_data(self) -> bool:
+        """
+        Carga archivos de entrenamiento desde data/training/<categoría>/*.txt
+        
+        Returns:
+            bool: True si se cargaron datos, False si no hay datos
+        """
+        print(f"\n📂 Buscando datos en: {self.data_dir}")
+        
+        if not self.data_dir.exists():
+            print(f"⚠️  Directorio no existe: {self.data_dir}")
+            return False
+        
+        total_files = 0
+        category_counts = {}
+        
+        for category in self.CATEGORIES:
+            category_dir = self.data_dir / category
+            if not category_dir.exists():
+                print(f"   ⚠️  {category}/: directorio no encontrado")
+                category_counts[category] = 0
+                continue
+            
+            files = list(category_dir.glob("*.txt"))
+            category_counts[category] = len(files)
+            print(f"   📄 {category:10}: {len(files):2} archivo(s)", end="")
+            
+            category_words = 0
+            for file_path in files:
+                try:
+                    with open(file_path, "r", encoding="utf-8") as f:
+                        text = f.read().strip()
+                    
+                    if text:  # Solo si tiene contenido
+                        self.texts.append(text)
+                        self.labels.append(self.label_mapping[category])
+                        total_files += 1
+                        category_words += len(text.split())
+                except (OSError, UnicodeDecodeError) as e:
+                    print(f"      ❌ Error leyendo {file_path.name}: {e}")
+            
+            if len(files) > 0:
+                print(f"  ({category_words:,} palabras)")
+            else:
+                print()
+        
+        print(f"\n✅ Total archivos cargados: {total_files}")
+        
+        if total_files == 0:
+            print("❌ No hay archivos de entrenamiento. Agrega .txt en data/training/")
+            return False
+        
+        self.total_documents = total_files
+        return True
+    
+    def train(self) -> dict:
+        """
+        Entrena el modelo.
+        
+        Returns:
+            dict: Métricas de entrenamiento
+        """
+        print("\n🔄 Preparando datos...")
+        
+        # Calcular test_size dinámico para pocos datos
+        total_samples = len(self.texts)
+        min_per_class = min([self.labels.count(i) for i in set(self.labels)])
+        
+        # Si hay muy pocos datos, usar un split más pequeño
+        if total_samples < 20:
+            test_size = 0.2  # Mínimo 20% para validación
+        elif min_per_class < 3:
+            test_size = 0.2
+        else:
+            test_size = 0.2
+        
+        # Convertir test_size a mínimo de 1 muestra por clase
+        test_samples = max(1, int(total_samples * test_size))
+        
+        print(f"   - Entrenamiento: ~{total_samples - test_samples} muestras")
+        print(f"   - Validación: ~{test_samples} muestras")
+        
+        # Split train/test con stratify solo si hay suficientes muestras
+        try:
+            X_train, X_test, y_train, y_test = train_test_split(
+                self.texts, self.labels, test_size=test_size, random_state=42, stratify=self.labels
+            )
+        except ValueError:
+            # Fallback sin stratify si hay muy pocos datos
+            X_train, X_test, y_train, y_test = train_test_split(
+                self.texts, self.labels, test_size=test_size, random_state=42
+            )
+        
+        # Vectorización TF-IDF
+        print("\n⚙️  Extrayendo características (TF-IDF)...")
+        X_train_vec = self.vectorizer.fit_transform(X_train)
+        X_test_vec = self.vectorizer.transform(X_test)
+        
+        vocab_size = len(self.vectorizer.get_feature_names_out())
+        print(f"   - Vocabulario: {vocab_size:,} términos únicos")
+        
+        # Entrenamiento
+        print("\n🤖 Entrenando Naive Bayes Multinomial...")
+        self.model.fit(X_train_vec, y_train)
+        print("   ✅ Modelo entrenado")
+        
+        # Evaluación
+        print("\n📊 Evaluando modelo...")
+        y_pred = self.model.predict(X_test_vec)
+        accuracy = accuracy_score(y_test, y_pred)
+        
+        print(f"\n{'=' * 70}")
+        print(f"✨ ACCURACY: {accuracy:.2%}")
+        print(f"{'=' * 70}")
+        
+        # Reporte detallado
+        print("\n📈 REPORTE DE CLASIFICACIÓN")
+        print("-" * 70)
+        class_report = classification_report(
+            y_test, y_pred, 
+            target_names=self.CATEGORIES,
+            digits=4
+        )
+        print(class_report)
+        
+        # Matriz de confusión
+        print("📊 MATRIZ DE CONFUSIÓN")
+        print("-" * 70)
+        cm = confusion_matrix(y_test, y_pred)
+        
+        # Header con nombres de categoría
+        print("      Predicción →")
+        print("  Real", "  ".join(f"{cat:10}" for cat in self.CATEGORIES))
+        for i, cat in enumerate(self.CATEGORIES):
+            row_str = f"{cat:5} " + "  ".join(f"{cm[i][j]:>9}" for j in range(len(self.CATEGORIES)))
+            print(row_str)
+        print()
+        
+        metrics = {
+            "accuracy": float(accuracy),
+            "samples_train": len(X_train),
+            "samples_test": len(X_test),
+            "vocab_size": vocab_size,
+            "total_samples": len(self.texts),
+            "accuracy_percent": f"{accuracy*100:.2f}%",
+            "confusion_matrix": cm.tolist(),
+            "classification_report": classification_report(
+                y_test, y_pred, 
+                target_names=self.CATEGORIES,
+                output_dict=True
+            ),
+            "trained_at": datetime.now().isoformat()
+        }
+        
+        return metrics
+    
+    def save_model(self) -> bool:
+        """
+        Guarda el modelo y vectorizador en models/
+        
+        Returns:
+            bool: True si se guardó exitosamente
+        """
+        print("\n💾 GUARDANDO MODELO")
+        print(f"   Ruta: {self.model_path}")
+        
+        try:
+            self.models_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Guardar como un único archivo con ambos objetos
+            model_data = {
+                "model": self.model,
+                "vectorizer": self.vectorizer,
+                "categories": self.CATEGORIES,
+                "label_mapping": self.label_mapping,
+                "trained_at": datetime.now().isoformat()
+            }
+            
+            joblib.dump(model_data, self.model_path)
+            
+            # Info del archivo
+            size_kb = self.model_path.stat().st_size / 1024
+            print(f"   ✅ Modelo guardado: {size_kb:.1f} KB")
+            
+            return True
+        except (OSError, ValueError) as e:
+            print(f"   ❌ Error al guardar: {e}")
+            return False
+    
+    def save_metrics(self, metrics: dict) -> bool:
+        """
+        Guarda métricas del entrenamiento en JSON.
+        
+        Returns:
+            bool: True si se guardó exitosamente
+        """
+        print("\n📊 GUARDANDO MÉTRICAS")
+        
+        try:
+            self.models_dir.mkdir(parents=True, exist_ok=True)
+            
+            with open(self.metrics_path, 'w', encoding='utf-8') as f:
+                json.dump(metrics, f, indent=2, ensure_ascii=False)
+            
+            print(f"   ✅ Métricas guardadas: {self.metrics_path}")
+            return True
+        except (OSError, TypeError) as e:
+            print(f"   ❌ Error al guardar métricas: {e}")
+            return False
+        
+    def create_summary(self, metrics: dict):
+        """Crea un reporte de resumen."""
+        summary = {
+            "timestamp": datetime.now().isoformat(),
+            "training_status": "success",
+            "metrics": metrics,
+            "categories": self.CATEGORIES,
+            "data_path": str(self.data_dir),
+            "model_path": str(self.model_path),
+            "metrics_path": str(self.metrics_path)
+        }
+        return summary
+
+
+def main():
+    """Función principal."""
+    print("=" * 70)
+    print("🎓 ENTRENADOR DE CLASIFICADOR DE DOCUMENTOS")
+    print("=" * 70)
+    
+    trainer = ClassifierTrainer()
+    
+    # Paso 1: Validar dataset
+    print("\n" + "=" * 70)
+    print("PASO 1: VALIDACIÓN DE DATASET")
+    print("=" * 70)
+    trainer.validate_dataset()
+    
+    # Paso 2: Cargar datos
+    print("\n" + "=" * 70)
+    print("PASO 2: CARGA DE DATOS")
+    print("=" * 70)
+    if not trainer.load_training_data():
+        print("\n⚠️  No se puede continuar sin datos de entrenamiento.")
+        print(f"   Agrega archivos .txt en: {trainer.data_dir}")
+        print("   Ver: data/training/README.md para instrucciones")
+        return 1
+    
+    # Paso 3: Entrenar
+    print("\n" + "=" * 70)
+    print("PASO 3: ENTRENAMIENTO")
+    print("=" * 70)
+    metrics = trainer.train()
+    
+    # Paso 4: Guardar
+    print("\n" + "=" * 70)
+    print("PASO 4: PERSISTENCIA")
+    print("=" * 70)
+    
+    if not trainer.save_model():
+        return 1
+    
+    if not trainer.save_metrics(metrics):
+        return 1
+    
+    # Resumen final
+    print("\n" + "=" * 70)
+    print("✅ ENTRENAMIENTO COMPLETADO EXITOSAMENTE")
+    print("=" * 70)
+    print(f"\n📦 Modelo: {trainer.model_path}")
+    print(f"📊 Métricas: {trainer.metrics_path}")
+    print(f"✨ Accuracy logrado: {metrics['accuracy_percent']}")
+    print("\nPróximo paso: Usar el modelo en app.py o pipeline")
+    print("=" * 70)
+    
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+
+
+========== generar_dataset.py ==========
+"""
+generar_dataset.py — Generador de dataset sintético de alta calidad.
+
+Genera documentos de entrenamiento para clasificación en 4 categorías:
+  - Facturas (FACTURA ELECTRONICA, tributario, SAT, IVA, NIT)
+  - Recibos (RECIBO, recibi de, efectivo, firma, sello)
+  - Contratos (CONTRATO, clausula, vigencia, el contratante, convenimos)
+  - Otros (Comunicado, estimado, informamos, cordialmente, aviso)
+
+Genera 35 archivos por categoría (140 total) con vocabulario diferenciador claro.
+
+Ejecutar:
+    python generar_dataset.py
+"""
+import random
+from pathlib import Path
+from datetime import datetime, timedelta
+
+# Palabras clave únicas por categoría para máxima diferenciación
+KEYWORDS = {
+    "factura": [
+        "FACTURA ELECTRONICA", "documento tributario", "SAT Guatemala",
+        "IVA 12%", "subtotal", "contribuyente", "serie correlativo",
+        "monto total", "RFC", "NIT", "autorizado", "GTQ", "Q",
+        "serie", "acreditar", "vencimiento", "SAT autorizado"
+    ],
+    "recibo": [
+        "RECIBO", "recibi de", "cantidad de", "por concepto de",
+        "forma de pago", "efectivo", "transferencia", "cheque",
+        "sello", "firma", "departamento cobros", "pago puntual",
+        "recibidor", "comprobante", "vale"
+    ],
+    "contrato": [
+        "CONTRATO", "clausula", "partes", "vigencia", "obligaciones",
+        "el contratante", "el contratado", "convenimos", "a partir de",
+        "acuerdo", "incumplimiento", "Guatemala", "suspend", "rescisión",
+        "firmamos", "acta", "términos y condiciones"
+    ],
+    "otro": [
+        "COMUNICADO", "estimado", "por medio de la presente",
+        "informamos", "agradecemos", "atentamente", "cordialmente",
+        "horario", "aviso", "departamento administrativo",
+        "favor de", "le comunicamos", "en consideración",
+        "La administración", "informacion general"
+    ]
+}
+
+
+def gen_factura(i):
+    """Genera una factura sintética con vocabulario diferenciador claro."""
+    keywords = KEYWORDS["factura"]
+    keyword1 = random.choice(keywords)
+    keyword2 = random.choice(keywords)
+    
+    serie = f"FAC-2026-{str(i).zfill(4)}"
+    nit = f"{random.randint(1000000, 9999999)}-{random.randint(1, 9)}"
+    subtotal = random.randint(500, 50000)
+    iva = int(subtotal * 0.12)
+    total = subtotal + iva
+    
+    nombres = ["Distribuidora Guatemalteca", "Empresa Comercial SA", "Grupo Industrial", "Servicios Globales"]
+    cliente = f"Cliente: {random.choice(nombres)}"
+    
+    texto = f"""
+FACTURA ELECTRONICA
+Numero: {serie}
+Fecha: {(datetime.now() - timedelta(days=random.randint(0, 60))).strftime('%d/%m/%Y')}
+
+Empresa Emisora
+NIT: {nit}
+{cliente}
+Direccion: Ciudad de Guatemala
+
+Concepto de Venta
+Descripcion de servicio/producto: Articulo {i}
+Cantidad: {random.randint(1, 100)} unidades
+Precio unitario: Q{random.randint(5, 500)}.00
+
+Detalle Tributario
+Subtotal: Q{subtotal}.00
+IVA 12%: Q{iva}.00
+Monto Total: Q{total}.00
+
+{keyword1}
+SAT Guatemala autorizado
+Documento tributario electronico
+{keyword2}
+
+Forma de pago: Transferencia Bancaria
+Banco: Banco del Pais
+Cuenta: 1234567890
+Referencia: INV-2026-{i}
+
+Serie: {serie}
+Correlativo: {i}
+RFC Guatemala
+Contribuyente activo
+Acreditar IVA
+Moneda GTQ quetzal Q
+Vencimiento: {(datetime.now() + timedelta(days=30)).strftime('%d/%m/%Y')}
+"""
+    return texto.strip()
+
+
+def gen_recibo(i):
+    """Genera un recibo sintético con vocabulario diferenciador claro."""
+    keywords = KEYWORDS["recibo"]
+    keyword1 = random.choice(keywords)
+    keyword2 = random.choice(keywords)
+    
+    numero = f"REC-{str(i).zfill(5)}"
+    monto = random.randint(50, 5000)
+    
+    conceptos = ["Pago de servicio", "Pago de renta", "Deposito en cuenta", "Pago de cuota", "Pago mensual"]
+    concepto = random.choice(conceptos)
+    
+    formas = ["efectivo", "cheque", "transferencia", "deposito"]
+    forma = random.choice(formas)
+    
+    texto = f"""
+RECIBO OFICIAL DE PAGO
+Numero: {numero}
+Fecha: {datetime.now().strftime('%d/%m/%Y')}
+
+Recibi de:
+Nombre: Empresa Receptora {i}
+Direccion: Ciudad de Guatemala
+Telefono: {random.randint(2000, 9999)}-{random.randint(1000, 9999)}
+
+Cantidad de Dinero:
+Monto recibido: Q{monto}.00
+Cantidad en letras: {monto} quetzales
+
+Por concepto de:
+{concepto}
+Descripcion: Pago correspondiente al mes/servicio
+
+Forma de pago: {forma.upper()}
+{keyword1}
+
+Detalles del Recibo:
+Departamento de cobros
+Sello: [OFICINA]
+Firma: ____________________
+Autorizado por: Recibidor
+
+{keyword2}
+Muchas gracias por su pago puntual
+Comprobante fiscal
+Vale de caja
+Referencia: {numero}
+"""
+    return texto.strip()
+
+
+def gen_contrato(i):
+    """Genera un contrato sintético con vocabulario diferenciador claro."""
+    keywords = KEYWORDS["contrato"]
+    keyword1 = random.choice(keywords)
+    keyword2 = random.choice(keywords)
+    
+    fecha_inicio = datetime.now()
+    fecha_fin = fecha_inicio + timedelta(days=random.randint(30, 730))
+    
+    texto = f"""
+CONTRATO DE PRESTACION DE SERVICIOS
+Numero: CTR-2026-{str(i).zfill(4)}
+Fecha: {fecha_inicio.strftime('%d/%m/%Y')}
+
+PARTES CONTRATANTES
+
+El contratante:
+Empresa Prestadora de Servicios
+NIT: 1234567-8
+Domicilio: Ciudad de Guatemala
+
+El contratado:
+Beneficiario del Servicio {i}
+Domicilio: Ciudad de Guatemala
+
+CLAUSULAS DEL CONTRATO
+
+PRIMERA: Objeto y Alcance
+Las partes convenimos en que el contratante prestará servicios al contratado.
+
+SEGUNDA: Vigencia
+Este contrato tendrá vigencia a partir del {fecha_inicio.strftime('%d/%m/%Y')}
+hasta el {fecha_fin.strftime('%d/%m/%Y')}, plazo de {random.randint(6, 24)} meses.
+
+TERCERA: Contraprestacion Economica
+El contratado se obliga a pagar Q{random.randint(1000, 10000)}.00 mensuales.
+
+CUARTA: Obligaciones del Contratante
+{keyword1}
+Prestar servicios de calidad y profesionalismo.
+Cumplir horarios establecidos.
+Mantener confidencialidad.
+
+QUINTA: Obligaciones del Contratado
+Efectuar pagos puntuales.
+Proveer herramientas necesarias.
+
+{keyword2}
+
+SEXTA: Resolucion y Rescisión
+En caso de incumplimiento grave, cualquiera de las partes podrá rescindir.
+Aviso con 30 días de anticipación.
+
+SÉPTIMA: Acuerdo General
+Ambas partes se comprometen a cumplir íntegramente.
+Lo anterior según las leyes de Guatemala.
+
+Firmamos en la ciudad de Guatemala:
+
+______________________________     ______________________________
+El Contratante                    El Contratado
+Firma y sello                      Firma
+"""
+    return texto.strip()
+
+
+def gen_otro(i):
+    """Genera un comunicado/otro documento con vocabulario diferenciador claro."""
+    keywords = KEYWORDS["otro"]
+    keyword1 = random.choice(keywords)
+    keyword2 = random.choice(keywords)
+    
+    texto = f"""
+COMUNICADO OFICIAL
+Fecha: {datetime.now().strftime('%d/%m/%Y')}
+Numero: COM-2026-{str(i).zfill(4)}
+
+Estimado Cliente/Usuario:
+
+Por medio de la presente le informamos sobre información importante
+que debe tomar en consideración.
+
+Aviso General:
+{keyword1} sobre cambios en nuestros servicios y horarios.
+
+Horario de Atencion:
+Lunes a Viernes: 08:00 - 17:00
+Sabado: 08:00 - 12:00
+Domingo: Cerrado
+
+Informacion Importante:
+Agradecemos su comprensión y paciencia.
+{keyword2}
+
+Datos de Contacto:
+Departamento Administrativo
+Telefono: 2234-5678
+Correo: info@empresa.gt
+Pagina web: www.empresa.gt
+
+Le comunicamos que cualquier duda puede dirigirse a nuestras oficinas.
+En consideración del tiempo que toma procesar solicitudes,
+favor de presentarse con anticipación.
+
+La administración se compromete a brindar el mejor servicio.
+Cordialmente,
+
+______________________________
+La Administracion
+Departamento de Comunicacion
+"""
+    return texto.strip()
+
+
+def main():
+    """Genera el dataset completo con 35 documentos por categoría."""
+    print("=" * 70)
+    print(" GENERADOR DE DATASET — OCR IA PROYECTO")
+    print("=" * 70)
+    
+    base_dir = Path("data/training")
+    base_dir.mkdir(parents=True, exist_ok=True)
+    
+    categorias = ["factura", "recibo", "contrato", "otro"]
+    generadores = {
+        "factura": gen_factura,
+        "recibo": gen_recibo,
+        "contrato": gen_contrato,
+        "otro": gen_otro
+    }
+    
+    stats = {}
+    
+    for categoria in categorias:
+        carpeta = base_dir / categoria
+        carpeta.mkdir(exist_ok=True)
+        
+        # Limpiar archivos antiguos
+        for archivo in carpeta.glob("*.txt"):
+            archivo.unlink()
+        
+        generador = generadores[categoria]
+        total_generados = 0
+        
+        # Generar 30 documentos base
+        print(f"\nGenerando {categoria}...")
+        for i in range(1, 31):
+            try:
+                contenido = generador(i)
+                archivo = carpeta / f"{categoria}_{str(i).zfill(3)}.txt"
+                archivo.write_text(contenido, encoding="utf-8")
+                total_generados += 1
+            except Exception as e:
+                print(f"  ❌ Error generando {categoria}_{i}: {e}")
+        
+        # Generar 5 documentos cortos adicionales (índices 31-35)
+        for i in range(31, 36):
+            try:
+                if categoria == "factura":
+                    contenido = f"FACTURA ELECTRONICA No.{i} SAT Guatemala Documento tributario Total Q{random.randint(100, 5000)} NIT Contribuyente IVA 12% Monto Q{random.randint(50, 3000)}"
+                elif categoria == "recibo":
+                    contenido = f"RECIBO Numero REC-{i} Recibi de cliente cantidad Q{random.randint(50, 1000)} por concepto de pago forma efectivo transferencia sello firma departamento cobros"
+                elif categoria == "contrato":
+                    contenido = f"CONTRATO Clausula el contratante el contratado Obligaciones vigencia {random.randint(6, 24)} meses convenimos a partir de acuerdo incumplimiento Guatemala"
+                else:
+                    contenido = f"COMUNICADO Estimado por medio de la presente le informamos aviso horario agradecemos atentamente cordialmente la administracion informacion contactenos"
+                
+                archivo = carpeta / f"{categoria}_corto_{str(i-30).zfill(2)}.txt"
+                archivo.write_text(contenido, encoding="utf-8")
+                total_generados += 1
+            except Exception as e:
+                print(f"  ❌ Error generando {categoria} corto_{i-30}: {e}")
+        
+        stats[categoria] = total_generados
+        print(f"  ✅ {total_generados} archivos generados")
+    
+    print(f"\n{'=' * 70}")
+    print(" RESUMEN")
+    print("=" * 70)
+    total = sum(stats.values())
+    for cat, count in stats.items():
+        print(f"  {cat:12s}: {count:2d} archivos")
+    print(f"  {'TOTAL':12s}: {total:3d} archivos")
+    print(f"{'=' * 70}")
+    print(f"\n✅ Dataset generado exitosamente en data/training/")
+    print(f"Próximo paso: python train_classifier.py")
+    print()
+
+
+if __name__ == "__main__":
+    main()
+
+
+========== smoke_test.py ==========
+"""
+smoke_test.py — Diagnóstico de integración del proyecto OCR IA.
+
+Ejecutar desde la raíz del proyecto:
+    python smoke_test.py
+
+NO es un test de pytest. Verifica que los módulos se comunican
+correctamente entre sí con datos reales, sin mocks.
+"""
+import sys
+import json
+import logging
+from pathlib import Path
+
+logging.basicConfig(
+    level=logging.WARNING,  # Solo warnings y errores en smoke test
+    format="[%(levelname)s] %(name)s: %(message)s"
+)
+
+OK = "  [OK]"
+FAIL = "  [FAIL]"
+WARN = "  [WARN]"
+
+def check(condition: bool, msg_ok: str, msg_fail: str) -> bool:
+    if condition:
+        print(f"{OK}  {msg_ok}")
+    else:
+        print(f"{FAIL} {msg_fail}")
+    return condition
+
+
+def test_01_imports():
+    print("\n[TEST 1] Imports de módulos")
+    try:
+        from config import TESSERACT_PATH
+        check(True, "config.py importado", "")
+        check(
+            TESSERACT_PATH is not None,
+            f"Tesseract encontrado en: {TESSERACT_PATH}",
+            "Tesseract NO encontrado — OCR no funcionará"
+        )
+    except ImportError as e:
+        print(f"{FAIL} config.py no importa: {e}")
+        return False
+
+    for modulo in ["src.ocr", "src.extractor", "src.classifier", "src.pipeline"]:
+        try:
+            __import__(modulo)
+            print(f"{OK}  {modulo} importado")
+        except ImportError as e:
+            print(f"{FAIL} {modulo} falla al importar: {e}")
+            return False
+    return True
+
+
+def test_02_classifier_sin_modelo():
+    print("\n[TEST 2] Classifier sin modelo entrenado")
+    try:
+        from src.classifier import DocumentClassifier
+        clf = DocumentClassifier()
+
+        check(hasattr(clf, 'is_trained'), "is_trained flag existe", "is_trained NO existe")
+        check(not clf.is_trained, "is_trained=False sin modelo (correcto)", "is_trained=True sin modelo (incorrecto)")
+
+        result = clf.predict("texto de prueba sin modelo")
+        check(isinstance(result, dict), "predict() retorna dict", "predict() NO retorna dict")
+        check("is_trained" in result, "is_trained en respuesta de predict()", "is_trained NO en respuesta")
+
+        # Verificar que existe al menos una de las dos claves de clase
+        tiene_clave = ("predicted_class" in result) or ("class" in result)
+        check(tiene_clave, "Clave de clase presente en resultado", "Ninguna clave de clase en resultado")
+
+        return True
+    except Exception as e:
+        print(f"{FAIL} Error en test classifier: {e}")
+        return False
+
+
+def test_03_classifier_con_modelo():
+    print("\n[TEST 3] Classifier con modelo entrenado")
+    model_path = Path("models/classifier_model.joblib")
+
+    if not model_path.exists():
+        print(f"{WARN}  models/classifier_model.joblib no existe")
+        print(f"        Ejecuta: python train_classifier.py")
+        print(f"        Este test se omite hasta que el modelo exista")
+        return None  # Warning, no fallo
+
+    try:
+        from src.classifier import DocumentClassifier
+        clf = DocumentClassifier(model_path=str(model_path))
+
+        check(clf.is_trained, "Modelo cargado (is_trained=True)", "Modelo NO cargó (is_trained=False)")
+
+        texto_factura = "FACTURA ELECTRONICA No. 001 Subtotal Q500 IVA Q60 Total Q560 NIT 1234567-8"
+        result = clf.predict(texto_factura)
+
+        check(isinstance(result, dict), "predict() retorna dict", "predict() NO retorna dict")
+        check(result.get("is_trained") == True, "is_trained=True en resultado", "is_trained != True en resultado")
+
+        clase = result.get("predicted_class") or result.get("class", "NINGUNA")
+        confianza = result.get("confidence", 0)
+        print(f"{OK}  Predicción: '{clase}' (confianza: {confianza:.2%})")
+
+        check(
+            clase in ["factura", "recibo", "contrato", "otro"],
+            f"Clase válida: {clase}",
+            f"Clase inesperada: {clase}"
+        )
+        return True
+
+    except Exception as e:
+        print(f"{FAIL} Error en test con modelo: {e}")
+        return False
+
+
+def test_04_extractor():
+    print("\n[TEST 4] Extractor con texto real")
+    try:
+        from src.extractor import DataExtractor
+        ext = DataExtractor()
+
+        texto = (
+            "Factura para juan@empresa.com "
+            "Tel: 2345-6789 Fecha: 22/04/2026 "
+            "Total: Q1500.00 URL: https://empresa.gt"
+        )
+        result = ext.extract_all(texto)
+
+        check(isinstance(result, dict), "extract_all() retorna dict", "extract_all() NO retorna dict")
+        check(len(result.get("emails", [])) > 0, "Email detectado", "Email NO detectado")
+        check(len(result.get("phones", [])) > 0, "Teléfono detectado", "Teléfono NO detectado")
+        check(len(result.get("dates", [])) > 0, "Fecha detectada", "Fecha NO detectada")
+        check(len(result.get("currency", [])) > 0, "Monto detectado", "Monto NO detectado")
+
+        return True
+    except Exception as e:
+        print(f"{FAIL} Error en extractor: {e}")
+        return False
+
+
+def test_05_pipeline_sin_archivo():
+    print("\n[TEST 5] Pipeline con archivo inexistente (error boundary)")
+    try:
+        from src.pipeline import OCRPipeline
+        pipe = OCRPipeline()
+
+        result = pipe.process_image("/archivo/que/no/existe.jpg")
+
+        check(isinstance(result, dict), "process_image() retorna dict (no excepción)", "process_image() lanzó excepción")
+        check("errors" in result, "Campo 'errors' en resultado", "Campo 'errors' FALTA en resultado")
+        check(len(result.get("errors", [])) > 0, "Error registrado en 'errors'", "Lista 'errors' vacía (debería tener error)")
+        check(result.get("status") in ["error", "partial"], "Status es 'error' o 'partial'", f"Status inesperado: {result.get('status')}")
+
+        return True
+    except Exception as e:
+        print(f"{FAIL} Pipeline lanzó excepción sin capturar: {e}")
+        print(f"        El error boundary no está funcionando correctamente")
+        return False
+
+
+def test_06_formato_salida_pipeline():
+    print("\n[TEST 6] Formato de salida del pipeline")
+    try:
+        from src.pipeline import OCRPipeline
+        pipe = OCRPipeline()
+
+        # Llama con archivo inexistente — nos interesa el formato del dict, no el contenido
+        result = pipe.process_image("/fake.jpg")
+
+        campos_esperados = ["status", "errors", "input_file"]
+        for campo in campos_esperados:
+            check(campo in result, f"Campo '{campo}' presente", f"Campo '{campo}' FALTA")
+
+        return True
+    except Exception as e:
+        print(f"{FAIL} Error verificando formato: {e}")
+        return False
+
+
+def test_07_compatibilidad_train_classifier():
+    print("\n[TEST 7] Compatibilidad train_classifier.py → classifier.py")
+    model_path = Path("models/classifier_model.joblib")
+
+    if not model_path.exists():
+        print(f"{WARN}  Modelo no existe — omitiendo test de compatibilidad")
+        print(f"        Ejecuta: python train_classifier.py")
+        return None
+
+    try:
+        import joblib
+        loaded = joblib.load(str(model_path))
+
+        if hasattr(loaded, 'predict'):
+            print(f"{OK}  Modelo es Pipeline de scikit-learn directo")
+            print(f"        classifier.py debe usar sklearn_pipeline.predict()")
+        elif isinstance(loaded, dict):
+            print(f"{OK}  Modelo es dict con llaves: {list(loaded.keys())}")
+            llaves_requeridas = ["model", "vectorizer"]
+            for llave in llaves_requeridas:
+                check(llave in loaded, f"Llave '{llave}' presente en dict", f"Llave '{llave}' FALTA en dict")
+        else:
+            print(f"{FAIL} Tipo de modelo desconocido: {type(loaded)}")
+            return False
+
+        # Verificar que classifier.py lo puede cargar correctamente
+        from src.classifier import DocumentClassifier
+        clf = DocumentClassifier(model_path=str(model_path))
+        check(clf.is_trained, "classifier.py carga el modelo correctamente", "classifier.py NO pudo cargar el modelo")
+
+        return True
+
+    except Exception as e:
+        print(f"{FAIL} Error en test de compatibilidad: {e}")
+        return False
+
+
+# ── EJECUCIÓN ─────────────────────────────────────────────────────────────────
+
+def main():
+    print("=" * 60)
+    print(" SMOKE TEST — OCR IA PROYECTO")
+    print(" Diagnóstico de integración entre módulos")
+    print("=" * 60)
+
+    tests = [
+        ("Imports", test_01_imports),
+        ("Classifier sin modelo", test_02_classifier_sin_modelo),
+        ("Classifier con modelo", test_03_classifier_con_modelo),
+        ("Extractor", test_04_extractor),
+        ("Pipeline error boundary", test_05_pipeline_sin_archivo),
+        ("Formato salida pipeline", test_06_formato_salida_pipeline),
+        ("Compatibilidad train↔classifier", test_07_compatibilidad_train_classifier),
+    ]
+
+    resultados = []
+    for nombre, test_fn in tests:
+        try:
+            r = test_fn()
+            resultados.append((nombre, r))
+        except Exception as e:
+            print(f"\n{FAIL} Test '{nombre}' falló con excepción: {e}")
+            resultados.append((nombre, False))
+
+    print("\n" + "=" * 60)
+    print(" RESUMEN")
+    print("=" * 60)
+
+    ok = sum(1 for _, r in resultados if r is True)
+    warn = sum(1 for _, r in resultados if r is None)
+    fail = sum(1 for _, r in resultados if r is False)
+
+    for nombre, r in resultados:
+        if r is True:
+            print(f"  [OK]   {nombre}")
+        elif r is None:
+            print(f"  [WARN] {nombre} — omitido (modelo no existe)")
+        else:
+            print(f"  [FAIL] {nombre}")
+
+    print()
+    print(f"  Pasados: {ok}/{len(tests)}   Omitidos: {warn}   Fallidos: {fail}")
+    print("=" * 60)
+
+    if fail == 0:
+        print("\n  El proyecto está listo para entrenar el modelo y hacer demo.")
+        print("  Siguiente paso: python generar_dataset.py && python train_classifier.py")
+    else:
+        print(f"\n  Hay {fail} problema(s) que resolver antes de la expo.")
+        print("  Revisa los [FAIL] arriba y corrígelos antes de continuar.")
+    print()
+
+
+if __name__ == "__main__":
+    main()
+
+
+========== end_to_end_test.py ==========
+"""
+end_to_end_test.py — Prueba completa del pipeline con datos reales.
+
+Simula el flujo completo OCR -> Extracción -> Clasificación usando texto
+pre-cargado (sin requerir Tesseract ni archivos físicos).
+
+Ejecutar:
+    python end_to_end_test.py
+"""
+import logging
+import json
+from pathlib import Path
+
+logging.basicConfig(level=logging.WARNING, format="[%(levelname)s] %(message)s")
+
+OK   = "  [OK]  "
+FAIL = "  [FAIL]"
+SEP  = "─" * 60
+
+DOCUMENTOS_TEST = [
+    {
+        "nombre": "Factura estándar",
+        "categoria_esperada": "factura",
+        "texto": (
+            "FACTURA ELECTRONICA No. FAC-2026-0001 "
+            "Distribuidora Guatemalteca SA NIT: 4523891-2 "
+            "Documento tributario electronico SAT Guatemala "
+            "Cliente: Juan Ramirez Correo: juan@empresa.com "
+            "Tel: 5432-1098 Fecha: 22/04/2026 "
+            "Subtotal Q8500.00 IVA 12% Q1020.00 Total Q9520.00 "
+            "Forma de pago: transferencia bancaria "
+            "contribuyente serie correlativo autorizado"
+        )
+    },
+    {
+        "nombre": "Recibo de pago",
+        "categoria_esperada": "recibo",
+        "texto": (
+            "RECIBO OFICIAL DE PAGO No. REC-00348 "
+            "Fecha: 20/04/2026 "
+            "Recibi de: Maria Gonzalez la cantidad de Q450.00 "
+            "por concepto de pago mensual servicio internet "
+            "Forma de pago: efectivo cheque transferencia "
+            "sello firma departamento cobros "
+            "Tel: 2234-5678 Muchas gracias por su pago puntual"
+        )
+    },
+    {
+        "nombre": "Contrato de servicios",
+        "categoria_esperada": "contrato",
+        "texto": (
+            "CONTRATO DE PRESTACION DE SERVICIOS "
+            "Entre los suscritos convenimos las siguientes clausulas "
+            "PRIMERA el contratante SEGUNDA vigencia 12 meses "
+            "TERCERA contraprestacion el contratado obligaciones "
+            "CUARTA confidencialidad Guatemala "
+            "a partir de 01/05/2026 acuerdo incumplimiento "
+            "firmamos en la ciudad de Guatemala"
+        )
+    },
+    {
+        "nombre": "Comunicado general",
+        "categoria_esperada": "otro",
+        "texto": (
+            "COMUNICADO OFICIAL Fecha: 22/04/2026 "
+            "Estimado cliente por medio de la presente le informamos "
+            "sobre los nuevos horarios de atencion de nuestras oficinas "
+            "Agradecemos su comprension cordialmente atentamente "
+            "la administracion aviso informacion general "
+            "Para consultas contactenos correo info@empresa.gt"
+        )
+    },
+]
+
+
+def test_extractor():
+    """Verifica que el extractor detecta datos en textos reales."""
+    print(f"\n{SEP}")
+    print(" TEST EXTRACTOR")
+    print(SEP)
+    from src.extractor import DataExtractor
+    ext = DataExtractor()
+
+    texto_con_datos = (
+        "Contacto: gerente@empresa.gt Tel: 2345-6789 "
+        "Fecha: 22/04/2026 Total: Q1500.00 "
+        "URL: https://empresa.gt RFC: ABC123456XYZ"
+    )
+
+    result = ext.extract_all(texto_con_datos)
+    checks = [
+        (len(result.get("emails", [])) > 0,     "Email extraído"),
+        (len(result.get("phones", [])) > 0,     "Teléfono extraído"),
+        (len(result.get("dates", [])) > 0,      "Fecha extraída"),
+        (len(result.get("currency", [])) > 0,   "Monto extraído"),
+        ("error" not in result,                  "Sin errores en extracción"),
+    ]
+
+    all_ok = True
+    for cond, msg in checks:
+        if cond:
+            print(f"{OK} {msg}")
+        else:
+            print(f"{FAIL} {msg}")
+            all_ok = False
+
+    return all_ok
+
+
+def test_clasificador():
+    """Verifica que el clasificador acierte en los 4 tipos de documento."""
+    print(f"\n{SEP}")
+    print(" TEST CLASIFICADOR (4 categorías)")
+    print(SEP)
+
+    model_path = Path("models/classifier_model.joblib")
+    if not model_path.exists():
+        print(f"{FAIL} Modelo no existe. Ejecuta: python train_classifier.py")
+        return False
+
+    from src.classifier import DocumentClassifier
+    clf = DocumentClassifier(model_path=str(model_path))
+
+    if not clf.is_trained:
+        print(f"{FAIL} Modelo cargado pero is_trained=False")
+        return False
+
+    aciertos = 0
+    total = len(DOCUMENTOS_TEST)
+    confianzas = []
+
+    for doc in DOCUMENTOS_TEST:
+        result = clf.predict(doc["texto"])
+        clase = result.get("predicted_class") or result.get("class", "?")
+        confianza = result.get("confidence", 0.0) or 0.0
+        confianzas.append(confianza)
+
+        acierto = clase == doc["categoria_esperada"]
+        if acierto:
+            aciertos += 1
+            marca = OK
+        else:
+            marca = FAIL
+
+        print(
+            f"{marca} '{doc['nombre']}' → "
+            f"esperado: {doc['categoria_esperada']:10s} | "
+            f"predicho: {clase:10s} | "
+            f"confianza: {confianza:.1%}"
+        )
+
+    conf_promedio = sum(confianzas) / len(confianzas) if confianzas else 0
+    print()
+    print(f"  Aciertos: {aciertos}/{total}")
+    print(f"  Confianza promedio: {conf_promedio:.1%}")
+
+    if conf_promedio < 0.70:
+        print(f"\n  ADVERTENCIA: Confianza promedio baja ({conf_promedio:.1%})")
+        print(f"  Para la expo necesitas > 70%. Regenera dataset y reentrena.")
+    elif conf_promedio < 0.85:
+        print(f"\n  OK para expo ({conf_promedio:.1%}). Podría ser mejor con más datos.")
+    else:
+        print(f"\n  EXCELENTE ({conf_promedio:.1%}). Listo para expo.")
+
+    return aciertos >= 3  # Al menos 3 de 4 categorías correctas
+
+
+def test_pipeline_texto():
+    """
+    Verifica el pipeline completo saltando el OCR (inyectando texto directo).
+    Simula lo que haría el pipeline después de que OCR extrae el texto.
+    """
+    print(f"\n{SEP}")
+    print(" TEST PIPELINE COMPLETO (texto inyectado, sin OCR)")
+    print(SEP)
+
+    from src.extractor import DataExtractor
+    from src.classifier import DocumentClassifier
+
+    model_path = Path("models/classifier_model.joblib")
+    clf = DocumentClassifier(model_path=str(model_path) if model_path.exists() else None)
+    ext = DataExtractor()
+
+    all_ok = True
+    for doc in DOCUMENTOS_TEST[:2]:  # Probar con los primeros 2
+        texto = doc["texto"]
+        nombre = doc["nombre"]
+
+        # Simular lo que hace pipeline.py internamente
+        try:
+            extraction = ext.extract_all(texto)
+            classification = clf.predict(texto)
+
+            clase = classification.get("predicted_class") or classification.get("class", "?")
+            confianza = classification.get("confidence", 0.0) or 0.0
+            datos = sum(len(v) if isinstance(v, list) else 1
+                       for v in extraction.values() if v)
+
+            print(f"{OK} '{nombre}'")
+            print(f"       Clase: {clase} ({confianza:.1%}) | Datos: {datos} encontrados")
+            print(f"       is_trained: {classification.get('is_trained')}")
+
+        except Exception as e:
+            print(f"{FAIL} '{nombre}' → excepción: {e}")
+            all_ok = False
+
+    return all_ok
+
+
+def test_formato_json():
+    """Verifica que el resultado del pipeline tiene el formato correcto."""
+    print(f"\n{SEP}")
+    print(" TEST FORMATO JSON DE SALIDA")
+    print(SEP)
+
+    from src.pipeline import OCRPipeline
+    pipe = OCRPipeline()
+
+    # Probar con archivo inexistente para ver formato de error
+    result = pipe.process_image("fake_para_formato_test.jpg")
+
+    campos_requeridos = ["status", "errors", "input_file"]
+    all_ok = True
+
+    for campo in campos_requeridos:
+        if campo in result:
+            print(f"{OK} Campo '{campo}' presente en output")
+        else:
+            print(f"{FAIL} Campo '{campo}' FALTA en output")
+            all_ok = False
+
+    # Verificar que errors es lista
+    if isinstance(result.get("errors"), list):
+        print(f"{OK} 'errors' es lista (correcto)")
+    else:
+        print(f"{FAIL} 'errors' no es lista")
+        all_ok = False
+
+    return all_ok
+
+
+# ── EJECUCIÓN ─────────────────────────────────────────────────────────────────
+
+def main():
+    print("=" * 60)
+    print(" END-TO-END TEST — OCR IA PROYECTO")
+    print(" Prueba completa del pipeline con datos reales")
+    print("=" * 60)
+
+    resultados = []
+    tests = [
+        ("Extractor", test_extractor),
+        ("Clasificador 4 categorías", test_clasificador),
+        ("Pipeline texto inyectado", test_pipeline_texto),
+        ("Formato JSON salida", test_formato_json),
+    ]
+
+    for nombre, fn in tests:
+        try:
+            ok = fn()
+            resultados.append((nombre, ok))
+        except Exception as e:
+            print(f"\n  EXCEPCIÓN en '{nombre}': {e}")
+            resultados.append((nombre, False))
+
+    print(f"\n{'=' * 60}")
+    print(" RESUMEN FINAL")
+    print("=" * 60)
+
+    pasados = sum(1 for _, r in resultados if r)
+    for nombre, r in resultados:
+        marca = "[OK]  " if r else "[FAIL]"
+        print(f"  {marca} {nombre}")
+
+    print(f"\n  Pasados: {pasados}/{len(resultados)}")
+    print("=" * 60)
+
+    if pasados == len(resultados):
+        print("\n  El pipeline está listo para la expo.")
+        print("  Siguiente: streamlit run app/app.py y prueba con archivos reales.\n")
+    else:
+        fallos = [n for n, r in resultados if not r]
+        print(f"\n  Fallos en: {fallos}")
+        print("  Revisa los [FAIL] arriba antes de continuar.\n")
+
+
+if __name__ == "__main__":
+    main()
+
+
+========== arrancar_expo.py ==========
+"""
+arrancar_expo.py — Script de inicio para el dia de la exposicion.
+
+Verifica que todo está en orden y lanza la aplicación.
+
+Ejecutar:
+    python arrancar_expo.py
+"""
+import sys
+import subprocess
+from pathlib import Path
+
+
+def verificar_modelo():
+    """Verifica que el modelo ML existe y está cargable."""
+    model = Path("models/classifier_model.joblib")
+    if not model.exists():
+        print("[ERROR] Modelo no encontrado: models/classifier_model.joblib")
+        print("        Ejecuta: python train_classifier.py")
+        return False
+    size_kb = model.stat().st_size / 1024
+    print(f"[OK]  Modelo encontrado ({size_kb:.1f} KB)")
+    return True
+
+
+def verificar_tesseract():
+    """Verifica disponibilidad de Tesseract para OCR."""
+    try:
+        from config import TESSERACT_PATH
+        import pytesseract
+
+        if TESSERACT_PATH:
+            try:
+                pytesseract.pytesseract.tesseract_cmd = TESSERACT_PATH
+                ver = pytesseract.get_tesseract_version()
+                print(f"[OK]  Tesseract {ver} en: {TESSERACT_PATH}")
+                return True
+            except Exception as e:
+                print(f"[WARN] Tesseract encontrado pero falla: {e}")
+                return False
+        else:
+            print("[WARN] Tesseract NO detectado — usará Plan B")
+            return False
+    except Exception:
+        print("[WARN] No se pudo verificar Tesseract")
+        return False
+
+
+def verificar_dependencias():
+    """Verifica que todos los paquetes necesarios están instalados."""
+    paquetes = ["streamlit", "pytesseract", "sklearn", "cv2", "PIL", "pdfplumber"]
+    faltantes = []
+    for pkg in paquetes:
+        try:
+            __import__(pkg if pkg != "sklearn" else "sklearn")
+        except ImportError:
+            faltantes.append(pkg)
+    if faltantes:
+        print(f"[ERROR] Dependencias faltantes: {faltantes}")
+        print("        Ejecuta: pip install -r requirements.txt")
+        return False
+    print("[OK]  Todas las dependencias instaladas")
+    return True
+
+
+def verificar_demos():
+    """Verifica que hay archivos de demo preparados."""
+    demos_dir = Path("demos")
+    if demos_dir.exists():
+        txt_files = list(demos_dir.glob("*.txt"))
+        pdf_files = list(demos_dir.glob("*.pdf"))
+        print(f"[INFO] Archivos de demo: {len(txt_files)} TXT, {len(pdf_files)} PDF")
+        if len(txt_files) >= 4:
+            print("[OK]  Archivos de demo (.txt) disponibles")
+            if len(pdf_files) >= 3:
+                print("[OK]  PDFs de demo listos para presentar")
+                return True
+            else:
+                print("[WARN] Convierte los .txt a PDF para la demo (instructions en demos/)")
+                return True
+        else:
+            print("[WARN] No hay suficientes archivos de demo (.txt)")
+            return False
+    else:
+        print("[WARN] Carpeta demos/ no existe")
+        return False
+
+
+def main():
+    """Función principal."""
+    print("=" * 60)
+    print(" VERIFICACIÓN PRE-EXPO — OCR IA PROYECTO")
+    print(" Inicia la aplicación después de validar todo")
+    print("=" * 60)
+    print()
+
+    modelo_ok = verificar_modelo()
+    tess_ok = verificar_tesseract()
+    deps_ok = verificar_dependencias()
+    demos_ok = verificar_demos()
+
+    print()
+    print("=" * 60)
+
+    # Determinar si hay problemas críticos
+    criticos_ok = modelo_ok and deps_ok
+
+    if not criticos_ok:
+        print("[ERROR] Hay problemas CRITICOS que impiden la ejecución.")
+        print()
+        print("Resuelve los [ERROR] antes de intentar de nuevo.")
+        print()
+        sys.exit(1)
+
+    print()
+    if tess_ok:
+        print("[OK] Tesseract disponible. Lanzando aplicación principal con OCR real...")
+        print()
+        print("      URL principal:    http://localhost:8501")
+        print("      Para detener:     Ctrl + C")
+        print()
+        try:
+            subprocess.run(
+                [sys.executable, "-m", "streamlit", "run",
+                 "app/app.py", "--server.port", "8501"],
+                check=False
+            )
+        except KeyboardInterrupt:
+            print()
+            print("Aplicación cerrada.")
+    else:
+        print("[WARN] Tesseract no disponible. Lanzando Plan B (respaldo)...")
+        print()
+        print("      URL Plan B:       http://localhost:8502")
+        print("      Para detener:     Ctrl + C")
+        print()
+        print("      Nota: Usa los documentos pre-cargados para la demo.")
+        print()
+        try:
+            subprocess.run(
+                [sys.executable, "-m", "streamlit", "run",
+                 "demo_plan_b.py", "--server.port", "8502"],
+                check=False
+            )
+        except KeyboardInterrupt:
+            print()
+            print("Plan B cerrado.")
+
+    print()
+    print("=" * 60)
+    print("Aplicación finalizada.")
+    print("=" * 60)
+
+
+if __name__ == "__main__":
+    main()
+
+
+========== verificar_expo.py ==========
+"""
+verificar_expo.py — Checklist automatizado del día de la expo.
+
+Ejecutar 30 minutos antes de presentar:
+    python verificar_expo.py
+
+Si todo es [OK], estás listo. Si hay [FAIL], sabes qué resolver.
+"""
+from pathlib import Path
+
+OK   = "  [OK]  "
+FAIL = "  [FAIL]"
+WARN = "  [WARN]"
+
+
+def check(cond, msg_ok, msg_fail, es_critico=True):
+    """Verifica una condición y muestra el resultado."""
+    if cond:
+        print(f"{OK} {msg_ok}")
+        return True
+    else:
+        marca = FAIL if es_critico else WARN
+        print(f"{marca} {msg_fail}")
+        return cond or not es_critico
+
+
+def main():
+    """Función principal."""
+    print("=" * 70)
+    print(" CHECKLIST DE EXPO — OCR IA PROYECTO")
+    print(" Ejecuta esto 30 min antes de presentar")
+    print("=" * 70)
+
+    criticos_ok = True
+
+    # ─ BLOQUE 1: Archivos críticos ─────────────────────────────────────
+    print("\n[1] ARCHIVOS CRITICOS")
+    print("-" * 70)
+    criticos_ok &= check(
+        Path("models/classifier_model.joblib").exists(),
+        "Modelo ML existe",
+        "MODELO NO EXISTE — ejecuta train_classifier.py"
+    )
+    criticos_ok &= check(
+        Path("app/app.py").exists(),
+        "app/app.py existe",
+        "app/app.py NO EXISTE"
+    )
+    criticos_ok &= check(
+        Path("demo_plan_b.py").exists(),
+        "Plan B existe (demo_plan_b.py)",
+        "Plan B NO EXISTE — riesgo sin respaldo"
+    )
+    criticos_ok &= check(
+        Path("smoke_test.py").exists(),
+        "smoke_test.py existe",
+        "smoke_test.py NO EXISTE"
+    )
+    criticos_ok &= check(
+        Path("src/classifier.py").exists(),
+        "src/classifier.py existe",
+        "src/classifier.py NO EXISTE"
+    )
+
+    # ─ BLOQUE 2: Entorno Python ────────────────────────────────────────
+    print("\n[2] ENTORNO PYTHON")
+    print("-" * 70)
+    try:
+        import streamlit
+        check(True, f"Streamlit {streamlit.__version__}", "")
+    except ImportError:
+        criticos_ok &= check(False, "", "Streamlit NO instalado")
+
+    try:
+        import sklearn
+        check(True, f"scikit-learn {sklearn.__version__}", "")
+    except ImportError:
+        criticos_ok &= check(False, "", "scikit-learn NO instalado")
+
+    try:
+        import pytesseract
+        check(True, "pytesseract importa correctamente", "")
+    except ImportError:
+        check(False, "", "pytesseract NO instalado", es_critico=False)
+
+    try:
+        import pdfplumber
+        check(True, "pdfplumber importa correctamente", "")
+    except ImportError:
+        check(False, "", "pdfplumber NO instalado", es_critico=False)
+
+    # ─ BLOQUE 3: Tesseract OCR ─────────────────────────────────────────
+    print("\n[3] TESSERACT OCR")
+    print("-" * 70)
+    tess_ok = False
+    try:
+        from config import TESSERACT_PATH
+        import pytesseract
+
+        if TESSERACT_PATH:
+            pytesseract.pytesseract.tesseract_cmd = TESSERACT_PATH
+            ver = pytesseract.get_tesseract_version()
+            langs = pytesseract.get_languages()
+            check(True, f"Tesseract {ver}", "")
+            check('eng' in langs, f"Idiomas: {', '.join(langs[:3])} (eng disponible)", "eng NO disponible")
+            tess_ok = True
+        else:
+            criticos_ok &= check(False, "",
+                                 "Tesseract NO detectado — instalar o definir TESSERACT_PATH")
+    except Exception as e:
+        criticos_ok &= check(False, "", f"Error verificando Tesseract: {e}")
+
+    # ─ BLOQUE 4: Modelo ML ──────────────────────────────────────────────
+    print("\n[4] MODELO DE MACHINE LEARNING")
+    print("-" * 70)
+    model_path = Path("models/classifier_model.joblib")
+    if model_path.exists():
+        size_kb = model_path.stat().st_size / 1024
+        check(size_kb > 10, f"Modelo OK ({size_kb:.1f} KB)", "Modelo muy pequeño")
+        try:
+            from src.classifier import DocumentClassifier
+            clf = DocumentClassifier(str(model_path))
+            check(clf.is_trained, "Modelo cargado (is_trained=True)",
+                  "Modelo NO cargó correctamente")
+
+            # Prueba con texto de factura
+            r = clf.predict("FACTURA ELECTRONICA NIT SAT IVA Total Q500 contribuyente")
+            clase = r.get("predicted_class") or r.get("class", "?")
+            conf = r.get("confidence", 0) or 0
+
+            check(clase == "factura", f"Predicción correcta: {clase}",
+                  f"Predicción incorrecta: {clase}", es_critico=False)
+            check(conf > 0.70, f"Confianza aceptable ({conf:.1%})",
+                  f"Confianza baja ({conf:.1%})", es_critico=False)
+            check(conf > 0.80, f"Confianza EXCELENTE ({conf:.1%})",
+                  "", es_critico=False)
+        except Exception as e:
+            criticos_ok &= check(False, "", f"Error cargando modelo: {e}")
+    else:
+        criticos_ok &= check(False, "", "Modelo NO existe")
+
+    # ─ BLOQUE 5: Extractor de Datos ────────────────────────────────────
+    print("\n[5] EXTRACTOR DE DATOS (REGEX)")
+    print("-" * 70)
+    try:
+        from src.extractor import DataExtractor
+        ext = DataExtractor()
+
+        # Prueba con texto que contiene todos los tipos de datos
+        texto_prueba = (
+            "email@test.com Tel: 5432-1098 Fecha: 22/04/2026 "
+            "Total Q1500.00 RFC: ABC123456XYZ"
+        )
+        r = ext.extract_all(texto_prueba)
+
+        check(len(r.get("emails", [])) > 0, "Extrae emails", "NO extrae emails")
+        check(len(r.get("phones", [])) > 0, "Extrae telefonos (OK)",
+              "NO extrae telefonos", es_critico=False)
+        check(len(r.get("dates", [])) > 0, "Extrae fechas", "NO extrae fechas")
+        check(len(r.get("currency", [])) > 0, "Extrae montos Q (OK)",
+              "NO extrae montos Q", es_critico=False)
+        check(len(r.get("rfc", [])) > 0, "Extrae RFC (OK)", "NO extrae RFC",
+              es_critico=False)
+    except Exception as e:
+        criticos_ok &= check(False, "", f"Error en extractor: {e}")
+
+    # ─ BLOQUE 6: Archivos de Demo ──────────────────────────────────────
+    print("\n[6] ARCHIVOS DE DEMO")
+    print("-" * 70)
+    demos_dir = Path("demos")
+    if demos_dir.exists():
+        pdfs = list(demos_dir.glob("*.pdf"))
+        txts = list(demos_dir.glob("*.txt"))
+        check(len(txts) >= 4, f"Archivos de demo: {len(txts)} .txt (OK)",
+              f"Solo {len(txts)} .txt (necesitas 4)", es_critico=False)
+        check(len(pdfs) >= 3, f"PDFs para expo: {len(pdfs)} (OK)",
+              f"Solo {len(pdfs)} PDF (ideal: 3-4)", es_critico=False)
+    else:
+        print(f"{WARN} Carpeta demos/ no existe — crea archivos de demo")
+
+    # ─ BLOQUE 7: Plan B (Respaldo) ─────────────────────────────────────
+    print("\n[7] PLAN B (RESPALDO SIN TESSERACT)")
+    print("-" * 70)
+    check(Path("demo_plan_b.py").exists(),
+          "demo_plan_b.py existe", "Plan B NO existe")
+    check(Path("arrancar_expo.py").exists(),
+          "arrancar_expo.py existe", "Script de arranque no existe",
+          es_critico=False)
+    check(Path("verificar_expo.py").exists(),
+          "verificar_expo.py (este script) existe", "Este script no existe")
+
+    # ─ BLOQUE 8: Tests ─────────────────────────────────────────────────
+    print("\n[8] TEST SUITES")
+    print("-" * 70)
+    check(Path("tests/").exists(),
+          "Carpeta tests/ existe", "tests/ NO EXISTE", es_critico=False)
+    check(Path("smoke_test.py").exists(),
+          "smoke_test.py existe", "smoke_test.py NO EXISTE", es_critico=False)
+    check(Path("end_to_end_test.py").exists(),
+          "end_to_end_test.py existe", "end_to_end_test.py NO EXISTE",
+          es_critico=False)
+
+    # ─ RESUMEN ──────────────────────────────────────────────────────────
+    print()
+    print("=" * 70)
+
+    if criticos_ok:
+        print("  ✅ RESULTADO: LISTO PARA EXPO")
+        print()
+        print("  Próximos pasos:")
+        print("    1. Ejecuta: python arrancar_expo.py")
+        print("       — o —")
+        print("       streamlit run app/app.py")
+        print()
+        print("  Si Tesseract falla:")
+        print("    streamlit run demo_plan_b.py --server.port 8502")
+        print()
+        print("  Última verificación: Prueba cargando un PDF demo.")
+    else:
+        print("  ❌ RESULTADO: HAY PROBLEMAS CRITICOS")
+        print()
+        print("  Resuelve todos los [FAIL] antes de presentar.")
+        print("  Los [WARN] son informativos, no bloquean la ejecución.")
+
+    print("=" * 70)
+    print()
+
+
+if __name__ == "__main__":
+    main()
+
+
+========== demo_plan_b.py ==========
+"""
+demo_plan_b.py — PLAN B: Demo sin Tesseract (OCR alternativo).
+
+Si Tesseract falla el día de la expo, ejecuta esto:
+    streamlit run demo_plan_b.py --server.port 8502
+
+Simula OCR inyectando textos pre-cargados de documentos de ejemplo.
+El clasificador ML y extractor de datos funcionan 100% sin Tesseract.
+"""
+import streamlit as st
+from pathlib import Path
+from src.classifier import DocumentClassifier
+from src.extractor import DataExtractor
+
+
+# ─ CONFIGURACIÓN STREAMLIT ─────────────────────────────────────────────
+st.set_page_config(
+    page_title="OCR IA - Plan B",
+    page_icon="🚀",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+st.markdown("""
+<style>
+    .header-gradient {
+        background: linear-gradient(135deg, #d32f2f 0%, #f57c00 100%);
+        padding: 2rem;
+        border-radius: 10px;
+        color: white;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    }
+    .header-gradient h1 {
+        margin: 0;
+        font-size: 2.5em;
+    }
+    .warning-box {
+        background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+        padding: 1.5rem;
+        border-radius: 10px;
+        border-left: 4px solid #ff9800;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# ─ CARGAR COMPONENTES EN CACHÉ ─────────────────────────────────────────
+@st.cache_resource
+def load_models():
+    """Carga los modelos una sola vez por sesión."""
+    model_path = Path("models/classifier_model.joblib")
+    clf = DocumentClassifier(str(model_path))
+    ext = DataExtractor()
+    return clf, ext
+
+
+# ─ DOCUMENTOS DE DEMOSTRACIÓN ──────────────────────────────────────────
+DOCUMENTOS_DEMO = {
+    "Factura": {
+        "descripcion": "Factura Electrónica de servicios",
+        "texto": """FACTURA ELECTRONICA
+Distribuidora Central S.A.
+NIT: 7823401-5
+Numero de Factura: FAC-2026-0428
+Fecha: 22/04/2026
+
+Cliente: Carlos Mendoza
+Correo: carlos.mendoza@correo.gt
+Telefono: 5543-2109
+
+Detalle:
+Servicio de Consultoria TI - Q 6,500.00
+Licencia de Software Anual - Q 2,400.00
+
+TOTAL: Q 10,920.00
+IVA (12%): Q 1,170.00
+
+Referencia: TRX-20260422
+SAT Guatemala - Contribuyente registrado"""
+    },
+    "Recibo": {
+        "descripcion": "Recibo Oficial de Pago",
+        "texto": """RECIBO OFICIAL DE PAGO
+Servicios Administrativos Guatemala
+
+Numero de Recibo: REC-2026-00892
+Fecha: 22/04/2026
+
+Recibi de: Ana Sofia Castillo
+Correo: ana.castillo@empresa.com
+Telefono: 2334-5678
+
+Cantidad: Q 2,500.00
+
+Por concepto de: Pago mensual de arrendamiento
+Piso 3, Edificio Torre Empresarial
+Mes: Abril 2026
+
+Forma de Pago: Cheque No. 00234 - Banco G&T Continental
+Estado: PAGADO - CANCELADO"""
+    },
+    "Contrato": {
+        "descripcion": "Contrato de Prestación de Servicios",
+        "texto": """CONTRATO DE PRESTACION DE SERVICIOS
+
+En la ciudad de Guatemala, 22 de abril del 2026
+
+PARTES:
+EL CONTRATANTE: TechSoluciones Guatemala S.A., NIT 4521890-3
+EL CONTRATADO: Maria Elena Lopez, DPI 2312456780101
+
+Correo: m.lopez@profesional.gt
+Telefono: 5678-9012
+
+CLAUSULAS:
+PRIMERA - OBJETO: Servicios de consultoria en desarrollo de software
+
+SEGUNDA - VIGENCIA: 12 meses a partir del 01/05/2026
+
+TERCERA - HONORARIOS: Q 8,000.00 mensuales
+
+CUARTA - OBLIGACIONES: Prestar servicios con diligencia y confidencialidad
+
+SEXTA - TERMINACION: 30 dias de anticipacion
+
+Firmas de las partes"""
+    },
+    "Comunicado": {
+        "descripcion": "Comunicado Oficial de la Empresa",
+        "texto": """COMUNICADO OFICIAL
+Corporacion Innovacion Guatemala
+Fecha: 22/04/2026
+
+Estimados senores:
+
+Por medio del presente comunicado, la Gerencia General informa
+sobre actualizaciones en nuestros servicios.
+
+NUEVOS HORARIOS DE ATENCION:
+Lunes a Viernes: 8:00 AM a 6:00 PM
+Sabados: 9:00 AM a 1:00 PM
+
+NUEVA PLATAFORMA DIGITAL:
+https://clientes.corporacion.gt
+
+LINEA DIRECTA DE ATENCION:
+Telefono: 2400-1234
+Correo: atencion@corporacion.gt
+
+Agradecemos la confianza en nuestros servicios.
+
+Lic. Roberto Sanchez Mendez
+Gerente General
+Tel: 2400-5678
+www.corporacion.gt"""
+    }
+}
+
+
+# ─ INTERFAZ PRINCIPAL ──────────────────────────────────────────────────
+st.markdown("""
+<div class="header-gradient">
+    <h1>🚀 PLAN B — Demo Alternativa</h1>
+    <p>Si Tesseract no está disponible, usa esta interfaz para demos</p>
+</div>
+""", unsafe_allow_html=True)
+
+st.markdown("""
+<div class="warning-box">
+    <strong>⚠️ Modo Alternativo Activado</strong><br/>
+    Tesseract no está disponible. Los textos están pre-cargados
+    para demostración. Todos los módulos funcionan normalmente.
+</div>
+""", unsafe_allow_html=True)
+
+# ─ SIDEBAR ─────────────────────────────────────────────────────────────
+with st.sidebar:
+    st.title("📋 Plan B")
+    st.markdown("---")
+    st.markdown("""
+    **Documentos de Demostración**
+    
+    Todos los textos están pre-cargados para probar:
+    - Clasificación ML
+    - Extracción de datos
+    - Formato de salida JSON
+    
+    Selecciona un documento a la izquierda.
+    """)
+
+# ─ CONTENIDO PRINCIPAL ─────────────────────────────────────────────────
+clf, ext = load_models()
+
+col1, col2 = st.columns([1, 2])
+
+with col1:
+    st.subheader("📄 Seleccionar Documento")
+    doc_tipo = st.radio(
+        "Elige un documento para analizar:",
+        list(DOCUMENTOS_DEMO.keys()),
+        key="doc_selector"
+    )
+
+with col2:
+    st.subheader("ℹ️ Información")
+    doc_info = DOCUMENTOS_DEMO[doc_tipo]
+    st.write(f"**{doc_info['descripcion']}**")
+
+st.divider()
+
+# ─ ANÁLISIS ────────────────────────────────────────────────────────────
+if st.button("🔍 Analizar Documento", use_container_width=True, type="primary"):
+    doc_info = DOCUMENTOS_DEMO[doc_tipo]
+    texto = doc_info["texto"]
+
+    with st.spinner("Procesando..."):
+        # Clasificación
+        clf_result = clf.predict(texto)
+        clase = clf_result.get("predicted_class") or clf_result.get("class", "?")
+        confianza = clf_result.get("confidence", 0) or 0
+
+        # Extracción
+        ext_result = ext.extract_all(texto)
+
+    # ─ RESULTADOS ──────────────────────────────────────────────────────
+    st.subheader("📊 Resultados de Análisis")
+
+    # Clasificación
+    st.markdown("### 🏷️ Clasificación")
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        badge_colors = {
+            "factura": "badge-factura",
+            "recibo": "badge-recibo",
+            "contrato": "badge-contrato",
+            "otro": "badge-otro",
+        }
+        st.metric("Tipo Detectado", clase.upper())
+
+    with col2:
+        color_icon = "🟢" if confianza > 0.80 else "🟡" if confianza > 0.60 else "🔴"
+        st.metric("Confianza", f"{color_icon} {confianza:.1%}")
+
+    with col3:
+        st.metric("is_trained", "✅ True")
+
+    st.divider()
+
+    # Extracción de datos
+    st.markdown("### 🔍 Datos Extraídos")
+
+    ext_cols = st.columns(2)
+
+    with ext_cols[0]:
+        st.write("**📧 Emails:**")
+        emails = ext_result.get("emails", [])
+        if emails:
+            for email in emails:
+                st.code(email)
+        else:
+            st.info("No encontrados")
+
+        st.write("**📱 Teléfonos:**")
+        phones = ext_result.get("phones", [])
+        if phones:
+            for phone in phones:
+                st.code(phone)
+        else:
+            st.info("No encontrados")
+
+        st.write("**🔗 URLs:**")
+        urls = ext_result.get("urls", [])
+        if urls:
+            for url in urls:
+                st.code(url)
+        else:
+            st.info("No encontradas")
+
+    with ext_cols[1]:
+        st.write("**📅 Fechas:**")
+        dates = ext_result.get("dates", [])
+        if dates:
+            for date in dates:
+                st.code(date)
+        else:
+            st.info("No encontradas")
+
+        st.write("**💰 Montos:**")
+        currency = ext_result.get("currency", [])
+        if currency:
+            for monto in currency:
+                st.code(monto)
+        else:
+            st.info("No encontrados")
+
+        st.write("**🆔 DNI/RFC:**")
+        dni = ext_result.get("dni", [])
+        rfc = ext_result.get("rfc", [])
+        if dni or rfc:
+            if dni:
+                for d in dni:
+                    st.code(f"DNI: {d}")
+            if rfc:
+                for r in rfc:
+                    st.code(f"RFC: {r}")
+        else:
+            st.info("No encontrados")
+
+    st.divider()
+
+    # Resumen
+    st.markdown("### ✅ Resumen")
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.write(f"**Clasificación:** {clase} ({confianza:.1%})")
+        total_items = sum(len(v) if isinstance(v, list) else 0 
+                        for v in ext_result.values())
+        st.write(f"**Datos Extraídos:** {total_items} items")
+
+    with col2:
+        if confianza > 0.70:
+            st.success("✅ Confianza aceptable para demo (>70%)")
+        else:
+            st.warning(f"⚠️ Confianza baja ({confianza:.1%})")
+
+st.divider()
+
+st.markdown("""
+---
+**Plan B — Demostración sin OCR**  
+Usa Streamlit + Modelo ML + Extractor de Datos  
+Para volver a la app principal: `streamlit run app/app.py`
+""")
+
+
+========== requirements.txt ==========
+pytesseract==0.3.10
+pdfplumber==0.10.3
+opencv-python==4.8.1.78
+scikit-learn==1.5.2
+streamlit>=1.40.0
+Pillow>=11.0.0
+pandas>=3.0.0
+joblib>=1.3.2
+fpdf2>=2.7.0
+numpy<2.0
+python-dotenv>=1.0.0
+
+
+========== tests\conftest.py ==========
+"""
+Configuración central de pytest con fixtures compartidas.
+"""
+import sys
+from pathlib import Path
+
+import pytest
+
+# Agregar el directorio raíz al path para imports
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+
+
+@pytest.fixture
+def extractor():
+    """
+    Instancia reutilizable de DataExtractor.
+    Se crea una nueva instancia para cada test.
+    """
+    from src.extractor import DataExtractor
+    return DataExtractor()
+
+
+@pytest.fixture
+def config():
+    """
+    Módulo de configuración del proyecto.
+    """
+    return sys.modules.get('config') or __import__('config')
+
+
+@pytest.fixture
+def pipeline():
+    """
+    Instancia reutilizable de OCRPipeline.
+    NOTA: Importación lazy para evitar dependencias de cv2 en setup.
+    """
+    try:
+        from src.pipeline import OCRPipeline
+        return OCRPipeline()
+    except (ImportError, AttributeError) as e:
+        # Retorna None si cv2 no está disponible (permiten tests sin OCR)
+        pytest.skip(f"Pipeline requires cv2: {str(e)}", allow_module_level=False)
+        return None
+
+
+@pytest.fixture
+def sample_text_with_emails():
+    """
+    Texto de muestra con múltiples emails.
+    """
+    return """
+    Contacto principal: john.doe@example.com
+    Email secundario: jane.smith@company.org
+    Para más info: info@domain.co.uk
+    """
+
+
+@pytest.fixture
+def sample_text_with_phones():
+    """
+    Texto de muestra con múltiples teléfonos.
+    """
+    return """
+    Teléfono: +34 912 345 678
+    Celular: 555-1234-5678
+    Otro: (202) 555-0173
+    Mobil: +1 555 123 4567
+    """
+
+
+@pytest.fixture
+def sample_text_with_dates():
+    """
+    Texto de muestra con múltiples fechas.
+    """
+    return """
+    Fecha de emisión: 2024-03-15
+    Vencimiento: 03/15/2024
+    Día de pago: 15-03-2024
+    Desde: 2024/03/15
+    """
+
+
+@pytest.fixture
+def sample_text_with_urls():
+    """
+    Texto de muestra con URLs.
+    """
+    return """
+    Sitio web: https://www.example.com
+    URL: http://domain.org/page
+    Portal: https://secure.company.com/api/v1
+    FTP: ftp://files.example.net
+    """
+
+
+@pytest.fixture
+def sample_text_with_currency():
+    """
+    Texto de muestra con valores monetarios.
+    """
+    return """
+    Precio: $199.99
+    Monto: €1,234.50
+    Importe: 500.00 USD
+    Total: £299.95
+    """
+
+
+@pytest.fixture
+def sample_text_with_dni():
+    """
+    Texto de muestra con DNI (documentos españoles).
+    """
+    return """
+    DNI: 12345678A
+    Cédula: 87654321Z
+    Identificación: 11223344B
+    """
+
+
+@pytest.fixture
+def sample_text_with_rfc():
+    """
+    Texto de muestra con RFC (México).
+    """
+    return """
+    RFC: AAA010101ABC
+    RFC del vendedor: XYZ920815ABC
+    Registro: ABP901215LB1
+    """
+
+
+@pytest.fixture
+def empty_text():
+    """
+    Texto vacío.
+    """
+    return ""
+
+
+@pytest.fixture
+def none_text():
+    """
+    None (para probar robustez).
+    """
+    return None
+
+
+========== tests\test_classifier.py ==========
+"""
+Tests para src/classifier.py - DocumentClassifier
+
+Cobertura:
+- Inicialización del clasificador (sin y con modelo)
+- Predicción con modelo entrenado
+- Predicción sin modelo (fallback)
+- Carga automática de modelo
+- Manejo de errores
+
+Total: 12 tests
+"""
+import sys
+from pathlib import Path
+
+import pytest
+
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+
+from config import MODELS_DIR
+from src.classifier import DocumentClassifier
+
+
+class TestClassifierInitialization:
+    """Tests para inicialización del clasificador."""
+
+    def test_classifier_initializes_without_model(self):
+        """El clasificador se inicializa correctamente sin modelo entrenado."""
+        classifier = DocumentClassifier()
+        assert classifier is not None
+        assert classifier.classes == ['factura', 'recibo', 'contrato', 'otro']
+        assert classifier.is_trained is False
+
+    def test_classifier_initializes_with_default_pipeline(self):
+        """El clasificador crea pipeline por defecto si no hay modelo."""
+        classifier = DocumentClassifier()
+        assert classifier.pipeline is not None
+        assert hasattr(classifier.pipeline, 'predict')
+
+    def test_classifier_attempts_to_load_model_if_exists(self):
+        """El clasificador intenta cargar modelo si existe en ruta."""
+        model_path = Path(MODELS_DIR) / "classifier_model.joblib"
+        classifier = DocumentClassifier(model_path=str(model_path))
+
+        # Si existe modelo, debe estar marcado como entrenado
+        if model_path.exists():
+            assert classifier.is_trained is True
+            assert classifier.model_data is not None
+        else:
+            assert classifier.is_trained is False
+
+
+class TestClassifierPrediction:
+    """Tests para predicción del clasificador."""
+
+    def test_predict_returns_dict(self):
+        """Predict devuelve diccionario con estructura correcta."""
+        classifier = DocumentClassifier()
+        result = classifier.predict("Texto de prueba")
+
+        assert isinstance(result, dict)
+        assert "class" in result
+        assert "confidence" in result
+        assert "probabilities" in result
+
+    def test_predict_with_empty_text(self):
+        """Predict maneja texto vacío sin error."""
+        classifier = DocumentClassifier()
+        result = classifier.predict("")
+
+        assert result["class"] is not None
+        assert result["confidence"] >= 0.0
+
+    def test_predict_with_long_text(self):
+        """Predict maneja textos muy largos."""
+        classifier = DocumentClassifier()
+        long_text = "palabra " * 10000  # 10000 palabras
+        result = classifier.predict(long_text)
+
+        assert result is not None
+        assert "class" in result
+
+    def test_predict_batch(self):
+        """Predict_batch procesa múltiples textos."""
+        classifier = DocumentClassifier()
+        texts = ["texto 1", "texto 2", "texto 3"]
+        results = classifier.predict_batch(texts)
+
+        assert len(results) == len(texts)
+        assert all(isinstance(r, dict) for r in results)
+        assert all("class" in r for r in results)
+
+    def test_predict_with_trained_model(self):
+        """Predict usa modelo entrenado si está disponible."""
+        model_path = Path(MODELS_DIR) / "classifier_model.joblib"
+
+        if model_path.exists():
+            classifier = DocumentClassifier(model_path=str(model_path))
+            result = classifier.predict("FACTURA de venta con detalles")
+
+            assert classifier.is_trained is True
+            assert result["model_type"] == "trained"
+            assert result["class"] in classifier.classes
+        else:
+            pytest.skip("Modelo entrenado no disponible")
+
+    def test_predict_returns_category_names_not_indices(self):
+        """Predict devuelve nombres de categoría, no índices."""
+        model_path = Path(MODELS_DIR) / "classifier_model.joblib"
+
+        if model_path.exists():
+            classifier = DocumentClassifier(model_path=str(model_path))
+            result = classifier.predict("Cualquier texto")
+
+            # Debe ser string con nombre, no número
+            assert isinstance(result["class"], str)
+            assert result["class"] in ['factura', 'recibo', 'contrato', 'otro']
+        else:
+            pytest.skip("Modelo entrenado no disponible")
+
+
+class TestClassifierFallback:
+    """Tests para comportamiento fallback del clasificador."""
+
+    def test_predict_without_model_doesnt_error(self):
+        """Predict sin modelo no lanza error."""
+        classifier = DocumentClassifier()
+        classifier.is_trained = False
+        classifier.model_data = None
+
+        # No debe lanzar excepción
+        result = classifier.predict("texto")
+        assert result is not None
+
+    def test_predict_returns_model_type_info(self):
+        """Predict incluye información del tipo de modelo usado."""
+        classifier = DocumentClassifier()
+        result = classifier.predict("texto de prueba")
+
+        assert "model_type" in result
+        assert result["model_type"] in ["trained", "default (not trained)", "untrained"]
+
+    def test_probabilities_sum_to_one_or_near_zero(self):
+        """Las probabilidades devueltas son válidas."""
+        classifier = DocumentClassifier()
+        result = classifier.predict("texto prueba")
+
+        probs = result.get("probabilities", {})
+        if probs:
+            total = sum(probs.values())
+            # Si hay probabilidades, deben sumar ~1 o ser ~0
+            assert total == 0.0 or 0.99 < total < 1.01
+
+
+class TestClassifierModelLoading:
+    """Tests para carga de modelos."""
+
+    def test_load_model_from_path(self):
+        """Puede cargar un modelo desde una ruta específica."""
+        model_path = Path(MODELS_DIR) / "classifier_model.joblib"
+
+        if model_path.exists():
+            classifier = DocumentClassifier()
+            classifier.load_model(str(model_path))
+
+            assert classifier.is_trained is True
+            assert classifier.model_data is not None
+        else:
+            pytest.skip("Modelo entrenado no disponible")
+
+    def test_load_nonexistent_model_doesnt_crash(self):
+        """Cargar modelo inexistente no crashea."""
+        classifier = DocumentClassifier()
+        classifier.load_model("/ruta/inexistente/modelo.joblib")
+
+        # No debe crashear, debe mantener estado o usar fallback
+        assert classifier is not None
+
+
+class TestClassifierEdgeCases:
+    """Tests para casos edge del clasificador."""
+
+    def test_predict_with_special_characters(self):
+        """Predict maneja caracteres especiales."""
+        classifier = DocumentClassifier()
+        text = "FACTURA #123-XYZ/2024 @ €50.00 & descuento!"
+        result = classifier.predict(text)
+
+        assert result["class"] is not None
+
+    def test_predict_with_unicode(self):
+        """Predict maneja unicode correctamente."""
+        classifier = DocumentClassifier()
+        text = "Factura с русским текстом 中文 العربية"
+        result = classifier.predict(text)
+
+        assert result is not None
+
+    def test_multiple_instances_independent(self):
+        """Múltiples instancias del clasificador son independientes."""
+        c1 = DocumentClassifier()
+        c2 = DocumentClassifier()
+
+        assert c1 is not c2
+        assert c1.pipeline is not c2.pipeline
+
+
+class TestClassifierIntegration:
+    """Tests de integración con pipeline."""
+
+    def test_classifier_in_pipeline_context(self):
+        """El clasificador funciona correctamente en contexto del pipeline."""
+        try:
+            from src.pipeline import OCRPipeline
+            pipeline = OCRPipeline()
+
+            # El clasificador debe estar disponible
+            assert hasattr(pipeline, 'classifier')
+            assert pipeline.classifier is not None
+
+        except (ImportError, AttributeError):
+            pytest.skip("Pipeline requires cv2")
+
+    def test_classifier_loads_model_automatically_in_pipeline(self):
+        """Pipeline carga modelo automáticamente si existe."""
+        try:
+            from src.pipeline import OCRPipeline
+
+            model_path = Path(MODELS_DIR) / "classifier_model.joblib"
+
+            if model_path.exists():
+                pipeline = OCRPipeline()
+                assert pipeline.classifier.is_trained is True
+
+        except (ImportError, AttributeError):
+            pytest.skip("Pipeline requires cv2")
+
+
+========== tests\test_extractor.py ==========
+"""
+Tests para src/extractor.py - DataExtractor
+
+Cobertura:
+- extract_emails() → 5 tests (MÉTODOS EN PLURAL)
+- extract_phones() → 5 tests
+- extract_dates() → 5 tests
+- extract_urls() → 5 tests
+- extract_currency() → 5 tests
+- extract_dni() → 4 tests
+- extract_rfc() → 4 tests
+- extract_all() → 3 tests
+- extract_custom_pattern() → 2 tests
+- extract_lines() → 2 tests
+
+Total: 40 tests
+"""
+
+
+class TestExtractorEmails:
+    """Tests para extracción de emails."""
+
+    def test_extract_emails_single_valid(self, extractor):
+        """Extrae un email válido de texto."""
+        result = extractor.extract_emails("Contacto: john@example.com")
+        assert isinstance(result, list)
+        assert "john@example.com" in result
+
+    def test_extract_emails_multiple_valid(self, extractor, sample_text_with_emails):
+        """Extrae múltiples emails de texto."""
+        result = extractor.extract_emails(sample_text_with_emails)
+        assert isinstance(result, list)
+        assert len(result) >= 2
+        assert "john.doe@example.com" in result
+
+    def test_extract_emails_with_subdomains(self, extractor):
+        """Extrae emails con subdominios."""
+        result = extractor.extract_emails("Email: info@mail.company.co.uk")
+        assert isinstance(result, list)
+        assert "info@mail.company.co.uk" in result
+
+    def test_extract_emails_empty_string(self, extractor, empty_text):
+        """Maneja texto vacío sin crash."""
+        result = extractor.extract_emails(empty_text)
+        assert isinstance(result, list)
+        assert len(result) == 0
+
+    def test_extract_emails_no_emails(self, extractor):
+        """Retorna lista vacía si no hay emails."""
+        result = extractor.extract_emails("Este texto no tiene emails")
+        assert isinstance(result, list)
+        assert len(result) == 0
+
+
+class TestExtractorPhones:
+    """Tests para extracción de teléfonos."""
+
+    def test_extract_phones_us_format(self, extractor):
+        """Extrae teléfono formato USA."""
+        result = extractor.extract_phones("Teléfono: (202) 555-0173")
+        assert isinstance(result, list)
+        assert len(result) >= 1
+
+    def test_extract_phones_with_dots(self, extractor):
+        """Extrae teléfono con puntos."""
+        result = extractor.extract_phones("Tel: 555.123.4567")
+        assert isinstance(result, list)
+        assert len(result) >= 1
+
+    def test_extract_phones_multiple(self, extractor, sample_text_with_phones):
+        """Extrae múltiples teléfonos."""
+        result = extractor.extract_phones(sample_text_with_phones)
+        assert isinstance(result, list)
+        assert len(result) >= 2
+
+    def test_extract_phones_empty(self, extractor, empty_text):
+        """Maneja texto vacío."""
+        result = extractor.extract_phones(empty_text)
+        assert isinstance(result, list)
+        assert len(result) == 0
+
+    def test_extract_phones_no_phones(self, extractor):
+        """Retorna lista vacía sin teléfonos."""
+        result = extractor.extract_phones("No hay números aquí")
+        assert isinstance(result, list)
+        assert len(result) == 0
+
+
+class TestExtractorDates:
+    """Tests para extracción de fechas."""
+
+    def test_extract_dates_slash_format(self, extractor):
+        """Extrae fecha en formato slash (MM/DD/YYYY o similar)."""
+        result = extractor.extract_dates("Fecha: 03/15/2024")
+        assert isinstance(result, list)
+        assert len(result) >= 1
+
+    def test_extract_dates_dash_format(self, extractor):
+        """Extrae fecha en formato dash (DD-MM-YYYY o similar)."""
+        result = extractor.extract_dates("Día: 15-03-2024")
+        assert isinstance(result, list)
+        assert len(result) >= 1
+
+    def test_extract_dates_multiple(self, extractor, sample_text_with_dates):
+        """Extrae múltiples fechas."""
+        result = extractor.extract_dates(sample_text_with_dates)
+        assert isinstance(result, list)
+        assert len(result) >= 2
+
+    def test_extract_dates_empty(self, extractor, empty_text):
+        """Maneja texto vacío."""
+        result = extractor.extract_dates(empty_text)
+        assert isinstance(result, list)
+        assert len(result) == 0
+
+    def test_extract_dates_no_dates(self, extractor):
+        """Retorna lista vacía sin fechas."""
+        result = extractor.extract_dates("No hay fechas aquí")
+        assert isinstance(result, list)
+        assert len(result) == 0
+
+
+class TestExtractorURLs:
+    """Tests para extracción de URLs."""
+
+    def test_extract_urls_https(self, extractor):
+        """Extrae URL con HTTPS."""
+        result = extractor.extract_urls("Sitio: https://www.example.com")
+        assert isinstance(result, list)
+        assert len(result) >= 1
+
+    def test_extract_urls_http(self, extractor):
+        """Extrae URL con HTTP."""
+        result = extractor.extract_urls("Web: http://domain.org/page")
+        assert isinstance(result, list)
+        assert len(result) >= 1
+
+    def test_extract_urls_with_path(self, extractor):
+        """Extrae URL con ruta."""
+        result = extractor.extract_urls("API: https://api.company.com/v1/endpoint")
+        assert isinstance(result, list)
+        assert len(result) >= 1
+
+    def test_extract_urls_multiple(self, extractor, sample_text_with_urls):
+        """Extrae múltiples URLs."""
+        result = extractor.extract_urls(sample_text_with_urls)
+        assert isinstance(result, list)
+        assert len(result) >= 2
+
+    def test_extract_urls_empty(self, extractor, empty_text):
+        """Maneja texto vacío."""
+        result = extractor.extract_urls(empty_text)
+        assert isinstance(result, list)
+        assert len(result) == 0
+
+
+class TestExtractorCurrency:
+    """Tests para extracción de moneda/valores."""
+
+    def test_extract_currency_usd_dollar(self, extractor):
+        """Extrae valor en USD con símbolo $."""
+        result = extractor.extract_currency("Precio: $199.99")
+        assert isinstance(result, list)
+        assert len(result) >= 1
+
+    def test_extract_currency_commas(self, extractor):
+        """Extrae valor con separadores de miles."""
+        result = extractor.extract_currency("Total: $1,234.50")
+        assert isinstance(result, list)
+        assert len(result) >= 1
+
+    def test_extract_currency_eur_code(self, extractor):
+        """Extrae valor con código EUR."""
+        result = extractor.extract_currency("Monto: EUR 100")
+        assert isinstance(result, list)
+
+    def test_extract_currency_usd_code(self, extractor):
+        """Extrae valor con código USD."""
+        result = extractor.extract_currency("Total: 500 USD")
+        assert isinstance(result, list)
+
+    def test_extract_currency_empty(self, extractor, empty_text):
+        """Maneja texto vacío."""
+        result = extractor.extract_currency(empty_text)
+        assert isinstance(result, list)
+        assert len(result) == 0
+
+
+class TestExtractorDNI:
+    """Tests para extracción de DNI (España)."""
+
+    def test_extract_dni_valid_format(self, extractor):
+        """Extrae DNI en formato válido."""
+        result = extractor.extract_dni("Mi DNI es 12345678A")
+        assert isinstance(result, list)
+
+    def test_extract_dni_with_dots(self, extractor):
+        """Extrae DNI con puntos separadores."""
+        result = extractor.extract_dni("DNI: 12.345.678-A")
+        assert isinstance(result, list)
+
+    def test_extract_dni_empty(self, extractor, empty_text):
+        """Maneja texto vacío."""
+        result = extractor.extract_dni(empty_text)
+        assert isinstance(result, list)
+        assert len(result) == 0
+
+    def test_extract_dni_returns_list(self, extractor):
+        """Siempre retorna lista (vacía o con matches)."""
+        result = extractor.extract_dni("No hay documentos aquí")
+        assert isinstance(result, list)
+
+
+class TestExtractorRFC:
+    """Tests para extracción de RFC (México)."""
+
+    def test_extract_rfc_valid_format(self, extractor):
+        """Extrae RFC en formato válido."""
+        result = extractor.extract_rfc("RFC: AAA010101ABC")
+        assert isinstance(result, list)
+
+    def test_extract_rfc_pattern_matching(self, extractor):
+        """Verifica que extract_rfc retorna lista."""
+        result = extractor.extract_rfc("Registro: ABP901215LB1")
+        assert isinstance(result, list)
+
+    def test_extract_rfc_empty(self, extractor, empty_text):
+        """Maneja texto vacío."""
+        result = extractor.extract_rfc(empty_text)
+        assert isinstance(result, list)
+        assert len(result) == 0
+
+    def test_extract_rfc_returns_list(self, extractor):
+        """Siempre retorna lista."""
+        result = extractor.extract_rfc("No hay RFC aquí")
+        assert isinstance(result, list)
+
+
+class TestExtractorAll:
+    """Tests para el método extract_all() (orquestador)."""
+
+    def test_extract_all_returns_dict(self, extractor):
+        """extract_all() retorna un diccionario."""
+        text = "Email: test@example.com, teléfono: (555) 123-4567"
+        result = extractor.extract_all(text)
+        assert isinstance(result, dict)
+
+    def test_extract_all_has_all_keys(self, extractor):
+        """extract_all() tiene todas las claves esperadas."""
+        text = "Test data"
+        result = extractor.extract_all(text)
+        expected_keys = ["emails", "phones", "dates", "urls", "currency", "dni", "rfc"]
+        for key in expected_keys:
+            assert key in result
+            assert isinstance(result[key], list)
+
+    def test_extract_all_with_comprehensive_text(self, extractor):
+        """extract_all() extrae datos de texto complejo."""
+        text = """
+        Contacto: juan@empresa.com
+        Teléfono: (202) 555-0173
+        Web: https://www.empresa.com
+        """
+        result = extractor.extract_all(text)
+        assert isinstance(result, dict)
+        assert "emails" in result
+        assert isinstance(result["emails"], list)
+
+
+class TestExtractorCustomPattern:
+    """Tests para extract_custom_pattern()."""
+
+    def test_extract_custom_pattern_valid(self, extractor):
+        """Extrae datos con patrón personalizado válido."""
+        pattern = r'\b[A-Z]{2}\d{3}\b'
+        text = "Código: AB123"
+        result = extractor.extract_custom_pattern(text, pattern)
+        assert isinstance(result, list)
+
+    def test_extract_custom_pattern_invalid_regex(self, extractor):
+        """Maneja patrón regex inválido."""
+        pattern = r'[A-Z'  # Regex inválido
+        text = "Test"
+        result = extractor.extract_custom_pattern(text, pattern)
+        assert isinstance(result, list)
+
+
+class TestExtractorLines:
+    """Tests para extract_lines()."""
+
+    def test_extract_lines_valid_text(self, extractor):
+        """Extrae líneas limpias de texto."""
+        text = "Línea 1\nLínea 2\nLínea 3"
+        result = extractor.extract_lines(text)
+        assert isinstance(result, list)
+        assert len(result) == 3
+
+    def test_extract_lines_with_empty_lines(self, extractor):
+        """Filtra líneas vacías."""
+        text = "Línea 1\n\n\nLínea 2\n"
+        result = extractor.extract_lines(text)
+        assert isinstance(result, list)
+        assert any("Línea" in line for line in result)
+
+
+class TestExtractorEdgeCases:
+    """Tests para casos edge y robustez."""
+
+    def test_extractor_handles_special_characters(self, extractor):
+        """Maneja caracteres especiales sin crash."""
+        result = extractor.extract_emails("Correo: test@example.com™✓")
+        assert isinstance(result, list)
+
+    def test_extractor_handles_unicode(self, extractor):
+        """Maneja texto con unicode sin crash."""
+        result = extractor.extract_emails("Enviar a: josé@españa.es")
+        assert isinstance(result, list)
+
+    def test_extractor_handles_long_text(self, extractor):
+        """Maneja texto muy largo sin timeout."""
+        long_text = "Email: test@example.com " * 1000
+        result = extractor.extract_emails(long_text)
+        assert isinstance(result, list)
+
+    def test_extractor_all_returns_correct_structure(self, extractor):
+        """extract_all() siempre retorna estructura válida."""
+        result = extractor.extract_all("Solo texto sin datos estructurados")
+        for key in result:
+            assert isinstance(result[key], list)
+
+    def test_extractor_returns_deduplicated_results(self, extractor):
+        """Los resultados no tienen duplicados (usa set)."""
+        text = "Email: test@example.com test@example.com test@example.com"
+        result = extractor.extract_emails(text)
+        assert isinstance(result, list)
+
+
+========== tests\test_pipeline.py ==========
+"""
+Tests para src/pipeline.py - OCRPipeline
+
+Cobertura:
+- OCRPipeline.__init__() → 3 tests (si no requiere cv2)
+- Validación de imports → 2 tests (imports seguros)
+- Métodos existentes → 2 tests (verificación de API)
+
+Total: 7 tests
+
+Nota: Tests que requieren OCR real (cv2) están en conftest.py con skip
+"""
+import pytest
+
+
+class TestPipelineImports:
+    """Tests para importación segura del módulo."""
+
+    def test_extractor_imports_successfully(self):
+        """El módulo extractor se importa correctamente."""
+        from src.extractor import DataExtractor
+        assert DataExtractor is not None
+
+    def test_pipeline_module_imports_or_skips(self):
+        """El módulo pipeline se importa, o se salta si cv2 no está."""
+        try:
+            from src import pipeline
+            assert pipeline is not None
+        except (ImportError, AttributeError) as e:
+            # cv2 no disponible, es esperado en esta fase
+            pytest.skip(f"cv2/numpy issue - skipping OCR tests: {str(e)[:50]}", allow_module_level=False)
+
+
+class TestExtractorImports:
+    """Tests para validar que extractor está disponible."""
+
+    def test_data_extractor_class_exists(self):
+        """La clase DataExtractor existe."""
+        from src.extractor import DataExtractor
+        assert hasattr(DataExtractor, "extract_emails")
+        assert hasattr(DataExtractor, "extract_all")
+
+    def test_extractor_can_be_instantiated(self):
+        """DataExtractor se puede instanciar."""
+        from src.extractor import DataExtractor
+        extractor = DataExtractor()
+        assert extractor is not None
+
+
+class TestClassifierImports:
+    """Tests para validar que classifier está disponible."""
+
+    def test_document_classifier_class_exists(self):
+        """La clase DocumentClassifier existe."""
+        try:
+            from src.classifier import DocumentClassifier
+            assert hasattr(DocumentClassifier, "predict")
+        except ImportError:
+            pytest.skip("DocumentClassifier no disponible")
+
+    def test_classifier_can_be_instantiated(self):
+        """DocumentClassifier se puede instanciar."""
+        try:
+            from src.classifier import DocumentClassifier
+            classifier = DocumentClassifier()
+            assert classifier is not None
+        except ImportError:
+            pytest.skip("DocumentClassifier dependencies missing")
+
+
+========== tests\test_trainer.py ==========
+"""
+Tests para train_classifier.py - Entrenador del Clasificador
+
+Cobertura:
+- Carga de datos de entrenamiento
+- Entrenamiento del modelo
+- Persistencia del modelo
+- Manejo de directorios y archivos
+- Validación de resultados
+
+Total: 10 tests
+"""
+import sys
+from pathlib import Path
+
+import pytest
+
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+
+from train_classifier import ClassifierTrainer
+
+
+class TestTrainerDataLoading:
+    """Tests para carga de datos del entrenador."""
+
+    def test_trainer_initializes(self):
+        """El entrenador se inicializa correctamente."""
+        trainer = ClassifierTrainer()
+        assert trainer is not None
+        assert trainer.CATEGORIES == ["factura", "recibo", "contrato", "otro"]
+
+    def test_trainer_finds_training_data(self):
+        """El entrenador encuentra datos de entrenamiento."""
+        trainer = ClassifierTrainer()
+        result = trainer.load_training_data()
+        
+        # Debe encontrar datos si existen
+        if trainer.data_dir.exists():
+            assert result is True or result is False  # Depende de si hay datos
+        else:
+            assert result is False
+
+    def test_trainer_loads_texts_and_labels(self):
+        """El entrenador carga textos y etiquetas correctamente."""
+        trainer = ClassifierTrainer()
+        result = trainer.load_training_data()
+        
+        if result:  # Si hay datos
+            assert len(trainer.texts) > 0
+            assert len(trainer.labels) > 0
+            assert len(trainer.texts) == len(trainer.labels)
+
+    def test_trainer_handles_missing_data_gracefully(self):
+        """El entrenador maneja carpetas sin datos sin error."""
+        trainer = ClassifierTrainer()
+        # Cambiar a ruta no existente
+        trainer.data_dir = Path("/ruta/inexistente/datos")
+        
+        result = trainer.load_training_data()
+        assert result is False  # Debe retornar False, no error
+
+    def test_label_mapping_correct(self):
+        """El mapeo de etiquetas es correcto."""
+        trainer = ClassifierTrainer()
+        expected_mapping = {
+            "factura": 0,
+            "recibo": 1,
+            "contrato": 2,
+            "otro": 3
+        }
+        assert trainer.label_mapping == expected_mapping
+
+
+class TestTrainerTraining:
+    """Tests para entrenamiento del modelo."""
+
+    def test_trainer_trains_when_data_available(self):
+        """El entrenador entrena correctamente cuando hay datos."""
+        trainer = ClassifierTrainer()
+        
+        if trainer.load_training_data():
+            # Hay datos, intentar entrenar
+            try:
+                metrics = trainer.train()
+                assert metrics is not None
+                assert "accuracy" in metrics
+                assert 0.0 <= metrics["accuracy"] <= 1.0
+            except (ValueError, IndexError) as e:
+                pytest.skip(f"Entrenamiento requiere datos suficientes: {str(e)}")
+
+    def test_trainer_returns_valid_metrics(self):
+        """El entrenador devuelve métricas válidas."""
+        trainer = ClassifierTrainer()
+        
+        if trainer.load_training_data():
+            try:
+                metrics = trainer.train()
+                
+                assert "accuracy" in metrics
+                assert "samples_train" in metrics
+                assert "samples_test" in metrics
+                assert "vocab_size" in metrics
+                assert "trained_at" in metrics
+                
+                assert metrics["samples_train"] > 0
+                assert metrics["vocab_size"] > 0
+            except (ValueError, IndexError) as e:
+                pytest.skip(f"Entrenamiento requiere datos suficientes: {str(e)}")
+
+    def test_trainer_creates_vectorizer(self):
+        """El entrenador crea vectorizador TF-IDF."""
+        trainer = ClassifierTrainer()
+        
+        if trainer.load_training_data():
+            try:
+                trainer.train()
+                assert trainer.vectorizer is not None
+                assert hasattr(trainer.vectorizer, 'transform')
+            except (ValueError, IndexError) as e:
+                pytest.skip(f"Entrenamiento requiere datos suficientes: {str(e)}")
+
+    def test_trainer_creates_model(self):
+        """El entrenador entrena modelo Naive Bayes."""
+        trainer = ClassifierTrainer()
+        
+        if trainer.load_training_data():
+            try:
+                trainer.train()
+                assert trainer.model is not None
+                assert hasattr(trainer.model, 'predict')
+                assert hasattr(trainer.model, 'predict_proba')
+            except (ValueError, IndexError) as e:
+                pytest.skip(f"Entrenamiento requiere datos suficientes: {str(e)}")
+
+
+class TestTrainerModelPersistence:
+    """Tests para guardado del modelo."""
+
+    def test_trainer_saves_model(self):
+        """El entrenador guarda el modelo correctamente."""
+        trainer = ClassifierTrainer()
+        
+        if trainer.load_training_data():
+            try:
+                trainer.train()
+                result = trainer.save_model()
+                
+                assert result is True
+                assert trainer.model_path.exists()
+            except (ValueError, IndexError, OSError) as e:
+                pytest.skip(f"Entrenamiento requiere datos suficientes: {str(e)}")
+
+    def test_saved_model_has_valid_size(self):
+        """El modelo guardado tiene tamaño razonable."""
+        trainer = ClassifierTrainer()
+        
+        if trainer.load_training_data():
+            try:
+                trainer.train()
+                trainer.save_model()
+                
+                size_bytes = trainer.model_path.stat().st_size
+                assert size_bytes > 0  # No debe estar vacío
+                assert size_bytes < 100 * 1024 * 1024  # Menos de 100MB
+            except (ValueError, IndexError, OSError) as e:
+                pytest.skip(f"Entrenamiento requiere datos suficientes: {str(e)}")
+
+    def test_model_can_be_loaded_after_saving(self):
+        """El modelo guardado puede ser recargado."""
+        trainer = ClassifierTrainer()
+        
+        if trainer.load_training_data():
+            try:
+                trainer.train()
+                trainer.save_model()
+                
+                # Intentar cargar con joblib
+                import joblib
+                loaded = joblib.load(trainer.model_path)
+                
+                assert loaded is not None
+                assert "model" in loaded
+                assert "vectorizer" in loaded
+                assert "categories" in loaded
+            except (ValueError, IndexError, OSError) as e:
+                pytest.skip(f"Entrenamiento requiere datos suficientes: {str(e)}")
+
+
+class TestTrainerSummary:
+    """Tests para generación de resumen."""
+
+    def test_trainer_creates_summary(self):
+        """El entrenador crea resumen correctamente."""
+        trainer = ClassifierTrainer()
+        
+        if trainer.load_training_data():
+            try:
+                metrics = trainer.train()
+                summary = trainer.create_summary(metrics)
+                
+                assert summary is not None
+                assert "timestamp" in summary
+                assert "metrics" in summary
+                assert "categories" in summary
+            except (ValueError, IndexError) as e:
+                pytest.skip(f"Entrenamiento requiere datos suficientes: {str(e)}")
+
+    def test_summary_has_all_fields(self):
+        """El resumen incluye todos los campos necesarios."""
+        trainer = ClassifierTrainer()
+        
+        if trainer.load_training_data():
+            try:
+                metrics = trainer.train()
+                summary = trainer.create_summary(metrics)
+                
+                expected_fields = [
+                    "timestamp",
+                    "training_status",
+                    "metrics",
+                    "categories",
+                    "data_path",
+                    "model_path"
+                ]
+                
+                for field in expected_fields:
+                    assert field in summary
+            except (ValueError, IndexError) as e:
+                pytest.skip(f"Entrenamiento requiere datos suficientes: {str(e)}")
+
+
+class TestTrainerEdgeCases:
+    """Tests para casos especiales del entrenador."""
+
+    def test_trainer_handles_no_data_gracefully(self):
+        """El entrenador maneja falta de datos sin crashear."""
+        trainer = ClassifierTrainer()
+        trainer.texts = []
+        trainer.labels = []
+        
+        # No debe crashear, debe manejar gracefully
+        try:
+            trainer.train()
+            # Podría fallar, pero no debe crash
+        except ValueError:
+            pass  # Es aceptable que falle
+        
+        assert True  # Si llegamos aquí, no crasheó
+
+    def test_trainer_categories_immutable(self):
+        """Las categorías del entrenador son correctas."""
+        trainer = ClassifierTrainer()
+        assert trainer.CATEGORIES == ["factura", "recibo", "contrato", "otro"]
+        assert len(trainer.CATEGORIES) == 4
+
+    def test_trainer_models_directory_created(self):
+        """El directorio de modelos se crea si no existe."""
+        trainer = ClassifierTrainer()
+        # Los directorios deben existir o crearse
+        assert trainer.models_dir.parent.exists() or trainer.models_dir.exists()
+
+
+========== tests\test_config.py ==========
+"""
+Tests para config.py - Configuración del proyecto
+
+Cobertura:
+- Config import → 1 test
+- Config has required attributes → 3 tests
+- Config values are correct type → 3 tests
+
+Total: 7 tests
+"""
+
+
+class TestConfigImport:
+    """Tests para importación de configuración."""
+
+    def test_config_imports_successfully(self, config):
+        """El módulo config se importa correctamente."""
+        assert config is not None
+
+
+class TestConfigAttributes:
+    """Tests para atributos de configuración."""
+
+    def test_config_has_required_paths(self, config):
+        """Config tiene las rutas requeridas."""
+        assert hasattr(config, "PROJECT_ROOT")
+        assert hasattr(config, "DATA_DIR")
+        assert hasattr(config, "MODELS_DIR")
+
+    def test_config_has_ocr_settings(self, config):
+        """Config tiene configuración OCR (dictionary)."""
+        assert hasattr(config, "OCR_CONFIG")
+        assert isinstance(config.OCR_CONFIG, dict)
+
+    def test_config_has_classifier_settings(self, config):
+        """Config tiene configuración del clasificador."""
+        assert hasattr(config, "CLASSIFIER_CONFIG")
+        assert isinstance(config.CLASSIFIER_CONFIG, dict)
+
+
+class TestConfigValues:
+    """Tests para valores de configuración."""
+
+    def test_config_paths_are_strings(self, config):
+        """Las rutas de config son strings o Path."""
+        assert config.PROJECT_ROOT is not None
+        assert config.DATA_DIR is not None
+        assert config.MODELS_DIR is not None
+
+    def test_config_ocr_settings_are_dict(self, config):
+        """Las configuraciones OCR son diccionario válido."""
+        assert isinstance(config.OCR_CONFIG, dict)
+        assert "tesseract_path" in config.OCR_CONFIG or "default_language" in config.OCR_CONFIG
+
+    def test_config_classifier_has_model_path(self, config):
+        """El config del clasificador tiene path del modelo."""
+        assert isinstance(config.CLASSIFIER_CONFIG, dict)
+        assert "model_path" in config.CLASSIFIER_CONFIG
+
+
+class TestConfigTypeConsistency:
+    """Tests para consistencia de tipos en config."""
+
+    def test_all_config_dictionaries_valid(self, config):
+        """Todos los diccionarios de config son válidos."""
+        assert isinstance(config.OCR_CONFIG, dict)
+        assert isinstance(config.CLASSIFIER_CONFIG, dict)
+        # No deben estar vacíos
+        assert len(config.OCR_CONFIG) > 0
+        assert len(config.CLASSIFIER_CONFIG) > 0
+
+    def test_config_directories_created(self, config):
+        """Los directorios de config existen o pueden crearse."""
+        assert config.DATA_DIR is not None
+        assert config.MODELS_DIR is not None

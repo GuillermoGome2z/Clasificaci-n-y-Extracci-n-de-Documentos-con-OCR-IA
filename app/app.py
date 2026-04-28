@@ -142,6 +142,20 @@ def load_pipeline(tesseract_path=None):
     """Carga el pipeline una sola vez por sesión."""
     return OCRPipeline(tesseract_path=tesseract_path)
 
+# ── AUTO-INICIALIZACIÓN ──────────────────────────────────────────
+# Si Tesseract está disponible y el pipeline no se ha inicializado,
+# lo inicializa automáticamente al abrir la app.
+if st.session_state.pipeline is None:
+    try:
+        from config import TESSERACT_PATH as _TESS_PATH
+        if _TESS_PATH:
+            st.session_state.pipeline = load_pipeline(
+                tesseract_path=_TESS_PATH
+            )
+    except Exception:
+        pass  # Si falla, el usuario lo inicializa manualmente
+# ────────────────────────────────────────────────────────────────
+
 # Sidebar - Configuración
 with st.sidebar:
     st.title("⚙️ Configuración")
