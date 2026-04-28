@@ -1,18 +1,51 @@
 {
   "accuracy": 1.0,
-  "samples_train": 112,
-  "samples_test": 28,
-  "vocab_size": 913,
-  "total_samples": 140,
+  "samples_train": 196,
+  "samples_test": 49,
+  "vocab_size": 1608,
+  "total_samples": 245,
   "accuracy_percent": "100.00%",
   "confusion_matrix": [
     [
       7,
       0,
       0,
+      0,
+      0,
+      0,
       0
     ],
     [
+      0,
+      7,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      7,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      7,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
       0,
       7,
       0,
@@ -21,10 +54,16 @@
     [
       0,
       0,
+      0,
+      0,
+      0,
       7,
       0
     ],
     [
+      0,
+      0,
+      0,
       0,
       0,
       0,
@@ -50,6 +89,24 @@
       "f1-score": 1.0,
       "support": 7.0
     },
+    "constancia": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 7.0
+    },
+    "carta_formal": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 7.0
+    },
+    "identificacion": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 7.0
+    },
     "otro": {
       "precision": 1.0,
       "recall": 1.0,
@@ -61,14 +118,14 @@
       "precision": 1.0,
       "recall": 1.0,
       "f1-score": 1.0,
-      "support": 28.0
+      "support": 49.0
     },
     "weighted avg": {
       "precision": 1.0,
       "recall": 1.0,
       "f1-score": 1.0,
-      "support": 28.0
+      "support": 49.0
     }
   },
-  "trained_at": "2026-04-27T19:09:38.398466"
+  "trained_at": "2026-04-28T00:41:06.972018"
 }

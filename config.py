@@ -64,8 +64,11 @@ OCR_CONFIG = {
 
 # Configuración de clasificación
 CLASSIFIER_CONFIG = {
-    "model_path": str(MODELS_DIR / "classifier.pkl"),
-    "classes": ["factura", "recibo", "contrato", "otro"],
+    "model_path": str(MODELS_DIR / "classifier_model.joblib"),
+    "max_features": 5000,
+    "ngram_range": (1, 2),
+    "categories": ["factura", "recibo", "contrato",
+                   "constancia", "carta_formal", "identificacion", "otro"]
 }
 
 # Configuración de datos

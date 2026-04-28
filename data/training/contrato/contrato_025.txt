@@ -1,6 +1,6 @@
 CONTRATO DE PRESTACION DE SERVICIOS
 Numero: CTR-2026-0025
-Fecha: 27/04/2026
+Fecha: 28/04/2026
 
 PARTES CONTRATANTES
 
@@ -19,11 +19,11 @@ PRIMERA: Objeto y Alcance
 Las partes convenimos en que el contratante prestará servicios al contratado.
 
 SEGUNDA: Vigencia
-Este contrato tendrá vigencia a partir del 27/04/2026
-hasta el 04/07/2027, plazo de 12 meses.
+Este contrato tendrá vigencia a partir del 28/04/2026
+hasta el 19/01/2028, plazo de 14 meses.
 
 TERCERA: Contraprestacion Economica
-El contratado se obliga a pagar Q1312.00 mensuales.
+El contratado se obliga a pagar Q4002.00 mensuales.
 
 CUARTA: Obligaciones del Contratante
 clausula
@@ -35,7 +35,7 @@ QUINTA: Obligaciones del Contratado
 Efectuar pagos puntuales.
 Proveer herramientas necesarias.
 
-firmamos
+el contratante
 
 SEXTA: Resolucion y Rescisión
 En caso de incumplimiento grave, cualquiera de las partes podrá rescindir.

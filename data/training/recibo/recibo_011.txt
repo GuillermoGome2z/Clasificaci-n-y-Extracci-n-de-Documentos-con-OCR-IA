@@ -1,15 +1,15 @@
 RECIBO OFICIAL DE PAGO
 Numero: REC-00011
-Fecha: 27/04/2026
+Fecha: 28/04/2026
 
 Recibi de:
 Nombre: Empresa Receptora 11
 Direccion: Ciudad de Guatemala
-Telefono: 8691-4775
+Telefono: 2563-2610
 
 Cantidad de Dinero:
-Monto recibido: Q4127.00
-Cantidad en letras: 4127 quetzales
+Monto recibido: Q1061.00
+Cantidad en letras: 1061 quetzales
 
 Por concepto de:
 Deposito en cuenta

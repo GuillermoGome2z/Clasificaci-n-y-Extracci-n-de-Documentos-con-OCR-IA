@@ -1,22 +1,22 @@
 RECIBO OFICIAL DE PAGO
 Numero: REC-00007
-Fecha: 27/04/2026
+Fecha: 28/04/2026
 
 Recibi de:
 Nombre: Empresa Receptora 7
 Direccion: Ciudad de Guatemala
-Telefono: 2223-8822
+Telefono: 2856-4626
 
 Cantidad de Dinero:
-Monto recibido: Q3578.00
-Cantidad en letras: 3578 quetzales
+Monto recibido: Q2584.00
+Cantidad en letras: 2584 quetzales
 
 Por concepto de:
-Pago de servicio
+Pago de cuota
 Descripcion: Pago correspondiente al mes/servicio
 
-Forma de pago: CHEQUE
-efectivo
+Forma de pago: DEPOSITO
+pago puntual
 
 Detalles del Recibo:
 Departamento de cobros
@@ -24,7 +24,7 @@ Sello: [OFICINA]
 Firma: ____________________
 Autorizado por: Recibidor
 
-departamento cobros
+vale
 Muchas gracias por su pago puntual
 Comprobante fiscal
 Vale de caja

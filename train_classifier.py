@@ -26,8 +26,9 @@ project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.naive_bayes import MultinomialNB
-from sklearn.model_selection import train_test_split
+from sklearn.svm import LinearSVC
+from sklearn.calibration import CalibratedClassifierCV
+from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 import joblib
 
@@ -38,8 +39,9 @@ from src.dataset_validator import validate_dataset
 class ClassifierTrainer:
     """Entrenador del clasificador de documentos."""
     
-    # Categorías soportadas
-    CATEGORIES = ["factura", "recibo", "contrato", "otro"]
+    # Categorías soportadas (7 según enunciado oficial)
+    CATEGORIES = ["factura", "recibo", "contrato",
+                  "constancia", "carta_formal", "identificacion", "otro"]
     
     def __init__(self):
         """Inicializa el entrenador."""
@@ -53,7 +55,9 @@ class ClassifierTrainer:
             min_df=2,
             max_df=0.8
         )
-        self.model = MultinomialNB()
+        # LinearSVC con CalibratedClassifierCV para obtener probabilidades
+        svc = LinearSVC(C=1.0, max_iter=2000, random_state=42)
+        self.model = CalibratedClassifierCV(svc, cv=5)
         self.texts = []
         self.labels = []
         self.label_mapping = {cat: i for i, cat in enumerate(self.CATEGORIES)}

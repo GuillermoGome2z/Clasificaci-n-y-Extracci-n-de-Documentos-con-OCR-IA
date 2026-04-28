@@ -1,22 +1,22 @@
 RECIBO OFICIAL DE PAGO
 Numero: REC-00016
-Fecha: 27/04/2026
+Fecha: 28/04/2026
 
 Recibi de:
 Nombre: Empresa Receptora 16
 Direccion: Ciudad de Guatemala
-Telefono: 6702-6541
+Telefono: 5454-8587
 
 Cantidad de Dinero:
-Monto recibido: Q3321.00
-Cantidad en letras: 3321 quetzales
+Monto recibido: Q876.00
+Cantidad en letras: 876 quetzales
 
 Por concepto de:
-Pago mensual
+Pago de servicio
 Descripcion: Pago correspondiente al mes/servicio
 
-Forma de pago: CHEQUE
-recibi de
+Forma de pago: DEPOSITO
+efectivo
 
 Detalles del Recibo:
 Departamento de cobros

@@ -1,22 +1,22 @@
 RECIBO OFICIAL DE PAGO
 Numero: REC-00015
-Fecha: 27/04/2026
+Fecha: 28/04/2026
 
 Recibi de:
 Nombre: Empresa Receptora 15
 Direccion: Ciudad de Guatemala
-Telefono: 2765-3223
+Telefono: 8866-9715
 
 Cantidad de Dinero:
-Monto recibido: Q749.00
-Cantidad en letras: 749 quetzales
+Monto recibido: Q3449.00
+Cantidad en letras: 3449 quetzales
 
 Por concepto de:
-Pago de renta
+Deposito en cuenta
 Descripcion: Pago correspondiente al mes/servicio
 
-Forma de pago: DEPOSITO
-comprobante
+Forma de pago: CHEQUE
+cheque
 
 Detalles del Recibo:
 Departamento de cobros
@@ -24,7 +24,7 @@ Sello: [OFICINA]
 Firma: ____________________
 Autorizado por: Recibidor
 
-firma
+comprobante
 Muchas gracias por su pago puntual
 Comprobante fiscal
 Vale de caja

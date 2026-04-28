@@ -1,22 +1,22 @@
 RECIBO OFICIAL DE PAGO
 Numero: REC-00022
-Fecha: 27/04/2026
+Fecha: 28/04/2026
 
 Recibi de:
 Nombre: Empresa Receptora 22
 Direccion: Ciudad de Guatemala
-Telefono: 9128-9365
+Telefono: 2760-6274
 
 Cantidad de Dinero:
-Monto recibido: Q4730.00
-Cantidad en letras: 4730 quetzales
+Monto recibido: Q753.00
+Cantidad en letras: 753 quetzales
 
 Por concepto de:
-Deposito en cuenta
+Pago de cuota
 Descripcion: Pago correspondiente al mes/servicio
 
-Forma de pago: TRANSFERENCIA
-vale
+Forma de pago: CHEQUE
+sello
 
 Detalles del Recibo:
 Departamento de cobros
@@ -24,7 +24,7 @@ Sello: [OFICINA]
 Firma: ____________________
 Autorizado por: Recibidor
 
-por concepto de
+cantidad de
 Muchas gracias por su pago puntual
 Comprobante fiscal
 Vale de caja
