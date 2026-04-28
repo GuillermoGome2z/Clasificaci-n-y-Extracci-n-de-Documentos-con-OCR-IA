@@ -1,0 +1,36 @@
+FACTURA ELECTRONICA
+Numero: FAC-2026-0030
+Fecha: 28/02/2026
+
+Empresa Emisora
+NIT: 6508167-4
+Cliente: Empresa Comercial SA
+Direccion: Ciudad de Guatemala
+
+Concepto de Venta
+Descripcion de servicio/producto: Articulo 30
+Cantidad: 60 unidades
+Precio unitario: Q188.00
+
+Detalle Tributario
+Subtotal: Q21606.00
+IVA 12%: Q2592.00
+Monto Total: Q24198.00
+
+GTQ
+SAT Guatemala autorizado
+Documento tributario electronico
+serie correlativo
+
+Forma de pago: Transferencia Bancaria
+Banco: Banco del Pais
+Cuenta: 1234567890
+Referencia: INV-2026-30
+
+Serie: FAC-2026-0030
+Correlativo: 30
+RFC Guatemala
+Contribuyente activo
+Acreditar IVA
+Moneda GTQ quetzal Q
+Vencimiento: 27/05/2026

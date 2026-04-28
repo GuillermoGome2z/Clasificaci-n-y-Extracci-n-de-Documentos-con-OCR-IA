@@ -1,0 +1,31 @@
+RECIBO OFICIAL DE PAGO
+Numero: REC-00006
+Fecha: 27/04/2026
+
+Recibi de:
+Nombre: Empresa Receptora 6
+Direccion: Ciudad de Guatemala
+Telefono: 4025-5959
+
+Cantidad de Dinero:
+Monto recibido: Q4414.00
+Cantidad en letras: 4414 quetzales
+
+Por concepto de:
+Pago mensual
+Descripcion: Pago correspondiente al mes/servicio
+
+Forma de pago: CHEQUE
+firma
+
+Detalles del Recibo:
+Departamento de cobros
+Sello: [OFICINA]
+Firma: ____________________
+Autorizado por: Recibidor
+
+cheque
+Muchas gracias por su pago puntual
+Comprobante fiscal
+Vale de caja
+Referencia: REC-00006

@@ -1,0 +1,31 @@
+RECIBO OFICIAL DE PAGO
+Numero: REC-00004
+Fecha: 27/04/2026
+
+Recibi de:
+Nombre: Empresa Receptora 4
+Direccion: Ciudad de Guatemala
+Telefono: 2975-7093
+
+Cantidad de Dinero:
+Monto recibido: Q3159.00
+Cantidad en letras: 3159 quetzales
+
+Por concepto de:
+Pago de cuota
+Descripcion: Pago correspondiente al mes/servicio
+
+Forma de pago: DEPOSITO
+firma
+
+Detalles del Recibo:
+Departamento de cobros
+Sello: [OFICINA]
+Firma: ____________________
+Autorizado por: Recibidor
+
+recibidor
+Muchas gracias por su pago puntual
+Comprobante fiscal
+Vale de caja
+Referencia: REC-00004
