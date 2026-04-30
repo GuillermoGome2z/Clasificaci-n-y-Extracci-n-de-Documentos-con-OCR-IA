@@ -27,107 +27,311 @@ st.set_page_config(
 # Estilos CSS personalizados
 st.markdown("""
 <style>
-    /* Gradientes y colores principales */
+    /* ── Variables de color ────────────────────────────── */
     :root {
-        --primary-blue: #1e3a8a;
-        --accent-blue: #3b82f6;
+        --primary: #1e3a8a;
+        --primary-light: #3b82f6;
+        --accent: #06b6d4;
+        --success: #10b981;
+        --warning: #f59e0b;
+        --danger: #ef4444;
+        --gray-50: #f9fafb;
+        --gray-100: #f3f4f6;
+        --gray-800: #1f2937;
+        --gray-900: #111827;
     }
-    
-    .main {
-        padding: 2rem;
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-    }
-    
-    /* Header con gradiente azul */
-    .header-gradient {
-        background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
-        padding: 2rem;
-        border-radius: 10px;
+
+    /* ── Header institucional ───────────────────────────── */
+    .header-institucional {
+        background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #06b6d4 100%);
+        padding: 2.5rem 2rem;
+        border-radius: 16px;
         color: white;
         margin-bottom: 2rem;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        box-shadow: 0 10px 30px rgba(30, 58, 138, 0.3);
+        position: relative;
+        overflow: hidden;
     }
-    
-    .header-gradient h1 {
-        margin: 0;
-        font-size: 2.5em;
+
+    .header-institucional::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -20%;
+        width: 600px;
+        height: 600px;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+        pointer-events: none;
     }
-    
-    /* Badges por categoría */
-    .badge-factura {
-        background: linear-gradient(135deg, #11998e, #38ef7d);
+
+    .header-content {
+        position: relative;
+        z-index: 1;
+    }
+
+    .header-uni {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        margin-bottom: 1rem;
+    }
+
+    .uni-tag {
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 2px;
+        opacity: 0.95;
+    }
+
+    .curso-tag {
+        font-size: 0.85rem;
+        opacity: 0.85;
+        font-weight: 500;
+    }
+
+    .header-title {
+        font-size: 2.5rem;
+        font-weight: 800;
+        margin: 0.5rem 0 1rem 0;
+        letter-spacing: -1px;
+        line-height: 1.1;
+    }
+
+    .header-subtitle {
+        font-size: 1rem;
+        opacity: 0.9;
+        max-width: 700px;
+        margin-bottom: 1.5rem;
+        line-height: 1.5;
+    }
+
+    .header-stats {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .stat-pill {
+        background: rgba(255,255,255,0.15);
+        backdrop-filter: blur(10px);
+        padding: 0.75rem 1.25rem;
+        border-radius: 12px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-width: 100px;
+        border: 1px solid rgba(255,255,255,0.2);
+        transition: transform 0.2s;
+    }
+
+    .stat-pill:hover {
+        transform: translateY(-2px);
+        background: rgba(255,255,255,0.25);
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 800;
+        line-height: 1;
+    }
+
+    .stat-label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-top: 0.25rem;
+        opacity: 0.9;
+    }
+
+    /* ── Badges de categoría con gradientes ──────────────── */
+    .badge-resultado {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.6rem 1.5rem;
+        border-radius: 30px;
+        font-weight: 700;
+        font-size: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         color: white;
-        padding: 0.5rem 1rem;
-        border-radius: 20px;
-        display: inline-block;
-        font-weight: bold;
     }
-    
-    .badge-recibo {
-        background: linear-gradient(135deg, #f2994a, #f2c94c);
-        color: #333;
-        padding: 0.5rem 1rem;
-        border-radius: 20px;
-        display: inline-block;
-        font-weight: bold;
+
+    .badge-factura       { background: linear-gradient(135deg, #10b981, #059669); }
+    .badge-recibo        { background: linear-gradient(135deg, #f59e0b, #d97706); }
+    .badge-contrato      { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+    .badge-constancia    { background: linear-gradient(135deg, #06b6d4, #0891b2); }
+    .badge-carta_formal  { background: linear-gradient(135deg, #ec4899, #db2777); }
+    .badge-identificacion{ background: linear-gradient(135deg, #6366f1, #4f46e5); }
+    .badge-otro          { background: linear-gradient(135deg, #6b7280, #4b5563); }
+
+    /* ── Cards de resultados ────────────────────────────── */
+    .result-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        border-left: 4px solid var(--primary-light);
+        margin-bottom: 1rem;
+        transition: transform 0.2s, box-shadow 0.2s;
     }
-    
-    .badge-contrato {
-        background: linear-gradient(135deg, #667eea, #764ba2);
+
+    .result-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+    }
+
+    .result-card-header {
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        color: var(--primary);
+        margin-bottom: 0.5rem;
+    }
+
+    .result-card-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--gray-900);
+    }
+
+    /* ── Botón de procesar mejorado ──────────────────────── */
+    .stButton > button[kind="primary"] {
+        background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
         color: white;
-        padding: 0.5rem 1rem;
-        border-radius: 20px;
-        display: inline-block;
-        font-weight: bold;
+        border: none;
+        padding: 0.75rem 2rem;
+        font-weight: 700;
+        font-size: 1rem;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(30, 58, 138, 0.3);
+        transition: all 0.2s;
     }
-    
-    .badge-otro {
-        background: linear-gradient(135deg, #eb3349, #f45c43);
-        color: white;
-        padding: 0.5rem 1rem;
-        border-radius: 20px;
-        display: inline-block;
-        font-weight: bold;
+
+    .stButton > button[kind="primary"]:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(30, 58, 138, 0.4);
     }
-    
-    /* Tabs mejorados */
-    .stTabs [data-baseweb="tab-list"] button {
-        font-size: 18px;
+
+    /* ── Tabs mejoradas ──────────────────────────────────── */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 0.5rem;
+        background: var(--gray-100);
+        padding: 0.5rem;
+        border-radius: 12px;
+    }
+
+    .stTabs [data-baseweb="tab"] {
         font-weight: 600;
+        padding: 0.5rem 1.5rem;
+        border-radius: 8px;
+        transition: all 0.2s;
     }
-    
-    /* Cajas de colores */
-    .success-box {
-        padding: 20px;
-        background: linear-gradient(135deg, #d4edda, #c3e6cb);
+
+    .stTabs [aria-selected="true"] {
+        background: white;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    /* ── File uploader ────────────────────────────────────── */
+    [data-testid="stFileUploader"] {
+        background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+        padding: 2rem;
+        border-radius: 12px;
+        border: 2px dashed var(--primary-light);
+        transition: all 0.2s;
+    }
+
+    [data-testid="stFileUploader"]:hover {
+        border-color: var(--primary);
+        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    }
+
+    /* ── Métricas ────────────────────────────────────────── */
+    [data-testid="stMetric"] {
+        background: white;
+        padding: 1rem;
         border-radius: 10px;
-        border-left: 4px solid #28a745;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+        border-top: 3px solid var(--primary-light);
     }
-    
-    .error-box {
-        padding: 20px;
-        background: linear-gradient(135deg, #f8d7da, #f5c6cb);
+
+    /* ── Sidebar ─────────────────────────────────────────── */
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #f9fafb 0%, #f3f4f6 100%);
+    }
+
+    [data-testid="stSidebar"] h1 {
+        color: var(--primary);
+        font-weight: 800;
+    }
+
+    /* ── Status boxes ────────────────────────────────────── */
+    .info-card {
+        background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+        padding: 1rem 1.5rem;
         border-radius: 10px;
-        border-left: 4px solid #dc3545;
+        border-left: 4px solid var(--primary-light);
+        margin: 1rem 0;
     }
-    
-    .info-box {
-        padding: 20px;
-        background: linear-gradient(135deg, #d1ecf1, #bee5eb);
+
+    .success-card {
+        background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+        padding: 1rem 1.5rem;
         border-radius: 10px;
-        border-left: 4px solid #17a2b8;
+        border-left: 4px solid var(--success);
+        margin: 1rem 0;
     }
-    
-    /* Footer */
-    .footer {
-        background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+
+    /* ── Footer ──────────────────────────────────────────── */
+    .footer-institucional {
+        background: linear-gradient(135deg, var(--gray-900) 0%, var(--gray-800) 100%);
         color: white;
         text-align: center;
         padding: 2rem;
-        border-radius: 10px;
+        border-radius: 16px;
         margin-top: 3rem;
-        font-size: 0.9em;
     }
+
+    .footer-title {
+        font-weight: 800;
+        font-size: 1.1rem;
+        margin-bottom: 0.5rem;
+        letter-spacing: 0.5px;
+    }
+
+    .footer-info {
+        opacity: 0.85;
+        font-size: 0.9rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .footer-credits {
+        opacity: 0.7;
+        font-size: 0.8rem;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid rgba(255,255,255,0.15);
+    }
+
+    /* ── Animaciones ─────────────────────────────────────── */
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .header-institucional, .result-card {
+        animation: fadeInUp 0.5s ease-out;
+    }
+
+    /* ── Esconder elementos default de Streamlit ────────── */
+    #MainMenu { visibility: hidden; }
+    footer { visibility: hidden; }
+    header { visibility: hidden; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -227,17 +431,40 @@ with st.sidebar:
     st.markdown("Confianza modelo: **83.76%** ✅")
 
 
-# Header principal con gradiente
+# Header principal institucional
 st.markdown("""
-<div class="header-gradient">
-    <h1>🤖 Sistema Inteligente OCR + IA</h1>
-    <p style="margin-top: 0.5rem; font-size: 1.1em;">Extrae texto, datos y clasifica documentos automáticamente</p>
+<div class="header-institucional">
+    <div class="header-content">
+        <div class="header-uni">
+            <span class="uni-tag">UNIVERSIDAD MARIANO GÁLVEZ DE GUATEMALA</span>
+            <span class="curso-tag">Curso 045 · Inteligencia Artificial · Proyecto 04</span>
+        </div>
+        <h1 class="header-title">Sistema Inteligente OCR + IA</h1>
+        <p class="header-subtitle">
+            Clasificación automática y extracción de datos en documentos
+            mediante Reconocimiento Óptico de Caracteres y Machine Learning
+        </p>
+        <div class="header-stats">
+            <div class="stat-pill">
+                <span class="stat-value">7</span>
+                <span class="stat-label">Categorías</span>
+            </div>
+            <div class="stat-pill">
+                <span class="stat-value">99.4%</span>
+                <span class="stat-label">F1-Macro</span>
+            </div>
+            <div class="stat-pill">
+                <span class="stat-value">245</span>
+                <span class="stat-label">Documentos</span>
+            </div>
+            <div class="stat-pill">
+                <span class="stat-value">96/96</span>
+                <span class="stat-label">Tests</span>
+            </div>
+        </div>
+    </div>
 </div>
 """, unsafe_allow_html=True)
-
-st.markdown(
-    "**Solución avanzada para digitalización inteligente con OCR y Machine Learning**"
-)
 
 # Verificar si el pipeline está inicializado
 if st.session_state.pipeline is None:
@@ -602,18 +829,24 @@ else:
                             class_name = classification.get("class", "desconocida").lower()
                             confidence = classification.get("confidence", 0)
 
-                            # Seleccionar badge según clase
+                            # Seleccionar badge según clase con iconos
                             badge_map = {
-                                "factura": "badge-factura",
-                                "recibo": "badge-recibo",
-                                "contrato": "badge-contrato",
-                                "otro": "badge-otro",
+                                "factura":        ("badge-factura",        "📄"),
+                                "recibo":         ("badge-recibo",         "🧾"),
+                                "contrato":       ("badge-contrato",       "📋"),
+                                "constancia":     ("badge-constancia",     "📜"),
+                                "carta_formal":   ("badge-carta_formal",   "✉️"),
+                                "identificacion": ("badge-identificacion", "🆔"),
+                                "otro":           ("badge-otro",           "📁"),
                             }
-                            badge_class = badge_map.get(class_name, "badge-otro")
+                            badge_class, badge_icon = badge_map.get(class_name, ("badge-otro", "📁"))
 
-                            # Mostrar badge HTML
+                            # Mostrar badge HTML mejorado
                             st.markdown(
-                                f'<div class="{badge_class}">{class_name.upper()}</div>',
+                                f'<div class="badge-resultado {badge_class}">'
+                                f'<span style="font-size: 1.3rem;">{badge_icon}</span>'
+                                f'<span>{class_name.upper().replace("_", " ")}</span>'
+                                f'</div>',
                                 unsafe_allow_html=True
                             )
 
@@ -629,14 +862,48 @@ else:
                             st.metric("📊 Confianza", f"{color} {confidence * 100:.1f}%")
 
                         with col2:
-                            st.write("**Probabilidades por Clase:**")
+                            st.write("### 📊 Probabilidades por Categoría")
                             probabilities = classification.get("probabilities", {})
                             if probabilities:
-                                # Ordenar por probabilidad
-                                for cls, prob in sorted(probabilities.items(), key=lambda x: x[1], reverse=True):
-                                    # Barra de progreso para cada clase
-                                    st.write(f"{cls.upper()}")
-                                    st.progress(prob, text=f"{prob * 100:.1f}%")
+                                # Ordenar de mayor a menor
+                                sorted_probs = sorted(probabilities.items(), key=lambda x: x[1], reverse=True)
+
+                                # Mostrar como barras visuales con colores
+                                color_map = {
+                                    'factura': '#10b981',
+                                    'recibo': '#f59e0b',
+                                    'contrato': '#8b5cf6',
+                                    'constancia': '#06b6d4',
+                                    'carta_formal': '#ec4899',
+                                    'identificacion': '#6366f1',
+                                    'otro': '#6b7280',
+                                }
+
+                                for cls, prob in sorted_probs:
+                                    color = color_map.get(cls.lower(), '#6b7280')
+                                    pct = prob * 100
+                                    # Barra HTML personalizada
+                                    st.markdown(f"""
+                                    <div style="margin-bottom: 0.75rem;">
+                                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
+                                            <span style="font-weight: 600; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 0.5px;">
+                                                {cls}
+                                            </span>
+                                            <span style="font-weight: 700; color: {color};">
+                                                {pct:.1f}%
+                                            </span>
+                                        </div>
+                                        <div style="background: #f3f4f6; border-radius: 6px; height: 12px; overflow: hidden;">
+                                            <div style="
+                                                background: linear-gradient(90deg, {color}aa, {color});
+                                                width: {pct}%;
+                                                height: 100%;
+                                                border-radius: 6px;
+                                                transition: width 0.5s ease;
+                                            "></div>
+                                        </div>
+                                    </div>
+                                    """, unsafe_allow_html=True)
                             else:
                                 st.info("Probabilidades no disponibles")
                 else:
@@ -750,16 +1017,24 @@ else:
         Este proyecto es de código abierto
         """)
 
-# Footer global
+# Footer institucional
 st.markdown("---")
 st.markdown("""
-<div class="footer">
-    <p>🤖 <strong>Sistema Inteligente OCR + IA</strong> — Digitalización automática de documentos</p>
-    <p style="font-size: 0.85em; opacity: 0.9;">
-        Confianza del modelo: <strong>83.76%</strong> | Precisión: <strong>98.8%</strong> | 
-        Categorías: Factura, Recibo, Contrato, Comunicado
-    </p>
-    <p style="font-size: 0.85em; opacity: 0.8;">© 2026 OCR IA Project • Código abierto • Guillermo</p>
+<div class="footer-institucional">
+    <div class="footer-title">🤖 SISTEMA INTELIGENTE OCR + IA</div>
+    <div class="footer-info">
+        Universidad Mariano Gálvez de Guatemala · Facultad de Ingeniería
+    </div>
+    <div class="footer-info">
+        Curso 045 — Inteligencia Artificial · Catedrático: Ing. MA. Carmelo Estuardo Mayén Monterroso
+    </div>
+    <div class="footer-info">
+        Proyecto 04 — Clasificación y Extracción de Documentos con OCR + IA
+    </div>
+    <div class="footer-credits">
+        Stack: Python 3.13 · Tesseract 5.5.0 · scikit-learn (LinearSVC + TF-IDF) · Streamlit<br/>
+        7 categorías · 245 documentos · F1-macro 0.9940 · 96/96 tests · Versión 1.0.0
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
