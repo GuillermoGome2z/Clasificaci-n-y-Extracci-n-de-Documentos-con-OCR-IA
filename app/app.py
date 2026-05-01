@@ -378,7 +378,7 @@ with st.sidebar:
     st.markdown("""
     ✅ OCR múltiples idiomas
     ✅ Extracción de datos
-    ✅ Clasificación 4 categorías
+    ✅ Clasificación 7 categorías
     ✅ JSON exportable
     """)
     
@@ -634,8 +634,15 @@ else:
 
                             with stats_col4:
                                 classification = result.get("steps", {}).get("classification", {})
+                                # Para PDFs buscar también en pages[0]
+                                if not classification:
+                                    pages = result.get("pages", [])
+                                    if pages:
+                                        classification = pages[0].get("classification", {})
                                 if classification:
-                                    class_name = classification.get("class", "N/A")
+                                    # El clasificador puede devolver "predicted_class" o "class"
+                                    class_name = (classification.get("predicted_class")
+                                                 or classification.get("class", "N/A"))
                                     st.metric("🏷️ Clasificación", class_name.title())
                                 else:
                                     st.metric("🏷️ Clasificación", "N/A")
@@ -818,12 +825,18 @@ else:
                         status_text.error(f"❌ Error: {str(e)}")
 
                     finally:
-                        # Limpiar archivo temporal de forma segura
-                        try:
-                            if os.path.exists(temp_path):
-                                os.remove(temp_path)
-                        except (OSError, PermissionError, FileNotFoundError) as cleanup_error:
-                            st.warning(f"⚠️ Advertencia: No se pudo limpiar el archivo temporal. {str(cleanup_error)}")
+                        # Limpiar archivo temporal con reintentos (Windows lock fix)
+                        import time as _time
+                        for _intento in range(4):
+                            try:
+                                if os.path.exists(temp_path):
+                                    os.remove(temp_path)
+                                break  # Borrado exitoso
+                            except (OSError, PermissionError):
+                                if _intento < 3:
+                                    _time.sleep(0.4)  # Esperar 400ms y reintentar
+                                # Si los 4 intentos fallan: silencio.
+                                # Windows borra los temps de AppData\Local\Temp al reiniciar.
 
     # TAB 2: Resultados Detallados
     with tab2:
@@ -833,6 +846,51 @@ else:
             st.info("💡 Procesa un archivo en la pestaña **'Procesar Archivo'** para ver resultados detallados")
         else:
             result = st.session_state.last_result
+
+            # ── FIX PDF: Normalizar estructura para que TAB 2 encuentre los datos ──
+            # El pipeline guarda datos de PDFs en result["pages"][0]
+            # pero la UI los busca en result["steps"]. Este bloque los sincroniza.
+            _pages = result.get("pages") or []
+            _steps = result.get("steps") or {}
+
+            if _pages:
+                _primera = _pages[0]
+
+                # Inicializar steps si no existe
+                if not _steps:
+                    result["steps"] = {}
+                    _steps = result["steps"]
+
+                # Copiar OCR
+                if not _steps.get("ocr"):
+                    _page_text = _primera.get("text", "") or ""
+                    _steps["ocr"] = {
+                        "status": "success" if _page_text.strip() else "warning",
+                        "confidence": _primera.get("confidence", 80),
+                        "language": _primera.get("language", "eng"),
+                    }
+                    result["steps"] = _steps
+
+                # Copiar extracción
+                if not _steps.get("extraction"):
+                    _ext = (_primera.get("extraction")
+                            or _primera.get("extracted_data")
+                            or {})
+                    if _ext:
+                        _steps["extraction"] = _ext
+                        result["steps"] = _steps
+
+                # Copiar clasificación
+                if not _steps.get("classification"):
+                    _clf = _primera.get("classification") or {}
+                    if _clf:
+                        _steps["classification"] = _clf
+                        result["steps"] = _steps
+
+                # Asegurar extracted_text para otras partes de la UI
+                if not result.get("extracted_text"):
+                    result["extracted_text"] = _primera.get("text", "") or ""
+            # ── FIN DEL FIX ────────────────────────────────────────────────────
 
             # Información general
             st.subheader("📋 Información General")
@@ -949,8 +1007,10 @@ else:
                         col1, col2 = st.columns([1, 2])
 
                         with col1:
-                            class_name = classification.get("class", "desconocida").lower()
-                            confidence = classification.get("confidence", 0)
+                            # El clasificador puede devolver "predicted_class" o "class"
+                            class_name = (classification.get("predicted_class")
+                                         or classification.get("class", "desconocida")).lower()
+                            confidence = classification.get("confidence", 0) or 0
 
                             # Seleccionar badge según clase con iconos
                             badge_map = {
