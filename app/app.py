@@ -818,12 +818,18 @@ else:
                         status_text.error(f"❌ Error: {str(e)}")
 
                     finally:
-                        # Limpiar archivo temporal de forma segura
-                        try:
-                            if os.path.exists(temp_path):
-                                os.remove(temp_path)
-                        except (OSError, PermissionError, FileNotFoundError) as cleanup_error:
-                            st.warning(f"⚠️ Advertencia: No se pudo limpiar el archivo temporal. {str(cleanup_error)}")
+                        # Limpiar archivo temporal con reintentos (Windows lock fix)
+                        import time as _time
+                        for _intento in range(4):
+                            try:
+                                if os.path.exists(temp_path):
+                                    os.remove(temp_path)
+                                break  # Borrado exitoso
+                            except (OSError, PermissionError):
+                                if _intento < 3:
+                                    _time.sleep(0.4)  # Esperar 400ms y reintentar
+                                # Si los 4 intentos fallan: silencio.
+                                # Windows borra los temps de AppData\Local\Temp al reiniciar.
 
     # TAB 2: Resultados Detallados
     with tab2:
