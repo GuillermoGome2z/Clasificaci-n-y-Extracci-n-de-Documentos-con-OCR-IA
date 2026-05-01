@@ -24,7 +24,7 @@ class PDFGenerator(FPDF):
     def header(self):
         """Encabezado de todas las páginas."""
         self.set_font("Helvetica", "B", 10)
-        self.cell(0, 10, "PROYECTO 04 - OCR IA", align="C", ln=True)
+        self.cell(0, 10, "PROYECTO 04 - OCR IA", align="C", new_x="LMARGIN", new_y="NEXT")
         self.ln(5)
     
     def footer(self):
@@ -39,57 +39,57 @@ def gen_factura_pdf():
     pdf = PDFGenerator()
     pdf.add_page()
     pdf.set_font("Helvetica", "B", 14)
-    pdf.cell(0, 10, "FACTURA ELECTRONICA", align="C", ln=True)
+    pdf.cell(0, 10, "FACTURA ELECTRONICA", align="C", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", "", 10)
     pdf.ln(5)
     
     # Datos
     pdf.set_font("Helvetica", "B", 10)
-    pdf.cell(50, 8, "Numero:", ln=False)
+    pdf.cell(50, 8, "Numero:", new_x="RIGHT", new_y="TOP")
     pdf.set_font("Helvetica", "", 10)
-    pdf.cell(0, 8, "FAC-2026-0001", ln=True)
+    pdf.cell(0, 8, "FAC-2026-0001", new_x="LMARGIN", new_y="NEXT")
     
     pdf.set_font("Helvetica", "B", 10)
-    pdf.cell(50, 8, "Fecha:", ln=False)
+    pdf.cell(50, 8, "Fecha:", new_x="RIGHT", new_y="TOP")
     pdf.set_font("Helvetica", "", 10)
-    pdf.cell(0, 8, datetime.now().strftime("%d/%m/%Y"), ln=True)
+    pdf.cell(0, 8, datetime.now().strftime("%d/%m/%Y"), new_x="LMARGIN", new_y="NEXT")
     pdf.ln(5)
     
     # Empresa
     pdf.set_font("Helvetica", "B", 10)
-    pdf.cell(0, 8, "EMPRESA EMISORA", ln=True)
+    pdf.cell(0, 8, "EMPRESA EMISORA", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", "", 9)
-    pdf.cell(0, 6, "NIT: 7654321-8", ln=True)
-    pdf.cell(0, 6, "Cliente: Distribuidora Guatemalteca", ln=True)
-    pdf.cell(0, 6, "Direccion: Ciudad de Guatemala", ln=True)
+    pdf.cell(0, 6, "NIT: 7654321-8", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "Cliente: Distribuidora Guatemalteca", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "Direccion: Ciudad de Guatemala", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(3)
     
     # Detalles
     pdf.set_font("Helvetica", "B", 10)
-    pdf.cell(0, 8, "CONCEPTO DE VENTA", ln=True)
+    pdf.cell(0, 8, "CONCEPTO DE VENTA", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", "", 9)
-    pdf.cell(0, 6, "Descripcion: Articulo 001", ln=True)
-    pdf.cell(0, 6, "Cantidad: 25 unidades", ln=True)
-    pdf.cell(0, 6, "Precio unitario: Q150.00", ln=True)
+    pdf.cell(0, 6, "Descripcion: Articulo 001", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "Cantidad: 25 unidades", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "Precio unitario: Q150.00", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(3)
     
     # Resumen
     pdf.set_font("Helvetica", "B", 10)
-    pdf.cell(0, 8, "RESUMEN TRIBUTARIO", ln=True)
+    pdf.cell(0, 8, "RESUMEN TRIBUTARIO", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", "", 9)
-    pdf.cell(0, 6, "Subtotal: Q3,750.00", ln=True)
-    pdf.cell(0, 6, "IVA 12%: Q450.00", ln=True)
+    pdf.cell(0, 6, "Subtotal: Q3,750.00", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "IVA 12%: Q450.00", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", "B", 10)
-    pdf.cell(0, 8, "TOTAL: Q4,200.00 GTQ", ln=True)
+    pdf.cell(0, 8, "TOTAL: Q4,200.00 GTQ", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(3)
     
     # Información SAT
     pdf.set_font("Helvetica", "", 8)
-    pdf.cell(0, 6, "FACTURA ELECTRONICA SAT Guatemala", ln=True)
-    pdf.cell(0, 6, "Documento tributario electronico", ln=True)
-    pdf.cell(0, 6, "Autorizado por SAT", ln=True)
-    pdf.cell(0, 6, "RFC Guatemala - Contribuyente activo", ln=True)
-    pdf.cell(0, 6, f"Vigencia: {(datetime.now() + timedelta(days=30)).strftime('%d/%m/%Y')}", ln=True)
+    pdf.cell(0, 6, "FACTURA ELECTRONICA SAT Guatemala", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "Documento tributario electronico", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "Autorizado por SAT", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "RFC Guatemala - Contribuyente activo", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, f"Vigencia: {(datetime.now() + timedelta(days=30)).strftime('%d/%m/%Y')}", new_x="LMARGIN", new_y="NEXT")
     
     # Guardar
     path = Path("demos/demo_factura_completo.pdf")
@@ -103,54 +103,54 @@ def gen_recibo_pdf():
     pdf = PDFGenerator()
     pdf.add_page()
     pdf.set_font("Helvetica", "B", 14)
-    pdf.cell(0, 10, "RECIBO OFICIAL DE PAGO", align="C", ln=True)
+    pdf.cell(0, 10, "RECIBO OFICIAL DE PAGO", align="C", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", "", 10)
     pdf.ln(5)
     
     # Datos
     pdf.set_font("Helvetica", "B", 10)
-    pdf.cell(50, 8, "Numero:", ln=False)
+    pdf.cell(50, 8, "Numero:", new_x="RIGHT", new_y="TOP")
     pdf.set_font("Helvetica", "", 10)
-    pdf.cell(0, 8, "REC-00001", ln=True)
+    pdf.cell(0, 8, "REC-00001", new_x="LMARGIN", new_y="NEXT")
     
     pdf.set_font("Helvetica", "B", 10)
-    pdf.cell(50, 8, "Fecha:", ln=False)
+    pdf.cell(50, 8, "Fecha:", new_x="RIGHT", new_y="TOP")
     pdf.set_font("Helvetica", "", 10)
-    pdf.cell(0, 8, datetime.now().strftime("%d/%m/%Y"), ln=True)
+    pdf.cell(0, 8, datetime.now().strftime("%d/%m/%Y"), new_x="LMARGIN", new_y="NEXT")
     pdf.ln(5)
     
     # Recibi de
     pdf.set_font("Helvetica", "B", 10)
-    pdf.cell(0, 8, "RECIBI DE", ln=True)
+    pdf.cell(0, 8, "RECIBI DE", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", "", 9)
-    pdf.cell(0, 6, "Nombre: Empresa Receptora 001", ln=True)
-    pdf.cell(0, 6, "Direccion: Ciudad de Guatemala", ln=True)
-    pdf.cell(0, 6, "Telefono: 2234-5678", ln=True)
+    pdf.cell(0, 6, "Nombre: Empresa Receptora 001", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "Direccion: Ciudad de Guatemala", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "Telefono: 2234-5678", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(3)
     
     # Monto
     pdf.set_font("Helvetica", "B", 10)
-    pdf.cell(0, 8, "CANTIDAD DE DINERO", ln=True)
+    pdf.cell(0, 8, "CANTIDAD DE DINERO", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", "", 9)
-    pdf.cell(0, 6, "Monto recibido: Q2,500.00", ln=True)
-    pdf.cell(0, 6, "Cantidad en letras: Dos mil quinientos quetzales", ln=True)
+    pdf.cell(0, 6, "Monto recibido: Q2,500.00", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "Cantidad en letras: Dos mil quinientos quetzales", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(3)
     
     # Concepto
     pdf.set_font("Helvetica", "B", 10)
-    pdf.cell(0, 8, "POR CONCEPTO DE", ln=True)
+    pdf.cell(0, 8, "POR CONCEPTO DE", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", "", 9)
-    pdf.cell(0, 6, "Pago de servicio mensual", ln=True)
-    pdf.cell(0, 6, "Descripcion: Pago correspondiente al mes", ln=True)
+    pdf.cell(0, 6, "Pago de servicio mensual", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "Descripcion: Pago correspondiente al mes", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(3)
     
     # Datos finales
     pdf.set_font("Helvetica", "", 9)
-    pdf.cell(0, 6, "Forma de pago: EFECTIVO", ln=True)
-    pdf.cell(0, 6, "Departamento de cobros", ln=True)
-    pdf.cell(0, 6, "Sello: [OFICINA]", ln=True)
-    pdf.cell(0, 6, "Firma: ____________________", ln=True)
-    pdf.cell(0, 6, "Muchas gracias por su pago puntual", ln=True)
+    pdf.cell(0, 6, "Forma de pago: EFECTIVO", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "Departamento de cobros", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "Sello: [OFICINA]", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "Firma: ____________________", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "Muchas gracias por su pago puntual", new_x="LMARGIN", new_y="NEXT")
     
     # Guardar
     path = Path("demos/demo_recibo_completo.pdf")
@@ -164,59 +164,59 @@ def gen_contrato_pdf():
     pdf = PDFGenerator()
     pdf.add_page()
     pdf.set_font("Helvetica", "B", 14)
-    pdf.cell(0, 10, "CONTRATO DE PRESTACION DE SERVICIOS", align="C", ln=True)
+    pdf.cell(0, 10, "CONTRATO DE PRESTACION DE SERVICIOS", align="C", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", "", 10)
     pdf.ln(5)
     
     # Número y fecha
     pdf.set_font("Helvetica", "B", 9)
-    pdf.cell(50, 7, "Numero:", ln=False)
+    pdf.cell(50, 7, "Numero:", new_x="RIGHT", new_y="TOP")
     pdf.set_font("Helvetica", "", 9)
-    pdf.cell(0, 7, "CTR-2026-0001", ln=True)
+    pdf.cell(0, 7, "CTR-2026-0001", new_x="LMARGIN", new_y="NEXT")
     
     pdf.set_font("Helvetica", "B", 9)
-    pdf.cell(50, 7, "Fecha:", ln=False)
+    pdf.cell(50, 7, "Fecha:", new_x="RIGHT", new_y="TOP")
     pdf.set_font("Helvetica", "", 9)
-    pdf.cell(0, 7, datetime.now().strftime("%d/%m/%Y"), ln=True)
+    pdf.cell(0, 7, datetime.now().strftime("%d/%m/%Y"), new_x="LMARGIN", new_y="NEXT")
     pdf.ln(3)
     
     # Partes
     pdf.set_font("Helvetica", "B", 10)
-    pdf.cell(0, 8, "PARTES CONTRATANTES", ln=True)
+    pdf.cell(0, 8, "PARTES CONTRATANTES", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", "", 9)
-    pdf.cell(0, 6, "El contratante: Empresa Prestadora de Servicios", ln=True)
-    pdf.cell(0, 6, "NIT: 1234567-8", ln=True)
-    pdf.cell(0, 6, "El contratado: Beneficiario del Servicio", ln=True)
+    pdf.cell(0, 6, "El contratante: Empresa Prestadora de Servicios", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "NIT: 1234567-8", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "El contratado: Beneficiario del Servicio", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(3)
     
     # Cláusulas
     pdf.set_font("Helvetica", "B", 10)
-    pdf.cell(0, 8, "CLAUSULAS DEL CONTRATO", ln=True)
+    pdf.cell(0, 8, "CLAUSULAS DEL CONTRATO", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", "", 9)
-    pdf.cell(0, 6, "PRIMERA: Objeto y Alcance", ln=True)
-    pdf.cell(0, 6, "Las partes convenimos en que el contratante prestara servicios", ln=True)
-    pdf.cell(0, 6, "al contratado.", ln=True)
+    pdf.cell(0, 6, "PRIMERA: Objeto y Alcance", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "Las partes convenimos en que el contratante prestara servicios", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "al contratado.", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(2)
     
-    pdf.cell(0, 6, "SEGUNDA: Vigencia", ln=True)
+    pdf.cell(0, 6, "SEGUNDA: Vigencia", new_x="LMARGIN", new_y="NEXT")
     fecha_fin = datetime.now() + timedelta(days=365)
-    pdf.cell(0, 6, f"Desde: {datetime.now().strftime('%d/%m/%Y')} hasta: {fecha_fin.strftime('%d/%m/%Y')}", ln=True)
-    pdf.cell(0, 6, "Plazo: 12 meses", ln=True)
+    pdf.cell(0, 6, f"Desde: {datetime.now().strftime('%d/%m/%Y')} hasta: {fecha_fin.strftime('%d/%m/%Y')}", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "Plazo: 12 meses", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(2)
     
-    pdf.cell(0, 6, "TERCERA: Contraprestacion Economica", ln=True)
-    pdf.cell(0, 6, "Pago mensual: Q5,000.00", ln=True)
+    pdf.cell(0, 6, "TERCERA: Contraprestacion Economica", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "Pago mensual: Q5,000.00", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(3)
     
     # Firmas
     pdf.set_font("Helvetica", "", 9)
-    pdf.cell(0, 6, "Ambas partes se comprometen a cumplir integramente.", ln=True)
-    pdf.cell(0, 6, "Segun las leyes de Guatemala.", ln=True)
+    pdf.cell(0, 6, "Ambas partes se comprometen a cumplir integramente.", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "Segun las leyes de Guatemala.", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(10)
-    pdf.cell(80, 6, "____________________", ln=False)
-    pdf.cell(0, 6, "____________________", ln=True)
-    pdf.cell(80, 6, "El Contratante", ln=False)
-    pdf.cell(0, 6, "El Contratado", ln=True)
+    pdf.cell(80, 6, "____________________", new_x="RIGHT", new_y="TOP")
+    pdf.cell(0, 6, "____________________", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(80, 6, "El Contratante", new_x="RIGHT", new_y="TOP")
+    pdf.cell(0, 6, "El Contratado", new_x="LMARGIN", new_y="NEXT")
     
     # Guardar
     path = Path("demos/demo_contrato_completo.pdf")
@@ -230,52 +230,52 @@ def gen_constancia_pdf():
     pdf = PDFGenerator()
     pdf.add_page()
     pdf.set_font("Helvetica", "B", 14)
-    pdf.cell(0, 10, "CONSTANCIA DE TRABAJO", align="C", ln=True)
+    pdf.cell(0, 10, "CONSTANCIA DE TRABAJO", align="C", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", "", 10)
     pdf.ln(5)
     
     # Número y empresa
     pdf.set_font("Helvetica", "B", 9)
-    pdf.cell(0, 7, "Numero: CONST-2026-0001", ln=True)
-    pdf.cell(0, 7, f"Fecha: {datetime.now().strftime('%d/%m/%Y')}", ln=True)
-    pdf.cell(0, 7, "Empresa: Distribuidora Central SA", ln=True)
+    pdf.cell(0, 7, "Numero: CONST-2026-0001", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 7, f"Fecha: {datetime.now().strftime('%d/%m/%Y')}", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 7, "Empresa: Distribuidora Central SA", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(3)
     
     # Encabezado
     pdf.set_font("Helvetica", "", 9)
-    pdf.cell(0, 6, "La Gerencia de Recursos Humanos de Distribuidora Central SA", ln=True)
+    pdf.cell(0, 6, "La Gerencia de Recursos Humanos de Distribuidora Central SA", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(2)
     
     pdf.set_font("Helvetica", "B", 10)
-    pdf.cell(0, 8, "HACE CONSTAR QUE:", ln=True)
+    pdf.cell(0, 8, "HACE CONSTAR QUE:", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(2)
     
     # Datos del trabajador
     pdf.set_font("Helvetica", "", 9)
-    pdf.cell(0, 6, "El senor(a) Juan Carlos Ramirez", ln=True)
-    pdf.cell(0, 6, "Identificado(a) con DPI numero: 1234-56789-0123", ln=True)
-    pdf.cell(0, 6, "Ha prestado servicios en nuestra institucion desempenando el cargo de", ln=True)
-    pdf.cell(0, 6, "Auxiliar Contable", ln=True)
-    pdf.cell(0, 6, "Desde: 15/03/2018 hasta la fecha", ln=True)
-    pdf.cell(0, 6, "Con una antiguedad de 6 anos de servicio continuo", ln=True)
+    pdf.cell(0, 6, "El senor(a) Juan Carlos Ramirez", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "Identificado(a) con DPI numero: 1234-56789-0123", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "Ha prestado servicios en nuestra institucion desempenando el cargo de", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "Auxiliar Contable", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "Desde: 15/03/2018 hasta la fecha", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "Con una antiguedad de 6 anos de servicio continuo", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(2)
     
     # Evaluación
-    pdf.cell(0, 6, "Durante este tiempo ha demostrado responsabilidad, puntualidad", ln=True)
-    pdf.cell(0, 6, "y compromiso con sus funciones laborales.", ln=True)
+    pdf.cell(0, 6, "Durante este tiempo ha demostrado responsabilidad, puntualidad", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "y compromiso con sus funciones laborales.", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(3)
     
     # Propósito
     pdf.set_font("Helvetica", "", 9)
-    pdf.cell(0, 6, "La presente constancia se extiende a solicitud del interesado", ln=True)
-    pdf.cell(0, 6, "para los fines que estime convenientes, en la ciudad de Guatemala", ln=True)
-    pdf.cell(0, 6, f"a los {random.randint(1, 28)} dias del mes de abril de 2026.", ln=True)
+    pdf.cell(0, 6, "La presente constancia se extiende a solicitud del interesado", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "para los fines que estime convenientes, en la ciudad de Guatemala", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, f"a los {random.randint(1, 28)} dias del mes de abril de 2026.", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(10)
     
-    pdf.cell(0, 6, "____________________", ln=True)
-    pdf.cell(0, 6, "Recursos Humanos", ln=True)
-    pdf.cell(0, 6, "Distribuidora Central SA", ln=True)
-    pdf.cell(0, 6, "Sello: [OFICIAL]", ln=True)
+    pdf.cell(0, 6, "____________________", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "Recursos Humanos", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "Distribuidora Central SA", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "Sello: [OFICIAL]", new_x="LMARGIN", new_y="NEXT")
     
     # Guardar
     path = Path("demos/demo_constancia_completo.pdf")
@@ -289,25 +289,25 @@ def gen_carta_formal_pdf():
     pdf = PDFGenerator()
     pdf.add_page()
     pdf.set_font("Helvetica", "B", 14)
-    pdf.cell(0, 10, "CARTA FORMAL", align="C", ln=True)
+    pdf.cell(0, 10, "CARTA FORMAL", align="C", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", "", 10)
     pdf.ln(5)
     
     # Encabezado
     pdf.set_font("Helvetica", "", 9)
-    pdf.cell(0, 6, f"Numero de referencia: CF-2026-0001", ln=True)
-    pdf.cell(0, 6, f"Guatemala, {datetime.now().strftime('%d de %B de %Y')}", ln=True)
+    pdf.cell(0, 6, f"Numero de referencia: CF-2026-0001", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, f"Guatemala, {datetime.now().strftime('%d de %B de %Y')}", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(2)
     
-    pdf.cell(0, 6, "Senor(a):", ln=True)
-    pdf.cell(0, 6, "Gerente General", ln=True)
-    pdf.cell(0, 6, "Empresa Receptora SA", ln=True)
-    pdf.cell(0, 6, "Presente.", ln=True)
+    pdf.cell(0, 6, "Senor(a):", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "Gerente General", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "Empresa Receptora SA", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "Presente.", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(3)
     
     # Cuerpo
     pdf.set_font("Helvetica", "", 9)
-    pdf.cell(0, 6, "Estimado senor(a):", ln=True)
+    pdf.cell(0, 6, "Estimado senor(a):", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(2)
     
     pdf.multi_cell(0, 5, 
@@ -322,14 +322,14 @@ def gen_carta_formal_pdf():
     pdf.ln(5)
     
     # Cierre
-    pdf.cell(0, 6, "Sin otro particular por el momento, me suscribo de usted", ln=True)
-    pdf.cell(0, 6, "atentamente y le saluda,", ln=True)
+    pdf.cell(0, 6, "Sin otro particular por el momento, me suscribo de usted", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "atentamente y le saluda,", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(10)
     
-    pdf.cell(0, 6, "____________________", ln=True)
-    pdf.cell(0, 6, "Lic. Roberto Sandoval", ln=True)
-    pdf.cell(0, 6, "Telefono: 2345-6789", ln=True)
-    pdf.cell(0, 6, "Correo: contacto@empresa.gt", ln=True)
+    pdf.cell(0, 6, "____________________", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "Lic. Roberto Sandoval", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "Telefono: 2345-6789", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "Correo: contacto@empresa.gt", new_x="LMARGIN", new_y="NEXT")
     
     # Guardar
     path = Path("demos/demo_carta_formal_completo.pdf")
@@ -343,59 +343,59 @@ def gen_identificacion_pdf():
     pdf = PDFGenerator()
     pdf.add_page()
     pdf.set_font("Helvetica", "B", 14)
-    pdf.cell(0, 10, "DOCUMENTO PERSONAL DE IDENTIFICACION", align="C", ln=True)
+    pdf.cell(0, 10, "DOCUMENTO PERSONAL DE IDENTIFICACION", align="C", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", "B", 10)
-    pdf.cell(0, 10, "DPI - RENAP GUATEMALA", align="C", ln=True)
+    pdf.cell(0, 10, "DPI - RENAP GUATEMALA", align="C", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", "", 10)
     pdf.ln(5)
     
     # Numero
     pdf.set_font("Helvetica", "B", 10)
-    pdf.cell(50, 8, "Numero de documento:", ln=False)
+    pdf.cell(50, 8, "Numero de documento:", new_x="RIGHT", new_y="TOP")
     pdf.set_font("Helvetica", "", 10)
-    pdf.cell(0, 8, "00000001", ln=True)
+    pdf.cell(0, 8, "00000001", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(3)
     
     # Datos
     pdf.set_font("Helvetica", "B", 9)
-    pdf.cell(0, 7, "DATOS DEL TITULAR", ln=True)
+    pdf.cell(0, 7, "DATOS DEL TITULAR", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", "", 9)
-    pdf.cell(50, 6, "Nombre completo:", ln=False)
-    pdf.cell(0, 6, "Juan Carlos Ramirez", ln=True)
-    pdf.cell(50, 6, "Numero DPI:", ln=False)
-    pdf.cell(0, 6, "1234 56789 0123", ln=True)
-    pdf.cell(50, 6, "Fecha nacimiento:", ln=False)
-    pdf.cell(0, 6, "15/03/1980", ln=True)
+    pdf.cell(50, 6, "Nombre completo:", new_x="RIGHT", new_y="TOP")
+    pdf.cell(0, 6, "Juan Carlos Ramirez", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(50, 6, "Numero DPI:", new_x="RIGHT", new_y="TOP")
+    pdf.cell(0, 6, "1234 56789 0123", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(50, 6, "Fecha nacimiento:", new_x="RIGHT", new_y="TOP")
+    pdf.cell(0, 6, "15/03/1980", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(2)
     
     # Ubicación
     pdf.set_font("Helvetica", "B", 9)
-    pdf.cell(0, 7, "INFORMACION DE UBICACION", ln=True)
+    pdf.cell(0, 7, "INFORMACION DE UBICACION", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", "", 9)
-    pdf.cell(50, 6, "Lugar nacimiento:", ln=False)
-    pdf.cell(0, 6, "Guatemala, Guatemala", ln=True)
-    pdf.cell(50, 6, "Municipio:", ln=False)
-    pdf.cell(0, 6, "Guatemala", ln=True)
-    pdf.cell(50, 6, "Departamento:", ln=False)
-    pdf.cell(0, 6, "Guatemala", ln=True)
-    pdf.cell(50, 6, "Vecino de:", ln=False)
-    pdf.cell(0, 6, "Guatemala", ln=True)
+    pdf.cell(50, 6, "Lugar nacimiento:", new_x="RIGHT", new_y="TOP")
+    pdf.cell(0, 6, "Guatemala, Guatemala", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(50, 6, "Municipio:", new_x="RIGHT", new_y="TOP")
+    pdf.cell(0, 6, "Guatemala", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(50, 6, "Departamento:", new_x="RIGHT", new_y="TOP")
+    pdf.cell(0, 6, "Guatemala", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(50, 6, "Vecino de:", new_x="RIGHT", new_y="TOP")
+    pdf.cell(0, 6, "Guatemala", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(2)
     
     # Información general
     pdf.set_font("Helvetica", "B", 9)
-    pdf.cell(0, 7, "INFORMACION GENERAL", ln=True)
+    pdf.cell(0, 7, "INFORMACION GENERAL", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", "", 9)
-    pdf.cell(0, 6, "Nacionalidad: Guatemalteco", ln=True)
-    pdf.cell(0, 6, "Registro Nacional de las Personas - RENAP", ln=True)
-    pdf.cell(0, 6, "Guatemala, Centro America", ln=True)
-    pdf.cell(0, 6, "Este documento es valido en todo el territorio nacional", ln=True)
+    pdf.cell(0, 6, "Nacionalidad: Guatemalteco", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "Registro Nacional de las Personas - RENAP", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "Guatemala, Centro America", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "Este documento es valido en todo el territorio nacional", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(2)
     
     # Validez
     pdf.set_font("Helvetica", "", 9)
-    pdf.cell(0, 6, f"Emitido: {datetime.now().strftime('%d/%m/%Y')}", ln=True)
-    pdf.cell(0, 6, f"Vigente hasta: 2032/12/31", ln=True)
+    pdf.cell(0, 6, f"Emitido: {datetime.now().strftime('%d/%m/%Y')}", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, f"Vigente hasta: 2032/12/31", new_x="LMARGIN", new_y="NEXT")
     
     # Guardar
     path = Path("demos/demo_identificacion_completo.pdf")
@@ -409,25 +409,25 @@ def gen_comunicado_pdf():
     pdf = PDFGenerator()
     pdf.add_page()
     pdf.set_font("Helvetica", "B", 14)
-    pdf.cell(0, 10, "COMUNICADO OFICIAL", align="C", ln=True)
+    pdf.cell(0, 10, "COMUNICADO OFICIAL", align="C", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", "", 10)
     pdf.ln(5)
     
     # Encabezado
     pdf.set_font("Helvetica", "B", 9)
-    pdf.cell(50, 7, "Numero:", ln=False)
+    pdf.cell(50, 7, "Numero:", new_x="RIGHT", new_y="TOP")
     pdf.set_font("Helvetica", "", 9)
-    pdf.cell(0, 7, "COM-2026-0001", ln=True)
+    pdf.cell(0, 7, "COM-2026-0001", new_x="LMARGIN", new_y="NEXT")
     
     pdf.set_font("Helvetica", "B", 9)
-    pdf.cell(50, 7, "Fecha:", ln=False)
+    pdf.cell(50, 7, "Fecha:", new_x="RIGHT", new_y="TOP")
     pdf.set_font("Helvetica", "", 9)
-    pdf.cell(0, 7, datetime.now().strftime("%d/%m/%Y"), ln=True)
+    pdf.cell(0, 7, datetime.now().strftime("%d/%m/%Y"), new_x="LMARGIN", new_y="NEXT")
     pdf.ln(3)
     
     # Destinatario
     pdf.set_font("Helvetica", "", 9)
-    pdf.cell(0, 6, "Estimado Cliente/Usuario:", ln=True)
+    pdf.cell(0, 6, "Estimado Cliente/Usuario:", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(2)
     
     # Contenido
@@ -449,22 +449,22 @@ def gen_comunicado_pdf():
     
     # Contacto
     pdf.set_font("Helvetica", "B", 9)
-    pdf.cell(0, 7, "DATOS DE CONTACTO", ln=True)
+    pdf.cell(0, 7, "DATOS DE CONTACTO", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", "", 9)
-    pdf.cell(0, 6, "Departamento Administrativo", ln=True)
-    pdf.cell(0, 6, "Telefono: 2234-5678", ln=True)
-    pdf.cell(0, 6, "Correo: info@empresa.gt", ln=True)
-    pdf.cell(0, 6, "Pagina web: www.empresa.gt", ln=True)
+    pdf.cell(0, 6, "Departamento Administrativo", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "Telefono: 2234-5678", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "Correo: info@empresa.gt", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "Pagina web: www.empresa.gt", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(3)
     
     # Cierre
     pdf.set_font("Helvetica", "", 9)
-    pdf.cell(0, 6, "La administracion se compromete a brindar el mejor servicio.", ln=True)
-    pdf.cell(0, 6, "Cordialmente,", ln=True)
+    pdf.cell(0, 6, "La administracion se compromete a brindar el mejor servicio.", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "Cordialmente,", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(8)
-    pdf.cell(0, 6, "____________________", ln=True)
-    pdf.cell(0, 6, "La Administracion", ln=True)
-    pdf.cell(0, 6, "Departamento de Comunicacion", ln=True)
+    pdf.cell(0, 6, "____________________", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "La Administracion", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "Departamento de Comunicacion", new_x="LMARGIN", new_y="NEXT")
     
     # Guardar
     path = Path("demos/demo_comunicado_completo.pdf")
@@ -494,10 +494,10 @@ def main():
     for nombre, func in generadores.items():
         try:
             ruta = func()
-            print(f"✅ {nombre:20s}: {ruta.name}")
+            print(f"[OK] {nombre:20s}: {ruta.name}")
             generados.append(ruta)
         except Exception as e:
-            print(f"❌ {nombre:20s}: ERROR - {e}")
+            print(f"[ERROR] {nombre:20s}: {e}")
     
     print()
     print("=" * 70)
@@ -515,3 +515,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
