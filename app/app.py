@@ -640,49 +640,172 @@ else:
                                 else:
                                     st.metric("🏷️ Clasificación", "N/A")
 
-                            # Mostrar texto extraído
+                            # Mostrar texto extraído (FIX multi-página)
                             st.divider()
                             st.subheader("📋 Texto Extraído (OCR)")
 
                             extracted_text = result.get("extracted_text", "").strip()
+                            pages = result.get("pages", [])
 
                             if extracted_text:
+                                # Caso 1: Imagen única (no es PDF multi-página)
                                 st.text_area(
                                     "Contenido del documento:",
                                     value=extracted_text,
-                                    height=250,
+                                    height=300,
                                     disabled=True,
-                                    key="ocr_output"
+                                    key="ocr_output_single"
                                 )
-                            else:
-                                # Para PDFs multipage
-                                pages = result.get("pages", [])
-                                if pages and len(pages) > 0:
-                                    num_pages = len(pages)
-                                    st.info(f"📑 Documento PDF de {num_pages} página(s)")
 
-                                    page_num = st.slider(
-                                        "Selecciona la página",
-                                        min_value=1,
-                                        max_value=num_pages,
-                                        value=1
+                            elif pages and len(pages) > 0:
+                                # Caso 2: PDF multi-página (FIX aplicado aquí)
+                                num_pages = len(pages)
+
+                                # Info del documento
+                                st.markdown(f"""
+                                <div class="info-card">
+                                    📑 <strong>Documento PDF con {num_pages} página(s)</strong><br/>
+                                    <span style="font-size: 0.9rem; opacity: 0.85;">
+                                        Usa el selector para navegar entre páginas. Todas las páginas
+                                        ya fueron procesadas — la navegación es instantánea.
+                                    </span>
+                                </div>
+                                """, unsafe_allow_html=True)
+
+                                # Selector con tabs si hay pocas páginas, o selectbox si hay muchas
+                                if num_pages <= 5:
+                                    # Tabs para 1-5 páginas (más visual)
+                                    page_tabs = st.tabs([f"📄 Página {i+1}" for i in range(num_pages)])
+
+                                    for idx, page_tab in enumerate(page_tabs):
+                                        with page_tab:
+                                            page_data = pages[idx]
+                                            page_text = page_data.get("text", "").strip()
+
+                                            col_a, col_b = st.columns([3, 1])
+                                            with col_a:
+                                                st.markdown(f"**Texto extraído (Página {idx+1}):**")
+                                            with col_b:
+                                                if page_text:
+                                                    st.markdown(f"<span style='float:right; font-size:0.85rem; color:#10b981;'>"
+                                                               f"✅ {len(page_text.split())} palabras</span>",
+                                                               unsafe_allow_html=True)
+
+                                            if page_text:
+                                                st.text_area(
+                                                    f"Contenido página {idx+1}:",
+                                                    value=page_text,
+                                                    height=250,
+                                                    disabled=True,
+                                                    key=f"ocr_page_{idx}",
+                                                    label_visibility="collapsed"
+                                                )
+                                            else:
+                                                st.warning(f"⚠️ No se extrajo texto en la página {idx+1}")
+
+                                            # Mostrar clasificación de esa página si existe
+                                            page_classification = page_data.get("classification", {})
+                                            if page_classification:
+                                                page_class = (page_classification.get("predicted_class")
+                                                             or page_classification.get("class", "?"))
+                                                page_conf = page_classification.get("confidence", 0) or 0
+                                                st.markdown(
+                                                    f"**Clasificación de esta página:** "
+                                                    f"`{page_class.upper()}` "
+                                                    f"({page_conf:.1%} confianza)"
+                                                )
+                                else:
+                                    # Selectbox para 6+ páginas
+                                    selected_page = st.selectbox(
+                                        "Selecciona la página a visualizar:",
+                                        options=list(range(1, num_pages + 1)),
+                                        format_func=lambda x: f"📄 Página {x} de {num_pages}",
+                                        key="page_selector"
                                     )
 
-                                    page_text = pages[page_num - 1].get("text", "").strip()
+                                    page_data = pages[selected_page - 1]
+                                    page_text = page_data.get("text", "").strip()
 
                                     if page_text:
                                         st.text_area(
-                                            f"Página {page_num}:",
+                                            f"Contenido página {selected_page}:",
                                             value=page_text,
-                                            height=250,
+                                            height=300,
                                             disabled=True,
-                                            key=f"ocr_page_{page_num}"
+                                            key=f"ocr_multi_{selected_page}"
                                         )
+
+                                        # Estadísticas de la página
+                                        cols = st.columns(3)
+                                        with cols[0]:
+                                            st.metric("📝 Palabras", len(page_text.split()))
+                                        with cols[1]:
+                                            st.metric("📏 Caracteres", len(page_text))
+                                        with cols[2]:
+                                            page_classification = page_data.get("classification", {})
+                                            page_class = (page_classification.get("predicted_class")
+                                                         or page_classification.get("class", "?"))
+                                            st.metric("🏷️ Tipo", page_class.upper() if page_class else "N/A")
                                     else:
-                                        st.warning(f"⚠️ No se extrajo texto en la página {page_num}")
+                                        st.warning(f"⚠️ No se extrajo texto en la página {selected_page}")
+
+                                # Resumen general del PDF multi-página
+                                st.divider()
+                                st.markdown("### 📊 Resumen del Documento Completo")
+
+                                # Calcular estadísticas globales
+                                total_palabras = sum(
+                                    len((p.get("text", "") or "").split())
+                                    for p in pages
+                                )
+                                paginas_con_texto = sum(
+                                    1 for p in pages
+                                    if (p.get("text", "") or "").strip()
+                                )
+
+                                # Clasificaciones por página
+                                clases_por_pagina = []
+                                for p in pages:
+                                    c = p.get("classification", {})
+                                    clase = c.get("predicted_class") or c.get("class", "?")
+                                    clases_por_pagina.append(clase)
+
+                                # Categoría dominante (la que más se repite)
+                                from collections import Counter
+                                if clases_por_pagina:
+                                    contador = Counter(clases_por_pagina)
+                                    clase_dominante, freq = contador.most_common(1)[0]
                                 else:
-                                    st.warning("⚠️ OCR no extrajo texto del documento")
-                                    st.info("Posibles razones:\n- Imagen de muy baja calidad\n- PDF sin contenido de texto\n- Idioma no soportado")
+                                    clase_dominante, freq = "N/A", 0
+
+                                summary_cols = st.columns(4)
+                                with summary_cols[0]:
+                                    st.metric("📑 Páginas totales", num_pages)
+                                with summary_cols[1]:
+                                    st.metric("✅ Con texto", paginas_con_texto)
+                                with summary_cols[2]:
+                                    st.metric("📝 Palabras totales", f"{total_palabras:,}")
+                                with summary_cols[3]:
+                                    st.metric(
+                                        "🏷️ Categoría dominante",
+                                        clase_dominante.upper() if clase_dominante != "N/A" else "N/A",
+                                        delta=f"{freq}/{num_pages} páginas"
+                                    )
+
+                            else:
+                                # Caso 3: Sin texto extraído
+                                st.warning("⚠️ OCR no extrajo texto del documento")
+                                st.markdown("""
+                                <div class="info-card">
+                                    <strong>Posibles razones:</strong>
+                                    <ul style="margin-top: 0.5rem;">
+                                        <li>Imagen de muy baja calidad o muy borrosa</li>
+                                        <li>PDF sin contenido de texto reconocible</li>
+                                        <li>Documento en idioma no soportado</li>
+                                        <li>Resolución insuficiente para OCR</li>
+                                    </ul>
+                                </div>
+                                """, unsafe_allow_html=True)
 
                             # Navegar a resultados detallados
                             st.divider()
