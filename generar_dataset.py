@@ -10,7 +10,8 @@ Genera documentos de entrenamiento para clasificación en 7 categorías:
   - Identificaciones (DOCUMENTO PERSONAL, DPI, RENAP, fecha nacimiento)
   - Otros (Comunicado, estimado, informamos, cordialmente, aviso)
 
-Genera 35 archivos por categoría (245 total) con vocabulario diferenciador claro.
+Genera 70 archivos por categoría (490 total) con múltiples variantes de formato
+y vocabulario diferenciador claro por categoría.
 También genera data/ground_truth.csv con metadata del dataset.
 
 Ejecutar:
@@ -86,7 +87,8 @@ def gen_factura(i):
     nombres = ["Distribuidora Guatemalteca", "Empresa Comercial SA", "Grupo Industrial", "Servicios Globales"]
     cliente = f"Cliente: {random.choice(nombres)}"
     
-    texto = f"""
+    # Formato 1: Estándar detallado
+    formato1 = f"""
 FACTURA ELECTRONICA
 Numero: {serie}
 Fecha: {(datetime.now() - timedelta(days=random.randint(0, 60))).strftime('%d/%m/%Y')}
@@ -124,7 +126,60 @@ Acreditar IVA
 Moneda GTQ quetzal Q
 Vencimiento: {(datetime.now() + timedelta(days=30)).strftime('%d/%m/%Y')}
 """
-    return texto.strip()
+    
+    # Formato 2: Compacto SAT
+    formato2 = f"""
+FACTURA ELECTRONICA SAT
+Serie: {serie}
+Fecha Emision: {datetime.now().strftime('%d/%m/%Y')}
+NIT Emisor: {nit}
+{cliente}
+
+CONCEPTO: Articulo {i}
+CANTIDAD: {random.randint(1, 100)} unidades
+PRECIO: Q{random.randint(5, 500)}.00
+
+---
+SUBTOTAL: Q{subtotal}.00
+IVA 12%: Q{iva}.00
+TOTAL: Q{total}.00
+---
+
+{keyword1}
+Documento tributario electronico SAT Guatemala
+Autorizado por SAT
+{keyword2}
+RFC {random.randint(100, 999)}-{random.randint(100, 999)}
+"""
+    
+    # Formato 3: Alternativo con detalle de conceptos
+    formato3 = f"""
+---FACTURA ELECTRONICA---
+Numero de Factura: {serie}
+Correlativo: {i}
+Fecha: {(datetime.now() - timedelta(days=random.randint(1, 30))).strftime('%d/%m/%Y')}
+
+Datos del Emisor
+NIT: {nit}
+{cliente}
+Guatemala
+
+Detalles de la Transaccion
+Renglon 1: {keyword1} - Q{subtotal}.00
+Cantidad: {random.randint(1, 50)} unidades
+
+Resumen Tributario
+Monto Gravable: Q{subtotal}.00
+{keyword2}
+Impuesto Valor Agregado 12%: Q{iva}.00
+
+Total a Pagar: Q{total}.00 GTQ
+
+Forma de Pago: {random.choice(['Efectivo', 'Transferencia', 'Cheque'])}
+Vencimiento Pago: {(datetime.now() + timedelta(days=random.randint(15, 45))).strftime('%d/%m/%Y')}
+"""
+    
+    return random.choice([formato1, formato2, formato3]).strip()
 
 
 def gen_recibo(i):
@@ -142,7 +197,8 @@ def gen_recibo(i):
     formas = ["efectivo", "cheque", "transferencia", "deposito"]
     forma = random.choice(formas)
     
-    texto = f"""
+    # Formato 1: Recibo estándar detallado
+    formato1 = f"""
 RECIBO OFICIAL DE PAGO
 Numero: {numero}
 Fecha: {datetime.now().strftime('%d/%m/%Y')}
@@ -175,7 +231,54 @@ Comprobante fiscal
 Vale de caja
 Referencia: {numero}
 """
-    return texto.strip()
+    
+    # Formato 2: Recibo compacto
+    formato2 = f"""
+---RECIBO DE PAGO---
+No.: {numero}
+Fecha: {datetime.now().strftime('%d/%m/%Y')}
+
+Recibi de: Empresa {i}
+Monto: Q{monto}.00
+Concepto: {concepto}
+Forma: {forma.upper()}
+
+{keyword1}
+Sello de cobros
+Firma: _________________
+
+{keyword2}
+"""
+    
+    # Formato 3: Recibo con detalles expandidos
+    formato3 = f"""
+=== RECIBO OFICIAL ===
+Numero de Recibo: {numero}
+Fecha de Emision: {datetime.now().strftime('%d/%m/%Y')}
+Hora: {datetime.now().strftime('%H:%M:%S')}
+
+De: Empresa Receptora {i}
+Telefono de contacto: {random.randint(2200, 7700)}-{random.randint(1000, 9999)}
+
+MONTO PAGADO: Q{monto}.00
+{keyword1}
+
+Por: {concepto}
+Periodo: {datetime.now().strftime('%B %Y')}
+
+Forma de Pago: {forma.upper()}
+{keyword2}
+
+Departamento de Cobros y Recaudacion
+Sello: [EMPRESA]
+Firma Autorizada: _______________
+Pago Puntual
+
+Comprobante: {numero}
+Vale
+"""
+    
+    return random.choice([formato1, formato2, formato3]).strip()
 
 
 def gen_contrato(i):
@@ -187,7 +290,8 @@ def gen_contrato(i):
     fecha_inicio = datetime.now()
     fecha_fin = fecha_inicio + timedelta(days=random.randint(30, 730))
     
-    texto = f"""
+    # Formato 1: Contrato estándar formal
+    formato1 = f"""
 CONTRATO DE PRESTACION DE SERVICIOS
 Numero: CTR-2026-{str(i).zfill(4)}
 Fecha: {fecha_inicio.strftime('%d/%m/%Y')}
@@ -241,7 +345,79 @@ ______________________________     ______________________________
 El Contratante                    El Contratado
 Firma y sello                      Firma
 """
-    return texto.strip()
+    
+    # Formato 2: Contrato simplificado
+    formato2 = f"""
+===== CONTRATO =====
+Numero: CTR-2026-{str(i).zfill(4)}
+Fecha: {fecha_inicio.strftime('%d/%m/%Y')}
+
+CONTRATANTE: Empresa Prestadora
+NIT: 1234567-8
+CONTRATADO: Beneficiario {i}
+
+{keyword1}
+Vigencia desde: {fecha_inicio.strftime('%d/%m/%Y')}
+Hasta: {fecha_fin.strftime('%d/%m/%Y')}
+Duracion: {random.randint(6, 24)} meses
+
+Pago Mensual: Q{random.randint(1000, 10000)}.00
+
+Clausulas Principales:
+- Prestar servicios profesionales
+- Cumplimiento de horarios
+- Confidencialidad de informacion
+
+{keyword2}
+- Resolucion con 30 dias aviso previo
+- Acuerdo segun leyes de Guatemala
+
+Firmamos:
+_________________  ___________________
+Contratante        Contratado
+"""
+    
+    # Formato 3: Contrato con tabla de términos
+    formato3 = f"""
+CONTRATO DE SERVICIOS PROFESIONALES
+Numero de Contrato: CTR-2026-{str(i).zfill(4)}
+Lugar: Guatemala
+Fecha: {fecha_inicio.strftime('%d/%m/%Y')}
+
+PARTES:
+Empresa: Empresa Prestadora de Servicios
+Persona: Beneficiario Contrato {i}
+
+{keyword1}
+
+TERMINOS Y CONDICIONES:
+Fecha de Inicio: {fecha_inicio.strftime('%d/%m/%Y')}
+Fecha de Terminacion: {fecha_fin.strftime('%d/%m/%Y')}
+Vigencia Total: {random.randint(6, 24)} meses
+
+Compensacion Economica:
+Monto Mensual: Q{random.randint(1000, 10000)}.00
+Moneda: Quetzal Guatemalteco
+
+Obligaciones del Contratante:
+- {keyword2}
+- Cumplimiento diligente
+- Profesionalismo
+
+Clausula de Terminacion:
+Previo aviso de 30 dias, cualquiera de las partes puede rescindir.
+Causales de rescisión: incumplimiento grave de obligaciones.
+
+ACUERDO FINAL:
+Ambas partes aceptan los terminos y condiciones establecidas.
+Ley aplicable: Leyes de la Republica de Guatemala
+
+FIRMANTES:
+________________           ________________
+Empresa                    Persona Contratada
+"""
+    
+    return random.choice([formato1, formato2, formato3]).strip()
 
 
 def gen_otro(i):
@@ -250,7 +426,8 @@ def gen_otro(i):
     keyword1 = random.choice(keywords)
     keyword2 = random.choice(keywords)
     
-    texto = f"""
+    # Formato 1: Comunicado formal
+    formato1 = f"""
 COMUNICADO OFICIAL
 Fecha: {datetime.now().strftime('%d/%m/%Y')}
 Numero: COM-2026-{str(i).zfill(4)}
@@ -289,7 +466,71 @@ ______________________________
 La Administracion
 Departamento de Comunicacion
 """
-    return texto.strip()
+    
+    # Formato 2: Comunicado simplificado
+    formato2 = f"""COMUNICADO
+Numero: COM-2026-{str(i).zfill(4)}
+Fecha: {datetime.now().strftime('%d/%m/%Y')}
+
+{keyword1}
+
+{keyword2}
+
+Horario: L-V 08:00-17:00, S 08:00-12:00
+
+Contacto:
+Telefono: 2234-5678
+Email: info@empresa.gt
+
+Cordialmente,
+La Administracion
+"""
+    
+    # Formato 3: Comunicado expandido
+    formato3 = f"""
+===== COMUNICADO INSTITUCIONAL =====
+Numero: COM-2026-{str(i).zfill(4)}
+Fecha de Emision: {datetime.now().strftime('%d/%m/%Y')}
+Prioridad: NORMAL
+
+DE: Departamento Administrativo
+A: Clientes y Usuarios
+
+ASUNTO: Comunicacion importante
+
+CONTENIDO:
+
+{keyword1}
+
+Por este medio informamos sobre cambios importantes en nuestros servicios
+y horarios de atención que es necesario que usted conozca.
+
+DETALLES:
+
+{keyword2}
+
+Agradecemos su comprension y paciencia durante este proceso.
+
+HORARIOS DE ATENCION:
+Lunes a Viernes: 08:00 - 17:00 horas
+Sabado: 08:00 - 12:00 horas
+Domingo: Cerrado
+
+CANALES DE COMUNICACION:
+Telefono Principal: 2234-5678
+Correo Electronico: info@empresa.gt
+Pagina Web: www.empresa.gt
+Departamento: Administracion
+
+NOTA IMPORTANTE:
+La administracion se compromete a brindar el mejor servicio posible.
+
+Cordialmente,
+La Administracion
+Firma: _________________
+"""
+    
+    return random.choice([formato1, formato2, formato3]).strip()
 
 
 def gen_constancia(i):
@@ -312,7 +553,8 @@ def gen_constancia(i):
     anios = random.randint(1, 10)
     fecha_ingreso = f"{random.randint(1, 28)}/0{random.randint(1, 9)}/201{random.randint(0, 9)}"
 
-    texto = f"""CONSTANCIA DE TRABAJO
+    # Formato 1: Constancia formal estándar
+    formato1 = f"""CONSTANCIA DE TRABAJO
 Numero: CONST-2026-{str(i).zfill(4)}
 
 {empresa}
@@ -344,7 +586,70 @@ Recursos Humanos
 Sello: [OFICIAL]
 Firma autorizada
 """
-    return texto.strip()
+    
+    # Formato 2: Constancia compacta
+    formato2 = f"""CONSTANCIA LABORAL
+Numero: CONST-2026-{str(i).zfill(4)}
+{empresa}
+Guatemala, {datetime.now().strftime('%d/%m/%Y')}
+
+Se hace constar que:
+{nombre}
+DPI: {random.randint(1000,9999)}-{random.randint(10000,99999)}-{random.randint(1000,9999)}
+
+{keyword1}
+
+Laboró en: {cargo}
+Desde: {fecha_ingreso}
+Antiguedad: {anios} años
+
+{keyword2}
+
+Para los fines que estime convenientes.
+
+Sello: [OFICIAL]
+Firma: __________________
+"""
+    
+    # Formato 3: Constancia con detalles expandidos
+    formato3 = f"""
+===== CONSTANCIA DE PRESTACION DE SERVICIOS =====
+Numero de Constancia: CONST-2026-{str(i).zfill(4)}
+Fecha: {datetime.now().strftime('%d/%m/%Y')}
+
+Institucion Empleadora:
+{empresa}
+Departamento: Recursos Humanos
+
+Datos del Trabajador:
+Nombre: {nombre}
+Documento Personal de Identificacion: {random.randint(1000,9999)}-{random.randint(10000,99999)}-{random.randint(1000,9999)}
+Cargo: {cargo}
+
+Información del Empleo:
+{keyword1}
+Fecha de Inicio de Labores: {fecha_ingreso}
+Tiempo de Antigüedad: {anios} años de servicio continuo
+Periodo de Evaluacion: Desde inicio hasta presente
+
+Conducta y Desempeño:
+El trabajador ha demostrado:
+- {keyword2}
+- Responsabilidad y puntualidad
+- Compromiso con sus funciones
+- Profesionalismo en sus actividades
+
+Propósito de la Constancia:
+Se extiende a solicitud del interesado para los fines administrativos
+y legales que estime convenientes.
+
+Lugar: Guatemala
+Autorizado por Recursos Humanos
+Sello Institucional: [EMPRESA]
+Firma: _______________________
+"""
+    
+    return random.choice([formato1, formato2, formato3]).strip()
 
 
 def gen_carta_formal(i):
@@ -366,7 +671,8 @@ def gen_carta_formal(i):
     destinatarios = ["Gerente General", "Director Administrativo",
                      "Jefe de Departamento", "Coordinador de Area"]
 
-    texto = f"""CARTA FORMAL
+    # Formato 1: Carta formal completa
+    formato1 = f"""CARTA FORMAL
 Numero de referencia: CF-2026-{str(i).zfill(4)}
 Guatemala, {datetime.now().strftime('%d de %B de %Y')}
 
@@ -398,7 +704,69 @@ ______________________________
 Telefono: {random.randint(2000, 7999)}-{random.randint(1000, 9999)}
 Correo: contacto@empresa.gt
 """
-    return texto.strip()
+    
+    # Formato 2: Carta formal simplificada
+    formato2 = f"""CARTA FORMAL
+Ref: CF-2026-{str(i).zfill(4)}
+Guatemala, {datetime.now().strftime('%d/%m/%Y')}
+
+{random.choice(destinatarios)}
+Presente
+
+{keyword1}
+
+{keyword2}
+
+{asunto}
+
+Respetuosamente,
+{random.choice(remitentes)}
+Telefono: {random.randint(2000, 7999)}-{random.randint(1000, 9999)}
+"""
+    
+    # Formato 3: Carta formal con detalles expandidos
+    formato3 = f"""
+===== CARTA FORMAL =====
+Numero: CF-2026-{str(i).zfill(4)}
+Fecha: {datetime.now().strftime('%d de %B de %Y')}
+Lugar: Guatemala
+
+REMITENTE:
+{random.choice(remitentes)}
+Direccion: Guatemala
+
+DESTINATARIO:
+{random.choice(destinatarios)}
+{random.choice(['Empresa Receptora SA', 'Corporacion Guatemala', 'Servicios Administrativos'])}
+Presente
+
+ASUNTO: {asunto}
+
+CUERPO DE LA CARTA:
+
+Estimado señor(a):
+
+{keyword1} por este medio me dirijo respetuosamente a su persona
+para exponer lo siguiente:
+
+{keyword2}
+
+Con relacion al asunto mencionado, solicito su atención especial.
+Adjunto encontrará documentación complementaria para su revision.
+
+Quedo atentamente a su disposición para resolver inquietudes adicionales.
+
+Sin otro particular por ahora,
+
+FIRMA Y CONTACTO:
+_____________________________
+{random.choice(remitentes)}
+Telefono: {random.randint(2200, 7800)}-{random.randint(1000, 9999)}
+Email: contacto@empresa.gt
+Firma: _____________________
+"""
+    
+    return random.choice([formato1, formato2, formato3]).strip()
 
 
 def gen_identificacion(i):
@@ -419,7 +787,8 @@ def gen_identificacion(i):
     municipio = random.choice(municipios)
     depto = random.choice(departamentos)
 
-    texto = f"""DOCUMENTO PERSONAL DE IDENTIFICACION
+    # Formato 1: DPI estándar detallado
+    formato1 = f"""DOCUMENTO PERSONAL DE IDENTIFICACION
 DPI - RENAP Guatemala
 Numero de documento: {str(i).zfill(8)}
 
@@ -442,11 +811,61 @@ Este documento es valido en todo el territorio nacional.
 Emitido: {datetime.now().strftime('%d/%m/%Y')}
 Vigente hasta: {random.randint(2028, 2035)}/01/01
 """
-    return texto.strip()
+    
+    # Formato 2: DPI simplificado
+    formato2 = f"""DPI RENAP
+Numero: {str(i).zfill(8)}
+
+{nombre}
+DPI: {dpi}
+Fecha Nac: {fecha_nac}
+Municipio: {municipio}
+Departamento: {depto}
+
+{keyword1}
+Nacionalidad: Guatemalteco
+Vigencia: {random.randint(2028, 2035)}
+"""
+    
+    # Formato 3: DPI con información expandida
+    formato3 = f"""
+===== DOCUMENTO PERSONAL DE IDENTIFICACION =====
+Registro Nacional de las Personas - RENAP
+Numero de Identificacion: {str(i).zfill(8)}
+Tipo: DPI Guatemalteco
+
+INFORMACION DEL TITULAR:
+Nombre Completo: {nombre}
+Numero de DPI: {dpi}
+{keyword1}
+
+DATOS DE NACIMIENTO:
+Fecha de Nacimiento: {fecha_nac}
+Lugar de Nacimiento: {municipio}, {depto}
+Municipio: {municipio}
+Departamento: {depto}
+
+INFORMACION ADICIONAL:
+Nacionalidad: Guatemalteco
+Domicilio: {municipio}, {depto}
+Vecino de: {municipio}
+
+VALIDEZ DEL DOCUMENTO:
+Emision: {datetime.now().strftime('%d/%m/%Y')}
+Vencimiento: {random.randint(2028, 2035)}/12/31
+Estado: Vigente en todo territorio nacional
+
+DATOS DE EMISION:
+Entidad Emisora: RENAP Guatemala
+Centro America
+Firmas y Sellos: [OFICIAL]
+"""
+    
+    return random.choice([formato1, formato2, formato3]).strip()
 
 
 def main():
-    """Genera el dataset completo con 35 documentos por categoría (7 categorías)."""
+    """Genera el dataset completo con 70 documentos por categoría (7 categorías = 490 total)."""
     print("=" * 70)
     print(" GENERADOR DE DATASET — OCR IA PROYECTO 04 (7 CATEGORÍAS)")
     print("=" * 70)
@@ -485,8 +904,8 @@ def main():
 
         print(f"\nGenerando {categoria}...")
 
-        # 30 documentos completos
-        for i in range(1, 31):
+        # 65 documentos completos (ampliar de 30 a 65)
+        for i in range(1, 66):
             try:
                 contenido = generador(i)
                 archivo = carpeta / f"{categoria}_{str(i).zfill(3)}.txt"
@@ -503,8 +922,8 @@ def main():
             except Exception as e:
                 print(f"  ❌ Error en {categoria}_{i}: {e}")
 
-        # 5 documentos cortos
-        for i in range(31, 36):
+        # 5 documentos cortos (índices 66-70)
+        for i in range(66, 71):
             shorts = {
                 "factura": f"FACTURA ELECTRONICA No.{i} SAT Guatemala NIT IVA 12% Total Q{random.randint(100,5000)} contribuyente documento tributario",
                 "recibo": f"RECIBO No.{i} Recibi de cliente Q{random.randint(50,1000)} efectivo pago concepto sello firma cobros",
@@ -516,7 +935,7 @@ def main():
             }
             try:
                 contenido = shorts[categoria]
-                archivo = carpeta / f"{categoria}_corto_{str(i-30).zfill(2)}.txt"
+                archivo = carpeta / f"{categoria}_corto_{str(i-65).zfill(2)}.txt"
                 archivo.write_text(contenido, encoding="utf-8")
                 total_generados += 1
                 ground_truth_rows.append({
@@ -526,7 +945,7 @@ def main():
                     "tipo": "corto"
                 })
             except Exception as e:
-                print(f"  ❌ Error corto {categoria}_{i-30}: {e}")
+                print(f"  ❌ Error corto {categoria}_{i-65}: {e}")
 
         stats[categoria] = total_generados
         print(f"  ✅ {total_generados} archivos generados")
