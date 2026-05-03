@@ -43,7 +43,7 @@ class CategoryStats:
 class DatasetValidator:
     """Validador completo del dataset de entrenamiento."""
 
-    CATEGORIES = ["factura", "recibo", "contrato", "otro"]
+    CATEGORIES = ["factura", "recibo", "contrato", "constancia", "carta_formal", "identificacion", "otro"]
     MIN_RECOMMENDED_PER_CATEGORY = 50  # Recomendado para buena accuracy
     MIN_VIABLE_PER_CATEGORY = 20  # Mínimo para entrenar
     MIN_WORDS_PER_FILE = 50  # Archivo muy corto

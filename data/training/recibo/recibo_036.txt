@@ -1,0 +1,14 @@
+---RECIBO DE PAGO---
+No.: REC-00036
+Fecha: 30/04/2026
+
+Recibi de: Empresa 36
+Monto: Q560.00
+Concepto: Pago mensual
+Forma: CHEQUE
+
+sello
+Sello de cobros
+Firma: _________________
+
+recibi de

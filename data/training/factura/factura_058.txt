@@ -1,0 +1,21 @@
+FACTURA ELECTRONICA SAT
+Serie: FAC-2026-0058
+Fecha Emision: 30/04/2026
+NIT Emisor: 2106508-2
+Cliente: Grupo Industrial
+
+CONCEPTO: Articulo 58
+CANTIDAD: 60 unidades
+PRECIO: Q369.00
+
+---
+SUBTOTAL: Q19707.00
+IVA 12%: Q2364.00
+TOTAL: Q22071.00
+---
+
+RFC
+Documento tributario electronico SAT Guatemala
+Autorizado por SAT
+acreditar
+RFC 194-481

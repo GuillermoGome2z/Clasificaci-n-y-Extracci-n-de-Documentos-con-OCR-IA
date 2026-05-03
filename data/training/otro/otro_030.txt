@@ -1,37 +1,40 @@
-COMUNICADO OFICIAL
-Fecha: 28/04/2026
+===== COMUNICADO INSTITUCIONAL =====
 Numero: COM-2026-0030
+Fecha de Emision: 30/04/2026
+Prioridad: NORMAL
 
-Estimado Cliente/Usuario:
+DE: Departamento Administrativo
+A: Clientes y Usuarios
 
-Por medio de la presente le informamos sobre información importante
-que debe tomar en consideración.
+ASUNTO: Comunicacion importante
 
-Aviso General:
-atentamente sobre cambios en nuestros servicios y horarios.
+CONTENIDO:
 
-Horario de Atencion:
-Lunes a Viernes: 08:00 - 17:00
-Sabado: 08:00 - 12:00
+agradecemos
+
+Por este medio informamos sobre cambios importantes en nuestros servicios
+y horarios de atención que es necesario que usted conozca.
+
+DETALLES:
+
+le comunicamos
+
+Agradecemos su comprension y paciencia durante este proceso.
+
+HORARIOS DE ATENCION:
+Lunes a Viernes: 08:00 - 17:00 horas
+Sabado: 08:00 - 12:00 horas
 Domingo: Cerrado
 
-Informacion Importante:
-Agradecemos su comprensión y paciencia.
-La administración
+CANALES DE COMUNICACION:
+Telefono Principal: 2234-5678
+Correo Electronico: info@empresa.gt
+Pagina Web: www.empresa.gt
+Departamento: Administracion
 
-Datos de Contacto:
-Departamento Administrativo
-Telefono: 2234-5678
-Correo: info@empresa.gt
-Pagina web: www.empresa.gt
+NOTA IMPORTANTE:
+La administracion se compromete a brindar el mejor servicio posible.
 
-Le comunicamos que cualquier duda puede dirigirse a nuestras oficinas.
-En consideración del tiempo que toma procesar solicitudes,
-favor de presentarse con anticipación.
-
-La administración se compromete a brindar el mejor servicio.
 Cordialmente,
-
-______________________________
 La Administracion
-Departamento de Comunicacion
+Firma: _________________

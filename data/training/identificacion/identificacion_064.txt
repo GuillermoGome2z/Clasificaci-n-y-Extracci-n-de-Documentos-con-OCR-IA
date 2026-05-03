@@ -1,0 +1,12 @@
+DPI RENAP
+Numero: 00000064
+
+Pedro Gonzalez
+DPI: 9528 48468 6887
+Fecha Nac: 9/04/1986
+Municipio: Guatemala
+Departamento: Chimaltenango
+
+DPI
+Nacionalidad: Guatemalteco
+Vigencia: 2030

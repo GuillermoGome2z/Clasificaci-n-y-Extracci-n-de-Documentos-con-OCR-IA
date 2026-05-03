@@ -1,0 +1,12 @@
+DPI RENAP
+Numero: 00000045
+
+Maria Gonzalez
+DPI: 2007 31518 5377
+Fecha Nac: 4/04/1998
+Municipio: Chinautla
+Departamento: Guatemala
+
+RENAP
+Nacionalidad: Guatemalteco
+Vigencia: 2032

@@ -1,22 +1,12 @@
-DOCUMENTO PERSONAL DE IDENTIFICACION
-DPI - RENAP Guatemala
-Numero de documento: 00000026
+DPI RENAP
+Numero: 00000026
 
-DPI
+Pedro Castillo
+DPI: 9796 46801 7913
+Fecha Nac: 2/09/1986
+Municipio: Amatitlan
+Departamento: Escuintla
 
-DATOS DEL TITULAR:
-Nombre completo: Carlos Mendoza
-Numero DPI: 5814 59697 6545
-Fecha de nacimiento: 7/05/1981
-Lugar de nacimiento: San Jose Pinula, Chimaltenango
-Vecino de: San Jose Pinula
-Municipio: San Jose Pinula
-Departamento: Chimaltenango
+municipio de
 Nacionalidad: Guatemalteco
-
-Registro Nacional de las Personas RENAP
-Guatemala, Centro America
-Este documento es valido en todo el territorio nacional.
-
-Emitido: 28/04/2026
-Vigente hasta: 2034/01/01
+Vigencia: 2032

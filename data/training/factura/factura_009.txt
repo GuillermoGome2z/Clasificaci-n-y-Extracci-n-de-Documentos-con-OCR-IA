@@ -1,36 +1,23 @@
-FACTURA ELECTRONICA
-Numero: FAC-2026-0009
-Fecha: 09/04/2026
-
-Empresa Emisora
-NIT: 6226161-1
-Cliente: Distribuidora Guatemalteca
-Direccion: Ciudad de Guatemala
-
-Concepto de Venta
-Descripcion de servicio/producto: Articulo 9
-Cantidad: 88 unidades
-Precio unitario: Q17.00
-
-Detalle Tributario
-Subtotal: Q10236.00
-IVA 12%: Q1228.00
-Monto Total: Q11464.00
-
-NIT
-SAT Guatemala autorizado
-Documento tributario electronico
-vencimiento
-
-Forma de pago: Transferencia Bancaria
-Banco: Banco del Pais
-Cuenta: 1234567890
-Referencia: INV-2026-9
-
-Serie: FAC-2026-0009
+---FACTURA ELECTRONICA---
+Numero de Factura: FAC-2026-0009
 Correlativo: 9
-RFC Guatemala
-Contribuyente activo
-Acreditar IVA
-Moneda GTQ quetzal Q
-Vencimiento: 28/05/2026
+Fecha: 08/04/2026
+
+Datos del Emisor
+NIT: 4060672-7
+Cliente: Servicios Globales
+Guatemala
+
+Detalles de la Transaccion
+Renglon 1: contribuyente - Q35601.00
+Cantidad: 6 unidades
+
+Resumen Tributario
+Monto Gravable: Q35601.00
+vencimiento
+Impuesto Valor Agregado 12%: Q4272.00
+
+Total a Pagar: Q39873.00 GTQ
+
+Forma de Pago: Efectivo
+Vencimiento Pago: 12/06/2026

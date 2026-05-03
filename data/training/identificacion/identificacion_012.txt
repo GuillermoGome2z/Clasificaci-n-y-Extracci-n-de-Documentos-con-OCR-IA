@@ -2,21 +2,21 @@ DOCUMENTO PERSONAL DE IDENTIFICACION
 DPI - RENAP Guatemala
 Numero de documento: 00000012
 
-RENAP
+vecino de
 
 DATOS DEL TITULAR:
-Nombre completo: Sofia Gonzalez
-Numero DPI: 9358 42227 3743
-Fecha de nacimiento: 19/01/1974
-Lugar de nacimiento: Villa Nueva, Quetzaltenango
-Vecino de: Villa Nueva
-Municipio: Villa Nueva
-Departamento: Quetzaltenango
+Nombre completo: Carlos Gonzalez
+Numero DPI: 8072 14266 7321
+Fecha de nacimiento: 4/06/1998
+Lugar de nacimiento: Guatemala, Sacatepequez
+Vecino de: Guatemala
+Municipio: Guatemala
+Departamento: Sacatepequez
 Nacionalidad: Guatemalteco
 
 Registro Nacional de las Personas RENAP
 Guatemala, Centro America
 Este documento es valido en todo el territorio nacional.
 
-Emitido: 28/04/2026
-Vigente hasta: 2031/01/01
+Emitido: 30/04/2026
+Vigente hasta: 2030/01/01

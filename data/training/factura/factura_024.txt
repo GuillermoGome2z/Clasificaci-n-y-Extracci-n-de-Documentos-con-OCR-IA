@@ -1,36 +1,23 @@
-FACTURA ELECTRONICA
-Numero: FAC-2026-0024
-Fecha: 29/03/2026
-
-Empresa Emisora
-NIT: 3264799-6
-Cliente: Distribuidora Guatemalteca
-Direccion: Ciudad de Guatemala
-
-Concepto de Venta
-Descripcion de servicio/producto: Articulo 24
-Cantidad: 99 unidades
-Precio unitario: Q285.00
-
-Detalle Tributario
-Subtotal: Q7175.00
-IVA 12%: Q861.00
-Monto Total: Q8036.00
-
-autorizado
-SAT Guatemala autorizado
-Documento tributario electronico
-NIT
-
-Forma de pago: Transferencia Bancaria
-Banco: Banco del Pais
-Cuenta: 1234567890
-Referencia: INV-2026-24
-
-Serie: FAC-2026-0024
+---FACTURA ELECTRONICA---
+Numero de Factura: FAC-2026-0024
 Correlativo: 24
-RFC Guatemala
-Contribuyente activo
-Acreditar IVA
-Moneda GTQ quetzal Q
-Vencimiento: 28/05/2026
+Fecha: 24/04/2026
+
+Datos del Emisor
+NIT: 7927025-3
+Cliente: Distribuidora Guatemalteca
+Guatemala
+
+Detalles de la Transaccion
+Renglon 1: Q - Q3059.00
+Cantidad: 28 unidades
+
+Resumen Tributario
+Monto Gravable: Q3059.00
+vencimiento
+Impuesto Valor Agregado 12%: Q367.00
+
+Total a Pagar: Q3426.00 GTQ
+
+Forma de Pago: Efectivo
+Vencimiento Pago: 05/06/2026

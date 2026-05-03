@@ -1,31 +1,38 @@
-CARTA FORMAL
-Numero de referencia: CF-2026-0015
-Guatemala, 28 de April de 2026
+===== CARTA FORMAL =====
+Numero: CF-2026-0015
+Fecha: 30 de April de 2026
+Lugar: Guatemala
 
-Señor(a):
-Gerente General
-Servicios Administrativos
-Presente.
+REMITENTE:
+Dra. Ana Recinos
+Direccion: Guatemala
+
+DESTINATARIO:
+Director Administrativo
+Corporacion Guatemala
+Presente
+
+ASUNTO: Presentación de propuesta comercial
+
+CUERPO DE LA CARTA:
 
 Estimado señor(a):
 
-me dirijo a usted con el respeto que se merece, para exponerle
-lo siguiente en relación al asunto: Notificación de cambio de domicilio.
+adjunto encontrará por este medio me dirijo respetuosamente a su persona
+para exponer lo siguiente:
 
-Por este medio me dirijo a usted para hacer de su conocimiento
-que adjunto encontrará, por lo que respetuosamente solicito
-su atención al presente.
+CARTA FORMAL
 
-En atención a lo anterior, adjunto encontrará la documentación
-correspondiente para su revisión y consideración.
+Con relacion al asunto mencionado, solicito su atención especial.
+Adjunto encontrará documentación complementaria para su revision.
 
-Quedo a su disposición para cualquier consulta adicional
-que estime pertinente.
+Quedo atentamente a su disposición para resolver inquietudes adicionales.
 
-Sin otro particular por el momento, me suscribo de usted
-atentamente y le saluda,
+Sin otro particular por ahora,
 
-______________________________
-Lic. Roberto Sandoval
-Telefono: 4876-9089
-Correo: contacto@empresa.gt
+FIRMA Y CONTACTO:
+_____________________________
+Ing. Maria Fuentes
+Telefono: 3029-2218
+Email: contacto@empresa.gt
+Firma: _____________________

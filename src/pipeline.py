@@ -79,7 +79,7 @@ class OCRPipeline:
                 return result
 
             extracted_text = ocr_result["text"]
-        except Exception as e:
+        except (OSError, FileNotFoundError, ValueError, RuntimeError) as e:
             error_msg = f"OCR exception: {str(e)}"
             result["errors"].append(error_msg)
             logger.error("Excepción en OCR: %s", e)
@@ -92,7 +92,7 @@ class OCRPipeline:
             extraction_result = self.extractor.extract_all(extracted_text)
             result["steps"]["extraction"] = extraction_result
             logger.debug("Extracción completada")
-        except Exception as e:
+        except (ValueError, TypeError, AttributeError) as e:
             error_msg = f"Extraction: {str(e)}"
             result["errors"].append(error_msg)
             logger.error("Excepción en extracción: %s", e)
@@ -104,12 +104,12 @@ class OCRPipeline:
             classification_result = self.classifier.predict(extracted_text)
             result["steps"]["classification"] = classification_result
             logger.debug("Clasificación completada")
-        except Exception as e:
+        except (ValueError, RuntimeError, AttributeError) as e:
             error_msg = f"Classification: {str(e)}"
             result["errors"].append(error_msg)
             logger.error("Excepción en clasificación: %s", e)
             classification_result = {
-                "class": "error",
+                "class": "no_disponible",
                 "confidence": 0.0,
                 "error": str(e)
             }
@@ -158,7 +158,7 @@ class OCRPipeline:
                 logger.error("OCR PDF falló: %s", error_msg)
                 result["status"] = "error"
                 return result
-        except Exception as e:
+        except (OSError, FileNotFoundError, ValueError, RuntimeError) as e:
             error_msg = f"PDF OCR exception: {str(e)}"
             result["errors"].append(error_msg)
             logger.error("Excepción en OCR PDF: %s", e)
@@ -181,7 +181,7 @@ class OCRPipeline:
                 logger.debug("Extrayendo datos de página %d", page_num)
                 extraction = self.extractor.extract_all(page_text)
                 page_result["extraction"] = extraction
-            except Exception as e:
+            except (ValueError, TypeError, AttributeError) as e:
                 error_msg = f"Extraction page {page_num}: {str(e)}"
                 page_result["page_errors"].append(error_msg)
                 result["errors"].append(error_msg)
@@ -193,13 +193,13 @@ class OCRPipeline:
                 logger.debug("Clasificando página %d", page_num)
                 classification = self.classifier.predict(page_text)
                 page_result["classification"] = classification
-            except Exception as e:
+            except (ValueError, RuntimeError, AttributeError) as e:
                 error_msg = f"Classification page {page_num}: {str(e)}"
                 page_result["page_errors"].append(error_msg)
                 result["errors"].append(error_msg)
                 logger.error("Excepción en clasificación página %d: %s", page_num, e)
                 classification = {
-                    "class": "error",
+                    "class": "no_disponible",
                     "confidence": 0.0,
                     "error": str(e)
                 }

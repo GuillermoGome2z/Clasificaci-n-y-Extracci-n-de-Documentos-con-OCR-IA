@@ -1,31 +1,24 @@
-RECIBO OFICIAL DE PAGO
-Numero: REC-00019
-Fecha: 28/04/2026
+=== RECIBO OFICIAL ===
+Numero de Recibo: REC-00019
+Fecha de Emision: 30/04/2026
+Hora: 23:12:16
 
-Recibi de:
-Nombre: Empresa Receptora 19
-Direccion: Ciudad de Guatemala
-Telefono: 3994-3357
+De: Empresa Receptora 19
+Telefono de contacto: 6668-8332
 
-Cantidad de Dinero:
-Monto recibido: Q1929.00
-Cantidad en letras: 1929 quetzales
+MONTO PAGADO: Q3752.00
+forma de pago
 
-Por concepto de:
-Pago mensual
-Descripcion: Pago correspondiente al mes/servicio
+Por: Pago mensual
+Periodo: April 2026
 
-Forma de pago: TRANSFERENCIA
-vale
+Forma de Pago: DEPOSITO
+departamento cobros
 
-Detalles del Recibo:
-Departamento de cobros
-Sello: [OFICINA]
-Firma: ____________________
-Autorizado por: Recibidor
+Departamento de Cobros y Recaudacion
+Sello: [EMPRESA]
+Firma Autorizada: _______________
+Pago Puntual
 
-vale
-Muchas gracias por su pago puntual
-Comprobante fiscal
-Vale de caja
-Referencia: REC-00019
+Comprobante: REC-00019
+Vale

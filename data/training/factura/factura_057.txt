@@ -1,0 +1,36 @@
+FACTURA ELECTRONICA
+Numero: FAC-2026-0057
+Fecha: 18/04/2026
+
+Empresa Emisora
+NIT: 5048424-8
+Cliente: Empresa Comercial SA
+Direccion: Ciudad de Guatemala
+
+Concepto de Venta
+Descripcion de servicio/producto: Articulo 57
+Cantidad: 7 unidades
+Precio unitario: Q73.00
+
+Detalle Tributario
+Subtotal: Q23081.00
+IVA 12%: Q2769.00
+Monto Total: Q25850.00
+
+autorizado
+SAT Guatemala autorizado
+Documento tributario electronico
+subtotal
+
+Forma de pago: Transferencia Bancaria
+Banco: Banco del Pais
+Cuenta: 1234567890
+Referencia: INV-2026-57
+
+Serie: FAC-2026-0057
+Correlativo: 57
+RFC Guatemala
+Contribuyente activo
+Acreditar IVA
+Moneda GTQ quetzal Q
+Vencimiento: 30/05/2026

@@ -1,36 +1,23 @@
-FACTURA ELECTRONICA
-Numero: FAC-2026-0018
-Fecha: 25/03/2026
-
-Empresa Emisora
-NIT: 2839706-3
-Cliente: Servicios Globales
-Direccion: Ciudad de Guatemala
-
-Concepto de Venta
-Descripcion de servicio/producto: Articulo 18
-Cantidad: 21 unidades
-Precio unitario: Q140.00
-
-Detalle Tributario
-Subtotal: Q589.00
-IVA 12%: Q70.00
-Monto Total: Q659.00
-
-subtotal
-SAT Guatemala autorizado
-Documento tributario electronico
-FACTURA ELECTRONICA
-
-Forma de pago: Transferencia Bancaria
-Banco: Banco del Pais
-Cuenta: 1234567890
-Referencia: INV-2026-18
-
-Serie: FAC-2026-0018
+---FACTURA ELECTRONICA---
+Numero de Factura: FAC-2026-0018
 Correlativo: 18
-RFC Guatemala
-Contribuyente activo
-Acreditar IVA
-Moneda GTQ quetzal Q
-Vencimiento: 28/05/2026
+Fecha: 20/04/2026
+
+Datos del Emisor
+NIT: 7695671-9
+Cliente: Servicios Globales
+Guatemala
+
+Detalles de la Transaccion
+Renglon 1: documento tributario - Q49043.00
+Cantidad: 10 unidades
+
+Resumen Tributario
+Monto Gravable: Q49043.00
+monto total
+Impuesto Valor Agregado 12%: Q5885.00
+
+Total a Pagar: Q54928.00 GTQ
+
+Forma de Pago: Transferencia
+Vencimiento Pago: 11/06/2026

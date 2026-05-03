@@ -1,0 +1,12 @@
+DPI RENAP
+Numero: 00000047
+
+Ana Lopez
+DPI: 6379 30832 6141
+Fecha Nac: 13/02/1977
+Municipio: Chinautla
+Departamento: Guatemala
+
+fecha de nacimiento
+Nacionalidad: Guatemalteco
+Vigencia: 2029

@@ -1,31 +1,14 @@
-RECIBO OFICIAL DE PAGO
-Numero: REC-00014
-Fecha: 28/04/2026
+---RECIBO DE PAGO---
+No.: REC-00014
+Fecha: 30/04/2026
 
-Recibi de:
-Nombre: Empresa Receptora 14
-Direccion: Ciudad de Guatemala
-Telefono: 6899-7275
+Recibi de: Empresa 14
+Monto: Q1986.00
+Concepto: Pago de renta
+Forma: CHEQUE
 
-Cantidad de Dinero:
-Monto recibido: Q4137.00
-Cantidad en letras: 4137 quetzales
+pago puntual
+Sello de cobros
+Firma: _________________
 
-Por concepto de:
-Pago de servicio
-Descripcion: Pago correspondiente al mes/servicio
-
-Forma de pago: TRANSFERENCIA
-cheque
-
-Detalles del Recibo:
-Departamento de cobros
-Sello: [OFICINA]
-Firma: ____________________
-Autorizado por: Recibidor
-
-transferencia
-Muchas gracias por su pago puntual
-Comprobante fiscal
-Vale de caja
-Referencia: REC-00014
+recibidor

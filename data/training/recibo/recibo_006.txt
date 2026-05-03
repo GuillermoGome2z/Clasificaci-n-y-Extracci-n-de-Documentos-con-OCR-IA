@@ -1,31 +1,24 @@
-RECIBO OFICIAL DE PAGO
-Numero: REC-00006
-Fecha: 28/04/2026
+=== RECIBO OFICIAL ===
+Numero de Recibo: REC-00006
+Fecha de Emision: 30/04/2026
+Hora: 23:12:16
 
-Recibi de:
-Nombre: Empresa Receptora 6
-Direccion: Ciudad de Guatemala
-Telefono: 9198-9378
+De: Empresa Receptora 6
+Telefono de contacto: 6997-5639
 
-Cantidad de Dinero:
-Monto recibido: Q4494.00
-Cantidad en letras: 4494 quetzales
+MONTO PAGADO: Q3757.00
+recibidor
 
-Por concepto de:
-Pago de cuota
-Descripcion: Pago correspondiente al mes/servicio
+Por: Pago de renta
+Periodo: April 2026
 
-Forma de pago: TRANSFERENCIA
-departamento cobros
+Forma de Pago: TRANSFERENCIA
+vale
 
-Detalles del Recibo:
-Departamento de cobros
-Sello: [OFICINA]
-Firma: ____________________
-Autorizado por: Recibidor
+Departamento de Cobros y Recaudacion
+Sello: [EMPRESA]
+Firma Autorizada: _______________
+Pago Puntual
 
-cheque
-Muchas gracias por su pago puntual
-Comprobante fiscal
-Vale de caja
-Referencia: REC-00006
+Comprobante: REC-00006
+Vale

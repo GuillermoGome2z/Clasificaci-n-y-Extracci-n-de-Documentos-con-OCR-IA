@@ -1,0 +1,27 @@
+===== CONTRATO =====
+Numero: CTR-2026-0034
+Fecha: 30/04/2026
+
+CONTRATANTE: Empresa Prestadora
+NIT: 1234567-8
+CONTRATADO: Beneficiario 34
+
+términos y condiciones
+Vigencia desde: 30/04/2026
+Hasta: 19/05/2027
+Duracion: 8 meses
+
+Pago Mensual: Q4211.00
+
+Clausulas Principales:
+- Prestar servicios profesionales
+- Cumplimiento de horarios
+- Confidencialidad de informacion
+
+acuerdo
+- Resolucion con 30 dias aviso previo
+- Acuerdo segun leyes de Guatemala
+
+Firmamos:
+_________________  ___________________
+Contratante        Contratado

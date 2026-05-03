@@ -1,0 +1,14 @@
+---RECIBO DE PAGO---
+No.: REC-00046
+Fecha: 30/04/2026
+
+Recibi de: Empresa 46
+Monto: Q4330.00
+Concepto: Pago de servicio
+Forma: DEPOSITO
+
+transferencia
+Sello de cobros
+Firma: _________________
+
+comprobante

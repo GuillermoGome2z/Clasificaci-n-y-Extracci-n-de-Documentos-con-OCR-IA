@@ -1,0 +1,14 @@
+---RECIBO DE PAGO---
+No.: REC-00056
+Fecha: 30/04/2026
+
+Recibi de: Empresa 56
+Monto: Q1575.00
+Concepto: Pago de renta
+Forma: DEPOSITO
+
+sello
+Sello de cobros
+Firma: _________________
+
+RECIBO

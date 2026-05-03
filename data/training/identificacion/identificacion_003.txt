@@ -1,22 +1,12 @@
-DOCUMENTO PERSONAL DE IDENTIFICACION
-DPI - RENAP Guatemala
-Numero de documento: 00000003
+DPI RENAP
+Numero: 00000003
 
-RENAP
-
-DATOS DEL TITULAR:
-Nombre completo: Maria Mendoza
-Numero DPI: 5356 58914 1899
-Fecha de nacimiento: 20/06/1976
-Lugar de nacimiento: Chinautla, Guatemala
-Vecino de: Chinautla
-Municipio: Chinautla
+Ana Castillo
+DPI: 1443 66950 5054
+Fecha Nac: 11/03/1989
+Municipio: Mixco
 Departamento: Guatemala
+
+número de identificación
 Nacionalidad: Guatemalteco
-
-Registro Nacional de las Personas RENAP
-Guatemala, Centro America
-Este documento es valido en todo el territorio nacional.
-
-Emitido: 28/04/2026
-Vigente hasta: 2035/01/01
+Vigencia: 2035

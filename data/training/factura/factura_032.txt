@@ -1,0 +1,36 @@
+FACTURA ELECTRONICA
+Numero: FAC-2026-0032
+Fecha: 08/03/2026
+
+Empresa Emisora
+NIT: 3254111-4
+Cliente: Servicios Globales
+Direccion: Ciudad de Guatemala
+
+Concepto de Venta
+Descripcion de servicio/producto: Articulo 32
+Cantidad: 32 unidades
+Precio unitario: Q222.00
+
+Detalle Tributario
+Subtotal: Q8311.00
+IVA 12%: Q997.00
+Monto Total: Q9308.00
+
+autorizado
+SAT Guatemala autorizado
+Documento tributario electronico
+acreditar
+
+Forma de pago: Transferencia Bancaria
+Banco: Banco del Pais
+Cuenta: 1234567890
+Referencia: INV-2026-32
+
+Serie: FAC-2026-0032
+Correlativo: 32
+RFC Guatemala
+Contribuyente activo
+Acreditar IVA
+Moneda GTQ quetzal Q
+Vencimiento: 30/05/2026

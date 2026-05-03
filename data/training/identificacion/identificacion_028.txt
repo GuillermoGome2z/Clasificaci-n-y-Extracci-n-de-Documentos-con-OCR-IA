@@ -1,22 +1,30 @@
-DOCUMENTO PERSONAL DE IDENTIFICACION
-DPI - RENAP Guatemala
-Numero de documento: 00000028
+===== DOCUMENTO PERSONAL DE IDENTIFICACION =====
+Registro Nacional de las Personas - RENAP
+Numero de Identificacion: 00000028
+Tipo: DPI Guatemalteco
 
-guatemalteco
+INFORMACION DEL TITULAR:
+Nombre Completo: Sofia Ramirez
+Numero de DPI: 2782 92534 7933
+número de identificación
 
-DATOS DEL TITULAR:
-Nombre completo: Pedro Gonzalez
-Numero DPI: 4283 83694 6749
-Fecha de nacimiento: 28/06/1979
-Lugar de nacimiento: Chinautla, Escuintla
-Vecino de: Chinautla
-Municipio: Chinautla
-Departamento: Escuintla
+DATOS DE NACIMIENTO:
+Fecha de Nacimiento: 2/02/1988
+Lugar de Nacimiento: San Jose Pinula, Quetzaltenango
+Municipio: San Jose Pinula
+Departamento: Quetzaltenango
+
+INFORMACION ADICIONAL:
 Nacionalidad: Guatemalteco
+Domicilio: San Jose Pinula, Quetzaltenango
+Vecino de: San Jose Pinula
 
-Registro Nacional de las Personas RENAP
-Guatemala, Centro America
-Este documento es valido en todo el territorio nacional.
+VALIDEZ DEL DOCUMENTO:
+Emision: 30/04/2026
+Vencimiento: 2033/12/31
+Estado: Vigente en todo territorio nacional
 
-Emitido: 28/04/2026
-Vigente hasta: 2033/01/01
+DATOS DE EMISION:
+Entidad Emisora: RENAP Guatemala
+Centro America
+Firmas y Sellos: [OFICIAL]

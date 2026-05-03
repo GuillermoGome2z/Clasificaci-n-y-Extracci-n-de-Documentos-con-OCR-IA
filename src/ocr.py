@@ -73,15 +73,22 @@ class OCRProcessor:
                     output_type=pytesseract.Output.DICT
                 )
 
-            # Calcular confianza promedio
+            # Calcular confianza promedio (distingue "sin texto" de "confianza baja")
             confidences = [int(conf) for conf in data['conf'] if int(conf) > 0]
-            avg_confidence = np.mean(confidences) if confidences else 0
+            has_text = bool(text.strip())
+            if confidences:
+                avg_confidence = float(np.mean(confidences))
+            elif has_text:
+                avg_confidence = 0.0  # texto detectado pero sin datos de confianza
+            else:
+                avg_confidence = -1.0  # indica que no se detectó texto
 
             logger.info("OCR imagen completado: confianza %.2f", avg_confidence)
             return {
                 "status": "success",
                 "text": text.strip(),
                 "confidence": round(avg_confidence, 2),
+                "has_text": has_text,
                 "language": lang
             }
         except (FileNotFoundError, ValueError, TypeError, OSError) as e:

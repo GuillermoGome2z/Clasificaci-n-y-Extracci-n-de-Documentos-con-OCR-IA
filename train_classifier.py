@@ -149,16 +149,8 @@ class ClassifierTrainer:
         
         # Calcular test_size dinámico para pocos datos
         total_samples = len(self.texts)
-        min_per_class = min([self.labels.count(i) for i in set(self.labels)])
-        
-        # Si hay muy pocos datos, usar un split más pequeño
-        if total_samples < 20:
-            test_size = 0.2  # Mínimo 20% para validación
-        elif min_per_class < 3:
-            test_size = 0.2
-        else:
-            test_size = 0.2
-        
+        test_size = 0.2
+
         # Convertir test_size a mínimo de 1 muestra por clase
         test_samples = max(1, int(total_samples * test_size))
         
@@ -170,8 +162,12 @@ class ClassifierTrainer:
             X_train, X_test, y_train, y_test = train_test_split(
                 self.texts, self.labels, test_size=test_size, random_state=42, stratify=self.labels
             )
-        except ValueError:
-            # Fallback sin stratify si hay muy pocos datos
+        except ValueError as e:
+            # Fallback sin stratify si hay muy pocos datos por clase
+            import logging as _logging
+            _logging.getLogger(__name__).warning(
+                "Stratified split falló (%s). Usando split sin stratify — métricas pueden estar sesgadas.", e
+            )
             X_train, X_test, y_train, y_test = train_test_split(
                 self.texts, self.labels, test_size=test_size, random_state=42
             )

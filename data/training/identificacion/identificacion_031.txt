@@ -1,0 +1,12 @@
+DPI RENAP
+Numero: 00000031
+
+Pedro Mendoza
+DPI: 4760 75798 3226
+Fecha Nac: 11/01/1976
+Municipio: Guatemala
+Departamento: Sacatepequez
+
+Registro Nacional de las Personas
+Nacionalidad: Guatemalteco
+Vigencia: 2032

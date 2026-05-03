@@ -1,0 +1,14 @@
+---RECIBO DE PAGO---
+No.: REC-00040
+Fecha: 30/04/2026
+
+Recibi de: Empresa 40
+Monto: Q3272.00
+Concepto: Pago mensual
+Forma: TRANSFERENCIA
+
+sello
+Sello de cobros
+Firma: _________________
+
+sello

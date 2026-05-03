@@ -1,0 +1,12 @@
+DPI RENAP
+Numero: 00000046
+
+Carlos Mendoza
+DPI: 4700 80102 2818
+Fecha Nac: 6/03/1996
+Municipio: Amatitlan
+Departamento: Sacatepequez
+
+guatemalteco
+Nacionalidad: Guatemalteco
+Vigencia: 2028

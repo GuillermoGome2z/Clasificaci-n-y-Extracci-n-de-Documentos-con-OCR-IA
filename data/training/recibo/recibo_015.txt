@@ -1,31 +1,24 @@
-RECIBO OFICIAL DE PAGO
-Numero: REC-00015
-Fecha: 28/04/2026
+=== RECIBO OFICIAL ===
+Numero de Recibo: REC-00015
+Fecha de Emision: 30/04/2026
+Hora: 23:12:16
 
-Recibi de:
-Nombre: Empresa Receptora 15
-Direccion: Ciudad de Guatemala
-Telefono: 8866-9715
+De: Empresa Receptora 15
+Telefono de contacto: 4236-4029
 
-Cantidad de Dinero:
-Monto recibido: Q3449.00
-Cantidad en letras: 3449 quetzales
+MONTO PAGADO: Q4085.00
+pago puntual
 
-Por concepto de:
-Deposito en cuenta
-Descripcion: Pago correspondiente al mes/servicio
+Por: Pago de servicio
+Periodo: April 2026
 
-Forma de pago: CHEQUE
-cheque
+Forma de Pago: CHEQUE
+por concepto de
 
-Detalles del Recibo:
-Departamento de cobros
-Sello: [OFICINA]
-Firma: ____________________
-Autorizado por: Recibidor
+Departamento de Cobros y Recaudacion
+Sello: [EMPRESA]
+Firma Autorizada: _______________
+Pago Puntual
 
-comprobante
-Muchas gracias por su pago puntual
-Comprobante fiscal
-Vale de caja
-Referencia: REC-00015
+Comprobante: REC-00015
+Vale

@@ -1,31 +1,14 @@
-RECIBO OFICIAL DE PAGO
-Numero: REC-00017
-Fecha: 28/04/2026
+---RECIBO DE PAGO---
+No.: REC-00017
+Fecha: 30/04/2026
 
-Recibi de:
-Nombre: Empresa Receptora 17
-Direccion: Ciudad de Guatemala
-Telefono: 9594-6083
-
-Cantidad de Dinero:
-Monto recibido: Q533.00
-Cantidad en letras: 533 quetzales
-
-Por concepto de:
-Pago mensual
-Descripcion: Pago correspondiente al mes/servicio
-
-Forma de pago: DEPOSITO
-recibi de
-
-Detalles del Recibo:
-Departamento de cobros
-Sello: [OFICINA]
-Firma: ____________________
-Autorizado por: Recibidor
+Recibi de: Empresa 17
+Monto: Q2389.00
+Concepto: Pago mensual
+Forma: CHEQUE
 
 comprobante
-Muchas gracias por su pago puntual
-Comprobante fiscal
-Vale de caja
-Referencia: REC-00017
+Sello de cobros
+Firma: _________________
+
+firma

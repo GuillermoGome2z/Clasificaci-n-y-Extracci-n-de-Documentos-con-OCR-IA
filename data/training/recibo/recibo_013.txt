@@ -1,22 +1,22 @@
 RECIBO OFICIAL DE PAGO
 Numero: REC-00013
-Fecha: 28/04/2026
+Fecha: 30/04/2026
 
 Recibi de:
 Nombre: Empresa Receptora 13
 Direccion: Ciudad de Guatemala
-Telefono: 6556-1034
+Telefono: 8056-6318
 
 Cantidad de Dinero:
-Monto recibido: Q3983.00
-Cantidad en letras: 3983 quetzales
+Monto recibido: Q1738.00
+Cantidad en letras: 1738 quetzales
 
 Por concepto de:
-Pago mensual
+Pago de renta
 Descripcion: Pago correspondiente al mes/servicio
 
-Forma de pago: EFECTIVO
-recibi de
+Forma de pago: DEPOSITO
+cheque
 
 Detalles del Recibo:
 Departamento de cobros
@@ -24,7 +24,7 @@ Sello: [OFICINA]
 Firma: ____________________
 Autorizado por: Recibidor
 
-sello
+recibi de
 Muchas gracias por su pago puntual
 Comprobante fiscal
 Vale de caja

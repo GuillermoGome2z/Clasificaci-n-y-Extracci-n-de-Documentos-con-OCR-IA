@@ -1,36 +1,23 @@
-FACTURA ELECTRONICA
-Numero: FAC-2026-0027
-Fecha: 03/03/2026
-
-Empresa Emisora
-NIT: 4449135-4
-Cliente: Empresa Comercial SA
-Direccion: Ciudad de Guatemala
-
-Concepto de Venta
-Descripcion de servicio/producto: Articulo 27
-Cantidad: 83 unidades
-Precio unitario: Q103.00
-
-Detalle Tributario
-Subtotal: Q46871.00
-IVA 12%: Q5624.00
-Monto Total: Q52495.00
-
-FACTURA ELECTRONICA
-SAT Guatemala autorizado
-Documento tributario electronico
-vencimiento
-
-Forma de pago: Transferencia Bancaria
-Banco: Banco del Pais
-Cuenta: 1234567890
-Referencia: INV-2026-27
-
-Serie: FAC-2026-0027
+---FACTURA ELECTRONICA---
+Numero de Factura: FAC-2026-0027
 Correlativo: 27
-RFC Guatemala
-Contribuyente activo
-Acreditar IVA
-Moneda GTQ quetzal Q
-Vencimiento: 28/05/2026
+Fecha: 02/04/2026
+
+Datos del Emisor
+NIT: 2799861-4
+Cliente: Servicios Globales
+Guatemala
+
+Detalles de la Transaccion
+Renglon 1: documento tributario - Q26538.00
+Cantidad: 28 unidades
+
+Resumen Tributario
+Monto Gravable: Q26538.00
+acreditar
+Impuesto Valor Agregado 12%: Q3184.00
+
+Total a Pagar: Q29722.00 GTQ
+
+Forma de Pago: Cheque
+Vencimiento Pago: 20/05/2026

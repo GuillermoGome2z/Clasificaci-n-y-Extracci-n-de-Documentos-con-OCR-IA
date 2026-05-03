@@ -1,0 +1,36 @@
+FACTURA ELECTRONICA
+Numero: FAC-2026-0062
+Fecha: 28/03/2026
+
+Empresa Emisora
+NIT: 2582835-8
+Cliente: Distribuidora Guatemalteca
+Direccion: Ciudad de Guatemala
+
+Concepto de Venta
+Descripcion de servicio/producto: Articulo 62
+Cantidad: 22 unidades
+Precio unitario: Q185.00
+
+Detalle Tributario
+Subtotal: Q13808.00
+IVA 12%: Q1656.00
+Monto Total: Q15464.00
+
+NIT
+SAT Guatemala autorizado
+Documento tributario electronico
+Q
+
+Forma de pago: Transferencia Bancaria
+Banco: Banco del Pais
+Cuenta: 1234567890
+Referencia: INV-2026-62
+
+Serie: FAC-2026-0062
+Correlativo: 62
+RFC Guatemala
+Contribuyente activo
+Acreditar IVA
+Moneda GTQ quetzal Q
+Vencimiento: 30/05/2026

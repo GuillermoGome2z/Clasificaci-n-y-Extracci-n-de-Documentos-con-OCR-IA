@@ -1,0 +1,14 @@
+---RECIBO DE PAGO---
+No.: REC-00042
+Fecha: 30/04/2026
+
+Recibi de: Empresa 42
+Monto: Q2749.00
+Concepto: Pago de cuota
+Forma: EFECTIVO
+
+firma
+Sello de cobros
+Firma: _________________
+
+recibidor

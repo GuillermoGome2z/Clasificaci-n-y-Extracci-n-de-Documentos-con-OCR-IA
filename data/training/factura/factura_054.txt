@@ -1,0 +1,23 @@
+---FACTURA ELECTRONICA---
+Numero de Factura: FAC-2026-0054
+Correlativo: 54
+Fecha: 16/04/2026
+
+Datos del Emisor
+NIT: 2960256-8
+Cliente: Empresa Comercial SA
+Guatemala
+
+Detalles de la Transaccion
+Renglon 1: subtotal - Q38112.00
+Cantidad: 39 unidades
+
+Resumen Tributario
+Monto Gravable: Q38112.00
+autorizado
+Impuesto Valor Agregado 12%: Q4573.00
+
+Total a Pagar: Q42685.00 GTQ
+
+Forma de Pago: Cheque
+Vencimiento Pago: 20/05/2026

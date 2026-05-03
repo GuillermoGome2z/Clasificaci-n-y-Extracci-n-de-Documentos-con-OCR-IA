@@ -1,0 +1,12 @@
+DPI RENAP
+Numero: 00000055
+
+Pedro Castillo
+DPI: 9041 64646 7158
+Fecha Nac: 17/09/1977
+Municipio: Guatemala
+Departamento: Escuintla
+
+fecha de nacimiento
+Nacionalidad: Guatemalteco
+Vigencia: 2035

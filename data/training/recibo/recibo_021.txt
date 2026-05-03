@@ -1,22 +1,22 @@
 RECIBO OFICIAL DE PAGO
 Numero: REC-00021
-Fecha: 28/04/2026
+Fecha: 30/04/2026
 
 Recibi de:
 Nombre: Empresa Receptora 21
 Direccion: Ciudad de Guatemala
-Telefono: 3811-1149
+Telefono: 5245-3978
 
 Cantidad de Dinero:
-Monto recibido: Q1076.00
-Cantidad en letras: 1076 quetzales
+Monto recibido: Q1948.00
+Cantidad en letras: 1948 quetzales
 
 Por concepto de:
-Deposito en cuenta
+Pago de renta
 Descripcion: Pago correspondiente al mes/servicio
 
-Forma de pago: TRANSFERENCIA
-vale
+Forma de pago: CHEQUE
+efectivo
 
 Detalles del Recibo:
 Departamento de cobros
@@ -24,7 +24,7 @@ Sello: [OFICINA]
 Firma: ____________________
 Autorizado por: Recibidor
 
-RECIBO
+recibidor
 Muchas gracias por su pago puntual
 Comprobante fiscal
 Vale de caja

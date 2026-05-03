@@ -1,0 +1,12 @@
+DPI RENAP
+Numero: 00000054
+
+Pedro Gonzalez
+DPI: 2378 89884 8989
+Fecha Nac: 6/03/1972
+Municipio: Chinautla
+Departamento: Sacatepequez
+
+guatemalteco
+Nacionalidad: Guatemalteco
+Vigencia: 2035

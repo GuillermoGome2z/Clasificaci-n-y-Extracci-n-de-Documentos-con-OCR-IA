@@ -1,22 +1,30 @@
-DOCUMENTO PERSONAL DE IDENTIFICACION
-DPI - RENAP Guatemala
-Numero de documento: 00000019
+===== DOCUMENTO PERSONAL DE IDENTIFICACION =====
+Registro Nacional de las Personas - RENAP
+Numero de Identificacion: 00000019
+Tipo: DPI Guatemalteco
 
-RENAP
+INFORMACION DEL TITULAR:
+Nombre Completo: Ana Mendoza
+Numero de DPI: 9479 19074 9320
+lugar de nacimiento
 
-DATOS DEL TITULAR:
-Nombre completo: Juan Gonzalez
-Numero DPI: 1995 69888 5810
-Fecha de nacimiento: 4/08/1985
-Lugar de nacimiento: Amatitlan, Guatemala
-Vecino de: Amatitlan
+DATOS DE NACIMIENTO:
+Fecha de Nacimiento: 22/02/1984
+Lugar de Nacimiento: Amatitlan, Quetzaltenango
 Municipio: Amatitlan
-Departamento: Guatemala
+Departamento: Quetzaltenango
+
+INFORMACION ADICIONAL:
 Nacionalidad: Guatemalteco
+Domicilio: Amatitlan, Quetzaltenango
+Vecino de: Amatitlan
 
-Registro Nacional de las Personas RENAP
-Guatemala, Centro America
-Este documento es valido en todo el territorio nacional.
+VALIDEZ DEL DOCUMENTO:
+Emision: 30/04/2026
+Vencimiento: 2030/12/31
+Estado: Vigente en todo territorio nacional
 
-Emitido: 28/04/2026
-Vigente hasta: 2028/01/01
+DATOS DE EMISION:
+Entidad Emisora: RENAP Guatemala
+Centro America
+Firmas y Sellos: [OFICIAL]
