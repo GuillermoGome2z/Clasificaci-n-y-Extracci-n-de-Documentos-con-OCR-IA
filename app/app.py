@@ -11,14 +11,15 @@ import tempfile
 from datetime import datetime
 from pathlib import Path
 
+# Agregar raíz del proyecto al path antes de cualquier import local.
+# Necesario cuando Streamlit se ejecuta desde app/ o desde cualquier CWD distinto a la raíz.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 logger = logging.getLogger(__name__)
 
 import streamlit as st
 
 from src.pipeline import OCRPipeline
-
-# Agregar src al path
-sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Configuración de la página
 st.set_page_config(
