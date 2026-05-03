@@ -45,8 +45,38 @@ def find_tesseract_path() -> str | None:
     return None
 
 
+def find_tessdata_prefix() -> str | None:
+    """
+    Detecta el directorio tessdata para configurar TESSDATA_PREFIX.
+    Prioridad: variable de entorno existente → directorio junto al ejecutable → default Windows.
+    """
+    # Respetar si ya está configurada
+    existing = os.getenv("TESSDATA_PREFIX")
+    if existing and Path(existing).is_dir():
+        return existing
+
+    # Derivar desde la ruta del ejecutable
+    tess_path = find_tesseract_path()
+    if tess_path:
+        tessdata = Path(tess_path).parent / "tessdata"
+        if tessdata.is_dir():
+            return str(tessdata)
+
+    # Default Windows
+    windows_tessdata = r"C:\Program Files\Tesseract-OCR\tessdata"
+    if Path(windows_tessdata).is_dir():
+        return windows_tessdata
+
+    return None
+
+
 # Configuración de Tesseract (auto-detección)
 TESSERACT_PATH = find_tesseract_path()
+TESSDATA_PREFIX = find_tessdata_prefix()
+
+# Asegurar TESSDATA_PREFIX en el entorno del proceso para que Tesseract lo lea
+if TESSDATA_PREFIX and not os.getenv("TESSDATA_PREFIX"):
+    os.environ["TESSDATA_PREFIX"] = TESSDATA_PREFIX
 
 # Configuración de logging
 _logging.basicConfig(
