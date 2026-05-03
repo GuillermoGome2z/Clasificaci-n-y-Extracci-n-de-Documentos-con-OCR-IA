@@ -1,0 +1,14 @@
+---RECIBO DE PAGO---
+No.: REC-00035
+Fecha: 30/04/2026
+
+Recibi de: Empresa 35
+Monto: Q3306.00
+Concepto: Deposito en cuenta
+Forma: TRANSFERENCIA
+
+forma de pago
+Sello de cobros
+Firma: _________________
+
+cheque

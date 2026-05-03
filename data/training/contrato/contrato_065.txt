@@ -1,0 +1,27 @@
+===== CONTRATO =====
+Numero: CTR-2026-0065
+Fecha: 30/04/2026
+
+CONTRATANTE: Empresa Prestadora
+NIT: 1234567-8
+CONTRATADO: Beneficiario 65
+
+suspend
+Vigencia desde: 30/04/2026
+Hasta: 20/03/2028
+Duracion: 11 meses
+
+Pago Mensual: Q5445.00
+
+Clausulas Principales:
+- Prestar servicios profesionales
+- Cumplimiento de horarios
+- Confidencialidad de informacion
+
+suspend
+- Resolucion con 30 dias aviso previo
+- Acuerdo segun leyes de Guatemala
+
+Firmamos:
+_________________  ___________________
+Contratante        Contratado

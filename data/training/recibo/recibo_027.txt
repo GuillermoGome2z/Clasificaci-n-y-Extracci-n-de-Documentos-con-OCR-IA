@@ -1,31 +1,24 @@
-RECIBO OFICIAL DE PAGO
-Numero: REC-00027
-Fecha: 28/04/2026
+=== RECIBO OFICIAL ===
+Numero de Recibo: REC-00027
+Fecha de Emision: 30/04/2026
+Hora: 23:12:16
 
-Recibi de:
-Nombre: Empresa Receptora 27
-Direccion: Ciudad de Guatemala
-Telefono: 7411-1709
+De: Empresa Receptora 27
+Telefono de contacto: 6375-6494
 
-Cantidad de Dinero:
-Monto recibido: Q155.00
-Cantidad en letras: 155 quetzales
-
-Por concepto de:
-Pago mensual
-Descripcion: Pago correspondiente al mes/servicio
-
-Forma de pago: DEPOSITO
+MONTO PAGADO: Q1601.00
 departamento cobros
 
-Detalles del Recibo:
-Departamento de cobros
-Sello: [OFICINA]
-Firma: ____________________
-Autorizado por: Recibidor
+Por: Pago mensual
+Periodo: April 2026
 
-sello
-Muchas gracias por su pago puntual
-Comprobante fiscal
-Vale de caja
-Referencia: REC-00027
+Forma de Pago: EFECTIVO
+transferencia
+
+Departamento de Cobros y Recaudacion
+Sello: [EMPRESA]
+Firma Autorizada: _______________
+Pago Puntual
+
+Comprobante: REC-00027
+Vale

@@ -1,31 +1,24 @@
-RECIBO OFICIAL DE PAGO
-Numero: REC-00008
-Fecha: 28/04/2026
+=== RECIBO OFICIAL ===
+Numero de Recibo: REC-00008
+Fecha de Emision: 30/04/2026
+Hora: 23:12:16
 
-Recibi de:
-Nombre: Empresa Receptora 8
-Direccion: Ciudad de Guatemala
-Telefono: 6508-5822
+De: Empresa Receptora 8
+Telefono de contacto: 5348-6695
 
-Cantidad de Dinero:
-Monto recibido: Q2202.00
-Cantidad en letras: 2202 quetzales
+MONTO PAGADO: Q2683.00
+vale
 
-Por concepto de:
-Pago de servicio
-Descripcion: Pago correspondiente al mes/servicio
+Por: Pago de servicio
+Periodo: April 2026
 
-Forma de pago: DEPOSITO
-cantidad de
+Forma de Pago: DEPOSITO
+vale
 
-Detalles del Recibo:
-Departamento de cobros
-Sello: [OFICINA]
-Firma: ____________________
-Autorizado por: Recibidor
+Departamento de Cobros y Recaudacion
+Sello: [EMPRESA]
+Firma Autorizada: _______________
+Pago Puntual
 
-firma
-Muchas gracias por su pago puntual
-Comprobante fiscal
-Vale de caja
-Referencia: REC-00008
+Comprobante: REC-00008
+Vale

@@ -1,31 +1,14 @@
-RECIBO OFICIAL DE PAGO
-Numero: REC-00025
-Fecha: 28/04/2026
+---RECIBO DE PAGO---
+No.: REC-00025
+Fecha: 30/04/2026
 
-Recibi de:
-Nombre: Empresa Receptora 25
-Direccion: Ciudad de Guatemala
-Telefono: 9037-4597
+Recibi de: Empresa 25
+Monto: Q3300.00
+Concepto: Deposito en cuenta
+Forma: DEPOSITO
 
-Cantidad de Dinero:
-Monto recibido: Q2910.00
-Cantidad en letras: 2910 quetzales
+sello
+Sello de cobros
+Firma: _________________
 
-Por concepto de:
-Deposito en cuenta
-Descripcion: Pago correspondiente al mes/servicio
-
-Forma de pago: EFECTIVO
-pago puntual
-
-Detalles del Recibo:
-Departamento de cobros
-Sello: [OFICINA]
-Firma: ____________________
-Autorizado por: Recibidor
-
-cantidad de
-Muchas gracias por su pago puntual
-Comprobante fiscal
-Vale de caja
-Referencia: REC-00025
+comprobante

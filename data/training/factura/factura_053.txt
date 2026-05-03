@@ -1,0 +1,21 @@
+FACTURA ELECTRONICA SAT
+Serie: FAC-2026-0053
+Fecha Emision: 30/04/2026
+NIT Emisor: 8033829-1
+Cliente: Servicios Globales
+
+CONCEPTO: Articulo 53
+CANTIDAD: 96 unidades
+PRECIO: Q420.00
+
+---
+SUBTOTAL: Q828.00
+IVA 12%: Q99.00
+TOTAL: Q927.00
+---
+
+vencimiento
+Documento tributario electronico SAT Guatemala
+Autorizado por SAT
+Q
+RFC 899-684

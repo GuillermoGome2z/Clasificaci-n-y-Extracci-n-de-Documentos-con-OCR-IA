@@ -1,0 +1,30 @@
+===== DOCUMENTO PERSONAL DE IDENTIFICACION =====
+Registro Nacional de las Personas - RENAP
+Numero de Identificacion: 00000049
+Tipo: DPI Guatemalteco
+
+INFORMACION DEL TITULAR:
+Nombre Completo: Pedro Ramirez
+Numero de DPI: 8093 12157 5912
+RENAP
+
+DATOS DE NACIMIENTO:
+Fecha de Nacimiento: 13/04/1972
+Lugar de Nacimiento: Chinautla, Escuintla
+Municipio: Chinautla
+Departamento: Escuintla
+
+INFORMACION ADICIONAL:
+Nacionalidad: Guatemalteco
+Domicilio: Chinautla, Escuintla
+Vecino de: Chinautla
+
+VALIDEZ DEL DOCUMENTO:
+Emision: 30/04/2026
+Vencimiento: 2028/12/31
+Estado: Vigente en todo territorio nacional
+
+DATOS DE EMISION:
+Entidad Emisora: RENAP Guatemala
+Centro America
+Firmas y Sellos: [OFICIAL]

@@ -1,0 +1,12 @@
+DPI RENAP
+Numero: 00000039
+
+Ana Lopez
+DPI: 6305 33216 1708
+Fecha Nac: 23/08/1990
+Municipio: Chinautla
+Departamento: Escuintla
+
+DOCUMENTO PERSONAL DE IDENTIFICACION
+Nacionalidad: Guatemalteco
+Vigencia: 2033

@@ -1,31 +1,14 @@
-RECIBO OFICIAL DE PAGO
-Numero: REC-00002
-Fecha: 28/04/2026
+---RECIBO DE PAGO---
+No.: REC-00002
+Fecha: 30/04/2026
 
-Recibi de:
-Nombre: Empresa Receptora 2
-Direccion: Ciudad de Guatemala
-Telefono: 9638-6040
+Recibi de: Empresa 2
+Monto: Q978.00
+Concepto: Pago de cuota
+Forma: CHEQUE
 
-Cantidad de Dinero:
-Monto recibido: Q633.00
-Cantidad en letras: 633 quetzales
+pago puntual
+Sello de cobros
+Firma: _________________
 
-Por concepto de:
-Pago mensual
-Descripcion: Pago correspondiente al mes/servicio
-
-Forma de pago: DEPOSITO
 firma
-
-Detalles del Recibo:
-Departamento de cobros
-Sello: [OFICINA]
-Firma: ____________________
-Autorizado por: Recibidor
-
-transferencia
-Muchas gracias por su pago puntual
-Comprobante fiscal
-Vale de caja
-Referencia: REC-00002

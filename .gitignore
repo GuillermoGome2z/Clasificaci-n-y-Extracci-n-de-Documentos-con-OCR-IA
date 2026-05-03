@@ -69,3 +69,24 @@ htmlcov/
 .tox/
 .hypothesis/
 *.cover
+
+# Archivos de análisis y reportes internos (no van al repositorio)
+ANALISIS_*.md
+REPORTE_*.md
+analisis_*.md
+reporte_*.md
+
+# Documentos binarios personales
+*.docx
+*.xlsx
+*.csv
+
+# Modelos entrenados (pueden ser grandes; regenerables con train_classifier.py)
+models/classifier_model.joblib
+models/training_metrics.json
+models/dataset_validation.json
+
+# Archivos de configuración de entorno
+.env
+.env.*
+config.local.py

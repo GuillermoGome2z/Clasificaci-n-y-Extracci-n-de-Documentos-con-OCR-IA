@@ -5,18 +5,18 @@ Numero de documento: 00000011
 guatemalteco
 
 DATOS DEL TITULAR:
-Nombre completo: Maria Lopez
-Numero DPI: 9897 28304 8189
-Fecha de nacimiento: 23/06/1996
-Lugar de nacimiento: San Jose Pinula, Sacatepequez
-Vecino de: San Jose Pinula
-Municipio: San Jose Pinula
-Departamento: Sacatepequez
+Nombre completo: Pedro Ramirez
+Numero DPI: 2405 70042 3811
+Fecha de nacimiento: 26/07/1996
+Lugar de nacimiento: Amatitlan, Escuintla
+Vecino de: Amatitlan
+Municipio: Amatitlan
+Departamento: Escuintla
 Nacionalidad: Guatemalteco
 
 Registro Nacional de las Personas RENAP
 Guatemala, Centro America
 Este documento es valido en todo el territorio nacional.
 
-Emitido: 28/04/2026
-Vigente hasta: 2034/01/01
+Emitido: 30/04/2026
+Vigente hasta: 2035/01/01

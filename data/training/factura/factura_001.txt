@@ -1,26 +1,26 @@
 FACTURA ELECTRONICA
 Numero: FAC-2026-0001
-Fecha: 07/04/2026
+Fecha: 17/04/2026
 
 Empresa Emisora
-NIT: 2758040-5
+NIT: 5356261-9
 Cliente: Distribuidora Guatemalteca
 Direccion: Ciudad de Guatemala
 
 Concepto de Venta
 Descripcion de servicio/producto: Articulo 1
-Cantidad: 40 unidades
-Precio unitario: Q83.00
+Cantidad: 49 unidades
+Precio unitario: Q72.00
 
 Detalle Tributario
-Subtotal: Q46368.00
-IVA 12%: Q5564.00
-Monto Total: Q51932.00
+Subtotal: Q20929.00
+IVA 12%: Q2511.00
+Monto Total: Q23440.00
 
-FACTURA ELECTRONICA
+monto total
 SAT Guatemala autorizado
 Documento tributario electronico
-NIT
+RFC
 
 Forma de pago: Transferencia Bancaria
 Banco: Banco del Pais
@@ -33,4 +33,4 @@ RFC Guatemala
 Contribuyente activo
 Acreditar IVA
 Moneda GTQ quetzal Q
-Vencimiento: 28/05/2026
+Vencimiento: 30/05/2026

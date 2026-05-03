@@ -1,31 +1,24 @@
-RECIBO OFICIAL DE PAGO
-Numero: REC-00009
-Fecha: 28/04/2026
+=== RECIBO OFICIAL ===
+Numero de Recibo: REC-00009
+Fecha de Emision: 30/04/2026
+Hora: 23:12:16
 
-Recibi de:
-Nombre: Empresa Receptora 9
-Direccion: Ciudad de Guatemala
-Telefono: 7775-5925
+De: Empresa Receptora 9
+Telefono de contacto: 4757-2799
 
-Cantidad de Dinero:
-Monto recibido: Q58.00
-Cantidad en letras: 58 quetzales
+MONTO PAGADO: Q602.00
+comprobante
 
-Por concepto de:
-Pago de servicio
-Descripcion: Pago correspondiente al mes/servicio
+Por: Pago de cuota
+Periodo: April 2026
 
-Forma de pago: CHEQUE
-transferencia
+Forma de Pago: CHEQUE
+recibi de
 
-Detalles del Recibo:
-Departamento de cobros
-Sello: [OFICINA]
-Firma: ____________________
-Autorizado por: Recibidor
+Departamento de Cobros y Recaudacion
+Sello: [EMPRESA]
+Firma Autorizada: _______________
+Pago Puntual
 
-vale
-Muchas gracias por su pago puntual
-Comprobante fiscal
-Vale de caja
-Referencia: REC-00009
+Comprobante: REC-00009
+Vale

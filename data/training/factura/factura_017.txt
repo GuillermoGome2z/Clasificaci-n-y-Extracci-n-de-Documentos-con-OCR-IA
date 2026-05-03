@@ -1,36 +1,23 @@
-FACTURA ELECTRONICA
-Numero: FAC-2026-0017
-Fecha: 26/03/2026
-
-Empresa Emisora
-NIT: 5786637-5
-Cliente: Grupo Industrial
-Direccion: Ciudad de Guatemala
-
-Concepto de Venta
-Descripcion de servicio/producto: Articulo 17
-Cantidad: 92 unidades
-Precio unitario: Q450.00
-
-Detalle Tributario
-Subtotal: Q42048.00
-IVA 12%: Q5045.00
-Monto Total: Q47093.00
-
-RFC
-SAT Guatemala autorizado
-Documento tributario electronico
-RFC
-
-Forma de pago: Transferencia Bancaria
-Banco: Banco del Pais
-Cuenta: 1234567890
-Referencia: INV-2026-17
-
-Serie: FAC-2026-0017
+---FACTURA ELECTRONICA---
+Numero de Factura: FAC-2026-0017
 Correlativo: 17
-RFC Guatemala
-Contribuyente activo
-Acreditar IVA
-Moneda GTQ quetzal Q
-Vencimiento: 28/05/2026
+Fecha: 29/04/2026
+
+Datos del Emisor
+NIT: 1570528-9
+Cliente: Servicios Globales
+Guatemala
+
+Detalles de la Transaccion
+Renglon 1: contribuyente - Q10650.00
+Cantidad: 45 unidades
+
+Resumen Tributario
+Monto Gravable: Q10650.00
+SAT Guatemala
+Impuesto Valor Agregado 12%: Q1278.00
+
+Total a Pagar: Q11928.00 GTQ
+
+Forma de Pago: Cheque
+Vencimiento Pago: 16/05/2026

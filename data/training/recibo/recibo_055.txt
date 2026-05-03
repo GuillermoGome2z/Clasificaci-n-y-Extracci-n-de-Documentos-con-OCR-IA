@@ -1,0 +1,14 @@
+---RECIBO DE PAGO---
+No.: REC-00055
+Fecha: 30/04/2026
+
+Recibi de: Empresa 55
+Monto: Q3346.00
+Concepto: Pago de cuota
+Forma: TRANSFERENCIA
+
+comprobante
+Sello de cobros
+Firma: _________________
+
+vale

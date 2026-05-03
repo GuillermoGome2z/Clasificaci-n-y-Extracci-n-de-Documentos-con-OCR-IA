@@ -1,31 +1,38 @@
-CARTA FORMAL
-Numero de referencia: CF-2026-0003
-Guatemala, 28 de April de 2026
+===== CARTA FORMAL =====
+Numero: CF-2026-0003
+Fecha: 30 de April de 2026
+Lugar: Guatemala
 
-Señor(a):
-Jefe de Departamento
-Empresa Receptora SA
-Presente.
+REMITENTE:
+Dr. Carlos Morales
+Direccion: Guatemala
+
+DESTINATARIO:
+Coordinador de Area
+Corporacion Guatemala
+Presente
+
+ASUNTO: Solicitud de prórroga de plazo
+
+CUERPO DE LA CARTA:
 
 Estimado señor(a):
 
-adjunto encontrará con el respeto que se merece, para exponerle
-lo siguiente en relación al asunto: Notificación de cambio de domicilio.
+estimado señor por este medio me dirijo respetuosamente a su persona
+para exponer lo siguiente:
 
-Por este medio me dirijo a usted para hacer de su conocimiento
-que atentamente le saluda, por lo que respetuosamente solicito
-su atención al presente.
+estimado señor
 
-En atención a lo anterior, adjunto encontrará la documentación
-correspondiente para su revisión y consideración.
+Con relacion al asunto mencionado, solicito su atención especial.
+Adjunto encontrará documentación complementaria para su revision.
 
-Quedo a su disposición para cualquier consulta adicional
-que estime pertinente.
+Quedo atentamente a su disposición para resolver inquietudes adicionales.
 
-Sin otro particular por el momento, me suscribo de usted
-atentamente y le saluda,
+Sin otro particular por ahora,
 
-______________________________
+FIRMA Y CONTACTO:
+_____________________________
 Dra. Ana Recinos
-Telefono: 4618-5828
-Correo: contacto@empresa.gt
+Telefono: 7614-2039
+Email: contacto@empresa.gt
+Firma: _____________________

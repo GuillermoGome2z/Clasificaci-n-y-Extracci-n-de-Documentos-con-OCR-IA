@@ -1,0 +1,36 @@
+FACTURA ELECTRONICA
+Numero: FAC-2026-0034
+Fecha: 25/03/2026
+
+Empresa Emisora
+NIT: 4447932-9
+Cliente: Grupo Industrial
+Direccion: Ciudad de Guatemala
+
+Concepto de Venta
+Descripcion de servicio/producto: Articulo 34
+Cantidad: 48 unidades
+Precio unitario: Q80.00
+
+Detalle Tributario
+Subtotal: Q21527.00
+IVA 12%: Q2583.00
+Monto Total: Q24110.00
+
+Q
+SAT Guatemala autorizado
+Documento tributario electronico
+Q
+
+Forma de pago: Transferencia Bancaria
+Banco: Banco del Pais
+Cuenta: 1234567890
+Referencia: INV-2026-34
+
+Serie: FAC-2026-0034
+Correlativo: 34
+RFC Guatemala
+Contribuyente activo
+Acreditar IVA
+Moneda GTQ quetzal Q
+Vencimiento: 30/05/2026

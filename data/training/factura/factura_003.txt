@@ -1,36 +1,21 @@
-FACTURA ELECTRONICA
-Numero: FAC-2026-0003
-Fecha: 05/03/2026
-
-Empresa Emisora
-NIT: 2171028-4
-Cliente: Distribuidora Guatemalteca
-Direccion: Ciudad de Guatemala
-
-Concepto de Venta
-Descripcion de servicio/producto: Articulo 3
-Cantidad: 47 unidades
-Precio unitario: Q389.00
-
-Detalle Tributario
-Subtotal: Q18386.00
-IVA 12%: Q2206.00
-Monto Total: Q20592.00
-
-IVA 12%
-SAT Guatemala autorizado
-Documento tributario electronico
-serie
-
-Forma de pago: Transferencia Bancaria
-Banco: Banco del Pais
-Cuenta: 1234567890
-Referencia: INV-2026-3
-
+FACTURA ELECTRONICA SAT
 Serie: FAC-2026-0003
-Correlativo: 3
-RFC Guatemala
-Contribuyente activo
-Acreditar IVA
-Moneda GTQ quetzal Q
-Vencimiento: 28/05/2026
+Fecha Emision: 30/04/2026
+NIT Emisor: 3345665-8
+Cliente: Empresa Comercial SA
+
+CONCEPTO: Articulo 3
+CANTIDAD: 49 unidades
+PRECIO: Q313.00
+
+---
+SUBTOTAL: Q40343.00
+IVA 12%: Q4841.00
+TOTAL: Q45184.00
+---
+
+monto total
+Documento tributario electronico SAT Guatemala
+Autorizado por SAT
+NIT
+RFC 138-689

@@ -1,36 +1,21 @@
-FACTURA ELECTRONICA
-Numero: FAC-2026-0025
-Fecha: 23/03/2026
+FACTURA ELECTRONICA SAT
+Serie: FAC-2026-0025
+Fecha Emision: 30/04/2026
+NIT Emisor: 2627827-7
+Cliente: Servicios Globales
 
-Empresa Emisora
-NIT: 7728934-6
-Cliente: Distribuidora Guatemalteca
-Direccion: Ciudad de Guatemala
+CONCEPTO: Articulo 25
+CANTIDAD: 92 unidades
+PRECIO: Q242.00
 
-Concepto de Venta
-Descripcion de servicio/producto: Articulo 25
-Cantidad: 5 unidades
-Precio unitario: Q450.00
-
-Detalle Tributario
-Subtotal: Q38355.00
-IVA 12%: Q4602.00
-Monto Total: Q42957.00
+---
+SUBTOTAL: Q34023.00
+IVA 12%: Q4082.00
+TOTAL: Q38105.00
+---
 
 SAT Guatemala
-SAT Guatemala autorizado
-Documento tributario electronico
-documento tributario
-
-Forma de pago: Transferencia Bancaria
-Banco: Banco del Pais
-Cuenta: 1234567890
-Referencia: INV-2026-25
-
-Serie: FAC-2026-0025
-Correlativo: 25
-RFC Guatemala
-Contribuyente activo
-Acreditar IVA
-Moneda GTQ quetzal Q
-Vencimiento: 28/05/2026
+Documento tributario electronico SAT Guatemala
+Autorizado por SAT
+monto total
+RFC 850-887

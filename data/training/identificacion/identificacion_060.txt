@@ -1,0 +1,30 @@
+===== DOCUMENTO PERSONAL DE IDENTIFICACION =====
+Registro Nacional de las Personas - RENAP
+Numero de Identificacion: 00000060
+Tipo: DPI Guatemalteco
+
+INFORMACION DEL TITULAR:
+Nombre Completo: Juan Gonzalez
+Numero de DPI: 2015 79954 5120
+DOCUMENTO PERSONAL DE IDENTIFICACION
+
+DATOS DE NACIMIENTO:
+Fecha de Nacimiento: 4/02/1978
+Lugar de Nacimiento: Guatemala, Quetzaltenango
+Municipio: Guatemala
+Departamento: Quetzaltenango
+
+INFORMACION ADICIONAL:
+Nacionalidad: Guatemalteco
+Domicilio: Guatemala, Quetzaltenango
+Vecino de: Guatemala
+
+VALIDEZ DEL DOCUMENTO:
+Emision: 30/04/2026
+Vencimiento: 2028/12/31
+Estado: Vigente en todo territorio nacional
+
+DATOS DE EMISION:
+Entidad Emisora: RENAP Guatemala
+Centro America
+Firmas y Sellos: [OFICIAL]

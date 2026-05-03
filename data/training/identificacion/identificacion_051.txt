@@ -1,0 +1,12 @@
+DPI RENAP
+Numero: 00000051
+
+Juan Ramirez
+DPI: 7770 13950 6147
+Fecha Nac: 28/07/1983
+Municipio: Amatitlan
+Departamento: Escuintla
+
+número de identificación
+Nacionalidad: Guatemalteco
+Vigencia: 2035

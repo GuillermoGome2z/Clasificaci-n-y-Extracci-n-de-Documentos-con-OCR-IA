@@ -1,0 +1,23 @@
+---FACTURA ELECTRONICA---
+Numero de Factura: FAC-2026-0031
+Correlativo: 31
+Fecha: 02/04/2026
+
+Datos del Emisor
+NIT: 5173050-2
+Cliente: Grupo Industrial
+Guatemala
+
+Detalles de la Transaccion
+Renglon 1: subtotal - Q16712.00
+Cantidad: 47 unidades
+
+Resumen Tributario
+Monto Gravable: Q16712.00
+autorizado
+Impuesto Valor Agregado 12%: Q2005.00
+
+Total a Pagar: Q18717.00 GTQ
+
+Forma de Pago: Efectivo
+Vencimiento Pago: 09/06/2026

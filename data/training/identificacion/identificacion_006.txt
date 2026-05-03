@@ -2,21 +2,21 @@ DOCUMENTO PERSONAL DE IDENTIFICACION
 DPI - RENAP Guatemala
 Numero de documento: 00000006
 
-DOCUMENTO PERSONAL DE IDENTIFICACION
+lugar de nacimiento
 
 DATOS DEL TITULAR:
-Nombre completo: Juan Gonzalez
-Numero DPI: 8949 96459 1141
-Fecha de nacimiento: 3/08/1980
-Lugar de nacimiento: Chinautla, Chimaltenango
-Vecino de: Chinautla
-Municipio: Chinautla
-Departamento: Chimaltenango
+Nombre completo: Pedro Mendoza
+Numero DPI: 9224 14026 8996
+Fecha de nacimiento: 9/03/1970
+Lugar de nacimiento: Villa Nueva, Sacatepequez
+Vecino de: Villa Nueva
+Municipio: Villa Nueva
+Departamento: Sacatepequez
 Nacionalidad: Guatemalteco
 
 Registro Nacional de las Personas RENAP
 Guatemala, Centro America
 Este documento es valido en todo el territorio nacional.
 
-Emitido: 28/04/2026
-Vigente hasta: 2035/01/01
+Emitido: 30/04/2026
+Vigente hasta: 2031/01/01

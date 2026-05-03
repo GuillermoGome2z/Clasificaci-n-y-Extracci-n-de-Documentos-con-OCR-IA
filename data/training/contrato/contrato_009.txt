@@ -1,52 +1,36 @@
-CONTRATO DE PRESTACION DE SERVICIOS
-Numero: CTR-2026-0009
-Fecha: 28/04/2026
+CONTRATO DE SERVICIOS PROFESIONALES
+Numero de Contrato: CTR-2026-0009
+Lugar: Guatemala
+Fecha: 30/04/2026
 
-PARTES CONTRATANTES
+PARTES:
+Empresa: Empresa Prestadora de Servicios
+Persona: Beneficiario Contrato 9
 
-El contratante:
-Empresa Prestadora de Servicios
-NIT: 1234567-8
-Domicilio: Ciudad de Guatemala
+incumplimiento
 
-El contratado:
-Beneficiario del Servicio 9
-Domicilio: Ciudad de Guatemala
+TERMINOS Y CONDICIONES:
+Fecha de Inicio: 30/04/2026
+Fecha de Terminacion: 17/04/2028
+Vigencia Total: 10 meses
 
-CLAUSULAS DEL CONTRATO
+Compensacion Economica:
+Monto Mensual: Q9759.00
+Moneda: Quetzal Guatemalteco
 
-PRIMERA: Objeto y Alcance
-Las partes convenimos en que el contratante prestará servicios al contratado.
+Obligaciones del Contratante:
+- términos y condiciones
+- Cumplimiento diligente
+- Profesionalismo
 
-SEGUNDA: Vigencia
-Este contrato tendrá vigencia a partir del 28/04/2026
-hasta el 01/04/2028, plazo de 11 meses.
+Clausula de Terminacion:
+Previo aviso de 30 dias, cualquiera de las partes puede rescindir.
+Causales de rescisión: incumplimiento grave de obligaciones.
 
-TERCERA: Contraprestacion Economica
-El contratado se obliga a pagar Q2619.00 mensuales.
+ACUERDO FINAL:
+Ambas partes aceptan los terminos y condiciones establecidas.
+Ley aplicable: Leyes de la Republica de Guatemala
 
-CUARTA: Obligaciones del Contratante
-rescisión
-Prestar servicios de calidad y profesionalismo.
-Cumplir horarios establecidos.
-Mantener confidencialidad.
-
-QUINTA: Obligaciones del Contratado
-Efectuar pagos puntuales.
-Proveer herramientas necesarias.
-
-firmamos
-
-SEXTA: Resolucion y Rescisión
-En caso de incumplimiento grave, cualquiera de las partes podrá rescindir.
-Aviso con 30 días de anticipación.
-
-SÉPTIMA: Acuerdo General
-Ambas partes se comprometen a cumplir íntegramente.
-Lo anterior según las leyes de Guatemala.
-
-Firmamos en la ciudad de Guatemala:
-
-______________________________     ______________________________
-El Contratante                    El Contratado
-Firma y sello                      Firma
+FIRMANTES:
+________________           ________________
+Empresa                    Persona Contratada

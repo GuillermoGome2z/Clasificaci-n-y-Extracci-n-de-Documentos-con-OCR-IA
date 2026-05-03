@@ -1,52 +1,27 @@
-CONTRATO DE PRESTACION DE SERVICIOS
+===== CONTRATO =====
 Numero: CTR-2026-0018
-Fecha: 28/04/2026
+Fecha: 30/04/2026
 
-PARTES CONTRATANTES
-
-El contratante:
-Empresa Prestadora de Servicios
+CONTRATANTE: Empresa Prestadora
 NIT: 1234567-8
-Domicilio: Ciudad de Guatemala
-
-El contratado:
-Beneficiario del Servicio 18
-Domicilio: Ciudad de Guatemala
-
-CLAUSULAS DEL CONTRATO
-
-PRIMERA: Objeto y Alcance
-Las partes convenimos en que el contratante prestará servicios al contratado.
-
-SEGUNDA: Vigencia
-Este contrato tendrá vigencia a partir del 28/04/2026
-hasta el 29/03/2028, plazo de 7 meses.
-
-TERCERA: Contraprestacion Economica
-El contratado se obliga a pagar Q9382.00 mensuales.
-
-CUARTA: Obligaciones del Contratante
-el contratado
-Prestar servicios de calidad y profesionalismo.
-Cumplir horarios establecidos.
-Mantener confidencialidad.
-
-QUINTA: Obligaciones del Contratado
-Efectuar pagos puntuales.
-Proveer herramientas necesarias.
+CONTRATADO: Beneficiario 18
 
 clausula
+Vigencia desde: 30/04/2026
+Hasta: 21/01/2028
+Duracion: 10 meses
 
-SEXTA: Resolucion y Rescisión
-En caso de incumplimiento grave, cualquiera de las partes podrá rescindir.
-Aviso con 30 días de anticipación.
+Pago Mensual: Q2818.00
 
-SÉPTIMA: Acuerdo General
-Ambas partes se comprometen a cumplir íntegramente.
-Lo anterior según las leyes de Guatemala.
+Clausulas Principales:
+- Prestar servicios profesionales
+- Cumplimiento de horarios
+- Confidencialidad de informacion
 
-Firmamos en la ciudad de Guatemala:
+el contratado
+- Resolucion con 30 dias aviso previo
+- Acuerdo segun leyes de Guatemala
 
-______________________________     ______________________________
-El Contratante                    El Contratado
-Firma y sello                      Firma
+Firmamos:
+_________________  ___________________
+Contratante        Contratado

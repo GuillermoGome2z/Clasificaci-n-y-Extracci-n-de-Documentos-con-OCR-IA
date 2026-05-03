@@ -1,0 +1,12 @@
+DPI RENAP
+Numero: 00000036
+
+Maria Castillo
+DPI: 5291 98933 7827
+Fecha Nac: 22/09/1988
+Municipio: Mixco
+Departamento: Quetzaltenango
+
+DPI
+Nacionalidad: Guatemalteco
+Vigencia: 2031

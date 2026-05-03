@@ -1,22 +1,30 @@
-DOCUMENTO PERSONAL DE IDENTIFICACION
-DPI - RENAP Guatemala
-Numero de documento: 00000018
+===== DOCUMENTO PERSONAL DE IDENTIFICACION =====
+Registro Nacional de las Personas - RENAP
+Numero de Identificacion: 00000018
+Tipo: DPI Guatemalteco
 
-RENAP
+INFORMACION DEL TITULAR:
+Nombre Completo: Carlos Lopez
+Numero de DPI: 2802 77612 8236
+municipio de
 
-DATOS DEL TITULAR:
-Nombre completo: Maria Mendoza
-Numero DPI: 7606 91016 8283
-Fecha de nacimiento: 15/07/1984
-Lugar de nacimiento: Mixco, Guatemala
-Vecino de: Mixco
-Municipio: Mixco
-Departamento: Guatemala
+DATOS DE NACIMIENTO:
+Fecha de Nacimiento: 28/09/1984
+Lugar de Nacimiento: Amatitlan, Quetzaltenango
+Municipio: Amatitlan
+Departamento: Quetzaltenango
+
+INFORMACION ADICIONAL:
 Nacionalidad: Guatemalteco
+Domicilio: Amatitlan, Quetzaltenango
+Vecino de: Amatitlan
 
-Registro Nacional de las Personas RENAP
-Guatemala, Centro America
-Este documento es valido en todo el territorio nacional.
+VALIDEZ DEL DOCUMENTO:
+Emision: 30/04/2026
+Vencimiento: 2029/12/31
+Estado: Vigente en todo territorio nacional
 
-Emitido: 28/04/2026
-Vigente hasta: 2033/01/01
+DATOS DE EMISION:
+Entidad Emisora: RENAP Guatemala
+Centro America
+Firmas y Sellos: [OFICIAL]

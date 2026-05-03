@@ -1,31 +1,38 @@
-CARTA FORMAL
-Numero de referencia: CF-2026-0024
-Guatemala, 28 de April de 2026
+===== CARTA FORMAL =====
+Numero: CF-2026-0024
+Fecha: 30 de April de 2026
+Lugar: Guatemala
 
-Señor(a):
-Director Administrativo
+REMITENTE:
+Ing. Maria Fuentes
+Direccion: Guatemala
+
+DESTINATARIO:
+Jefe de Departamento
 Corporacion Guatemala
-Presente.
+Presente
+
+ASUNTO: Notificación de cambio de domicilio
+
+CUERPO DE LA CARTA:
 
 Estimado señor(a):
 
-quedo a su disposición con el respeto que se merece, para exponerle
-lo siguiente en relación al asunto: Confirmación de reunión.
+estimado señor por este medio me dirijo respetuosamente a su persona
+para exponer lo siguiente:
 
-Por este medio me dirijo a usted para hacer de su conocimiento
-que quedo a su disposición, por lo que respetuosamente solicito
-su atención al presente.
+estimada señora
 
-En atención a lo anterior, adjunto encontrará la documentación
-correspondiente para su revisión y consideración.
+Con relacion al asunto mencionado, solicito su atención especial.
+Adjunto encontrará documentación complementaria para su revision.
 
-Quedo a su disposición para cualquier consulta adicional
-que estime pertinente.
+Quedo atentamente a su disposición para resolver inquietudes adicionales.
 
-Sin otro particular por el momento, me suscribo de usted
-atentamente y le saluda,
+Sin otro particular por ahora,
 
-______________________________
+FIRMA Y CONTACTO:
+_____________________________
 Dra. Ana Recinos
-Telefono: 5396-1554
-Correo: contacto@empresa.gt
+Telefono: 5447-2345
+Email: contacto@empresa.gt
+Firma: _____________________

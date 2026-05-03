@@ -1,0 +1,30 @@
+===== DOCUMENTO PERSONAL DE IDENTIFICACION =====
+Registro Nacional de las Personas - RENAP
+Numero de Identificacion: 00000043
+Tipo: DPI Guatemalteco
+
+INFORMACION DEL TITULAR:
+Nombre Completo: Carlos Gonzalez
+Numero de DPI: 8188 29461 3971
+RENAP
+
+DATOS DE NACIMIENTO:
+Fecha de Nacimiento: 9/04/1996
+Lugar de Nacimiento: San Jose Pinula, Chimaltenango
+Municipio: San Jose Pinula
+Departamento: Chimaltenango
+
+INFORMACION ADICIONAL:
+Nacionalidad: Guatemalteco
+Domicilio: San Jose Pinula, Chimaltenango
+Vecino de: San Jose Pinula
+
+VALIDEZ DEL DOCUMENTO:
+Emision: 30/04/2026
+Vencimiento: 2030/12/31
+Estado: Vigente en todo territorio nacional
+
+DATOS DE EMISION:
+Entidad Emisora: RENAP Guatemala
+Centro America
+Firmas y Sellos: [OFICIAL]

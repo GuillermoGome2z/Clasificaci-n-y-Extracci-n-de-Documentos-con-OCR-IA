@@ -1,0 +1,21 @@
+FACTURA ELECTRONICA SAT
+Serie: FAC-2026-0045
+Fecha Emision: 30/04/2026
+NIT Emisor: 9657845-3
+Cliente: Distribuidora Guatemalteca
+
+CONCEPTO: Articulo 45
+CANTIDAD: 8 unidades
+PRECIO: Q166.00
+
+---
+SUBTOTAL: Q41646.00
+IVA 12%: Q4997.00
+TOTAL: Q46643.00
+---
+
+IVA 12%
+Documento tributario electronico SAT Guatemala
+Autorizado por SAT
+NIT
+RFC 504-640

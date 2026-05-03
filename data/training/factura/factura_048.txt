@@ -1,0 +1,21 @@
+FACTURA ELECTRONICA SAT
+Serie: FAC-2026-0048
+Fecha Emision: 30/04/2026
+NIT Emisor: 1045755-8
+Cliente: Empresa Comercial SA
+
+CONCEPTO: Articulo 48
+CANTIDAD: 7 unidades
+PRECIO: Q82.00
+
+---
+SUBTOTAL: Q2741.00
+IVA 12%: Q328.00
+TOTAL: Q3069.00
+---
+
+documento tributario
+Documento tributario electronico SAT Guatemala
+Autorizado por SAT
+subtotal
+RFC 538-608

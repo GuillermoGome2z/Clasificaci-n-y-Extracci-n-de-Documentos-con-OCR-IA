@@ -1,36 +1,21 @@
-FACTURA ELECTRONICA
-Numero: FAC-2026-0008
-Fecha: 12/04/2026
-
-Empresa Emisora
-NIT: 5520573-3
-Cliente: Grupo Industrial
-Direccion: Ciudad de Guatemala
-
-Concepto de Venta
-Descripcion de servicio/producto: Articulo 8
-Cantidad: 8 unidades
-Precio unitario: Q338.00
-
-Detalle Tributario
-Subtotal: Q19417.00
-IVA 12%: Q2330.00
-Monto Total: Q21747.00
-
-FACTURA ELECTRONICA
-SAT Guatemala autorizado
-Documento tributario electronico
-RFC
-
-Forma de pago: Transferencia Bancaria
-Banco: Banco del Pais
-Cuenta: 1234567890
-Referencia: INV-2026-8
-
+FACTURA ELECTRONICA SAT
 Serie: FAC-2026-0008
-Correlativo: 8
-RFC Guatemala
-Contribuyente activo
-Acreditar IVA
-Moneda GTQ quetzal Q
-Vencimiento: 28/05/2026
+Fecha Emision: 30/04/2026
+NIT Emisor: 3188346-3
+Cliente: Grupo Industrial
+
+CONCEPTO: Articulo 8
+CANTIDAD: 34 unidades
+PRECIO: Q111.00
+
+---
+SUBTOTAL: Q2271.00
+IVA 12%: Q272.00
+TOTAL: Q2543.00
+---
+
+documento tributario
+Documento tributario electronico SAT Guatemala
+Autorizado por SAT
+GTQ
+RFC 537-934

@@ -1,0 +1,12 @@
+DPI RENAP
+Numero: 00000035
+
+Carlos Gonzalez
+DPI: 9046 81215 2901
+Fecha Nac: 18/06/1979
+Municipio: Chinautla
+Departamento: Guatemala
+
+DPI
+Nacionalidad: Guatemalteco
+Vigencia: 2028

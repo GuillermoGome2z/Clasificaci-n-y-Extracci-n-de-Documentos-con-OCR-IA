@@ -1,0 +1,30 @@
+===== DOCUMENTO PERSONAL DE IDENTIFICACION =====
+Registro Nacional de las Personas - RENAP
+Numero de Identificacion: 00000052
+Tipo: DPI Guatemalteco
+
+INFORMACION DEL TITULAR:
+Nombre Completo: Sofia Ramirez
+Numero de DPI: 9344 86892 1150
+guatemalteco
+
+DATOS DE NACIMIENTO:
+Fecha de Nacimiento: 17/05/1986
+Lugar de Nacimiento: Amatitlan, Sacatepequez
+Municipio: Amatitlan
+Departamento: Sacatepequez
+
+INFORMACION ADICIONAL:
+Nacionalidad: Guatemalteco
+Domicilio: Amatitlan, Sacatepequez
+Vecino de: Amatitlan
+
+VALIDEZ DEL DOCUMENTO:
+Emision: 30/04/2026
+Vencimiento: 2032/12/31
+Estado: Vigente en todo territorio nacional
+
+DATOS DE EMISION:
+Entidad Emisora: RENAP Guatemala
+Centro America
+Firmas y Sellos: [OFICIAL]

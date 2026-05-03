@@ -1,0 +1,21 @@
+FACTURA ELECTRONICA SAT
+Serie: FAC-2026-0041
+Fecha Emision: 30/04/2026
+NIT Emisor: 2732492-6
+Cliente: Empresa Comercial SA
+
+CONCEPTO: Articulo 41
+CANTIDAD: 62 unidades
+PRECIO: Q187.00
+
+---
+SUBTOTAL: Q28176.00
+IVA 12%: Q3381.00
+TOTAL: Q31557.00
+---
+
+monto total
+Documento tributario electronico SAT Guatemala
+Autorizado por SAT
+subtotal
+RFC 610-868

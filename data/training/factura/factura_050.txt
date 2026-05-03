@@ -1,0 +1,23 @@
+---FACTURA ELECTRONICA---
+Numero de Factura: FAC-2026-0050
+Correlativo: 50
+Fecha: 08/04/2026
+
+Datos del Emisor
+NIT: 7538607-8
+Cliente: Distribuidora Guatemalteca
+Guatemala
+
+Detalles de la Transaccion
+Renglon 1: acreditar - Q14583.00
+Cantidad: 14 unidades
+
+Resumen Tributario
+Monto Gravable: Q14583.00
+RFC
+Impuesto Valor Agregado 12%: Q1749.00
+
+Total a Pagar: Q16332.00 GTQ
+
+Forma de Pago: Efectivo
+Vencimiento Pago: 15/05/2026

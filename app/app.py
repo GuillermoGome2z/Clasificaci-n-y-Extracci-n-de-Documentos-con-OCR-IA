@@ -2,12 +2,16 @@
 Aplicación Streamlit para OCR IA Project
 """
 
+import html as _html
 import json
+import logging
 import os
 import sys
 import tempfile
 from datetime import datetime
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 import streamlit as st
 
@@ -341,9 +345,8 @@ if "pipeline" not in st.session_state:
 if "last_result" not in st.session_state:
     st.session_state.last_result = None
 
-@st.cache_resource
 def load_pipeline(tesseract_path=None):
-    """Carga el pipeline una sola vez por sesión."""
+    """Crea una instancia del pipeline por sesión (no compartida entre usuarios)."""
     return OCRPipeline(tesseract_path=tesseract_path)
 
 # ── AUTO-INICIALIZACIÓN ──────────────────────────────────────────
@@ -356,7 +359,7 @@ if st.session_state.pipeline is None:
             st.session_state.pipeline = load_pipeline(
                 tesseract_path=_TESS_PATH
             )
-    except Exception:
+    except (ImportError, OSError, RuntimeError):
         pass  # Si falla, el usuario lo inicializa manualmente
 # ────────────────────────────────────────────────────────────────
 
@@ -825,18 +828,13 @@ else:
                         status_text.error(f"❌ Error: {str(e)}")
 
                     finally:
-                        # Limpiar archivo temporal con reintentos (Windows lock fix)
-                        import time as _time
-                        for _intento in range(4):
-                            try:
-                                if os.path.exists(temp_path):
-                                    os.remove(temp_path)
-                                break  # Borrado exitoso
-                            except (OSError, PermissionError):
-                                if _intento < 3:
-                                    _time.sleep(0.4)  # Esperar 400ms y reintentar
-                                # Si los 4 intentos fallan: silencio.
-                                # Windows borra los temps de AppData\Local\Temp al reiniciar.
+                        # Limpiar archivo temporal — missing_ok evita error si ya fue borrado
+                        try:
+                            Path(temp_path).unlink(missing_ok=True)
+                        except PermissionError:
+                            # Windows puede mantener el archivo bloqueado brevemente;
+                            # el SO lo eliminará de AppData\Local\Temp al reiniciar.
+                            logger.warning("No se pudo eliminar temp: %s", temp_path)
 
     # TAB 2: Resultados Detallados
     with tab2:
@@ -1024,11 +1022,12 @@ else:
                             }
                             badge_class, badge_icon = badge_map.get(class_name, ("badge-otro", "📁"))
 
-                            # Mostrar badge HTML mejorado
+                            # Mostrar badge HTML mejorado (class_name escapado para evitar XSS)
+                            _safe_label = _html.escape(class_name.upper().replace("_", " "))
                             st.markdown(
                                 f'<div class="badge-resultado {badge_class}">'
                                 f'<span style="font-size: 1.3rem;">{badge_icon}</span>'
-                                f'<span>{class_name.upper().replace("_", " ")}</span>'
+                                f'<span>{_safe_label}</span>'
                                 f'</div>',
                                 unsafe_allow_html=True
                             )

@@ -1,22 +1,22 @@
 RECIBO OFICIAL DE PAGO
 Numero: REC-00023
-Fecha: 28/04/2026
+Fecha: 30/04/2026
 
 Recibi de:
 Nombre: Empresa Receptora 23
 Direccion: Ciudad de Guatemala
-Telefono: 9990-5956
+Telefono: 8705-7152
 
 Cantidad de Dinero:
-Monto recibido: Q955.00
-Cantidad en letras: 955 quetzales
+Monto recibido: Q3739.00
+Cantidad en letras: 3739 quetzales
 
 Por concepto de:
-Deposito en cuenta
+Pago mensual
 Descripcion: Pago correspondiente al mes/servicio
 
 Forma de pago: EFECTIVO
-efectivo
+forma de pago
 
 Detalles del Recibo:
 Departamento de cobros
