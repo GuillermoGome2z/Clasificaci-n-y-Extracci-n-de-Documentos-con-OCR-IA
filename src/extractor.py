@@ -97,7 +97,7 @@ class DataExtractor:
             total_items = sum(len(v) if isinstance(v, list) else 1 for v in result.values())
             logger.info("Extracción completada: %d items extraídos", total_items)
             return result
-        except Exception as e:
+        except (ValueError, TypeError, AttributeError, re.error) as e:
             logger.error("Error en extracción: %s", e)
             return {
                 "emails": [],
@@ -126,7 +126,7 @@ class DataExtractor:
             cleaned_lines = [line.strip() for line in lines if line.strip()]
             logger.debug("Líneas extraídas: %d", len(cleaned_lines))
             return cleaned_lines
-        except Exception as e:
+        except (ValueError, AttributeError) as e:
             logger.error("Error extrayendo líneas: %s", e)
             return []
 
@@ -153,6 +153,6 @@ class DataExtractor:
 
             logger.debug("Tablas extraídas: %d filas", len(table))
             return table
-        except Exception as e:
+        except (ValueError, AttributeError) as e:
             logger.error("Error extrayendo tablas: %s", e)
             return []
