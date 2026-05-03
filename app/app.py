@@ -615,7 +615,10 @@ else:
                                 ocr_data = result.get("steps", {}).get("ocr", {})
                                 if ocr_data:
                                     confidence = ocr_data.get("confidence", 0)
-                                    st.metric("🔤 Confianza OCR", f"{confidence:.0f}%")
+                                    if confidence < 0:
+                                        st.metric("🔤 Confianza OCR", "Sin texto")
+                                    else:
+                                        st.metric("🔤 Confianza OCR", f"{confidence:.0f}%")
                                 else:
                                     st.metric("🔤 Confianza OCR", "N/A")
 
@@ -923,8 +926,11 @@ else:
                             st.metric("✅ Estado", "Éxito" if ocr_data.get("status") == "success" else "Error")
                         with col2:
                             confidence = ocr_data.get("confidence", 0)
-                            color = "🟢" if confidence > 80 else "🟡" if confidence > 60 else "🔴"
-                            st.metric("📊 Confianza", f"{color} {confidence:.0f}%")
+                            if confidence < 0:
+                                st.metric("📊 Confianza", "⚠️ Sin texto")
+                            else:
+                                color = "🟢" if confidence > 80 else "🟡" if confidence > 60 else "🔴"
+                                st.metric("📊 Confianza", f"{color} {confidence:.0f}%")
                         with col3:
                             st.metric("🗣️ Idioma", {
                                 "spa": "🇪🇸 Español",
