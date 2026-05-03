@@ -118,7 +118,7 @@ class OCRPipeline:
         result["extracted_text"] = extracted_text
         try:
             result["lines"] = self.extractor.extract_lines(extracted_text)
-        except Exception as e:
+        except (ValueError, AttributeError, TypeError) as e:
             logger.warning("Error extrayendo líneas: %s", e)
             result["lines"] = []
 
