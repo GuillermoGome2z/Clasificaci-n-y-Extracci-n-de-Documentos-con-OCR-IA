@@ -1,1 +1,16 @@
-DPI RENAP documento personal identificacion guatemalteco municipio departamento fecha nacimiento numero identificacion
+DOCUMENTO PERSONAL DE IDENTIFICACION
+CUI - RENAP GUATEMALA
+Numero de documento: 00300303
+
+DATOS DEL TITULAR
+Nombre completo: Maria Isabel Rodriguez Garcia
+CUI: 5555 12345 6789
+Fecha nacimiento: 28/02/1995
+Municipio: Mixco
+Departamento: Guatemala
+Estado civil: Casada
+Nacionalidad: Guatemalteca
+
+RENAP Guatemala - Documento oficial
+Emitido: 08/03/2021
+Vence: 08/03/2031

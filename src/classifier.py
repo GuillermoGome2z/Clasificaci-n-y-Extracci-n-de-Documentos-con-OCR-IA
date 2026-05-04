@@ -102,18 +102,20 @@ class DocumentClassifier:
                 categories = self.model_data.get("categories", self.classes)
 
                 X = vectorizer.transform([text])
-                predicted_idx = model.predict(X)[0]
+                raw_pred = model.predict(X)[0]
                 probabilities = model.predict_proba(X)[0]
 
-                # Convertir índice a nombre de categoría
-                if predicted_idx < len(categories):
-                    predicted_class = categories[predicted_idx]
+                # El modelo puede devolver el label directamente (str) o un índice (int)
+                if isinstance(raw_pred, (int, np.integer)):
+                    predicted_class = categories[int(raw_pred)] if int(raw_pred) < len(categories) else str(raw_pred)
                 else:
-                    predicted_class = str(predicted_idx)
+                    predicted_class = str(raw_pred)
 
+                # Mapear probabilidades usando model.classes_ si está disponible
+                model_classes = list(getattr(model, "classes_", categories))
                 prob_dict = {
-                    categories[i]: float(prob)
-                    for i, prob in enumerate(probabilities)
+                    str(cls): float(prob)
+                    for cls, prob in zip(model_classes, probabilities)
                 }
 
                 result = {

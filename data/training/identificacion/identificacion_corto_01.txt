@@ -1,1 +1,15 @@
-DPI RENAP documento personal identificacion guatemalteco municipio departamento fecha nacimiento numero identificacion
+DOCUMENTO PERSONAL DE IDENTIFICACION
+DPI - RENAP GUATEMALA
+Numero de documento: 00100101
+
+DATOS DEL TITULAR
+Nombre: Sofia Alejandra Martinez Perez
+DPI: 1234 56789 0101
+Fecha nacimiento: 12/05/1990
+Municipio: Guatemala
+Departamento: Guatemala
+Nacionalidad: Guatemalteca
+
+Registro Nacional de las Personas - RENAP
+Fecha emision: 15/01/2018
+Fecha vencimiento: 15/01/2028

@@ -1,1 +1,16 @@
-DPI RENAP documento personal identificacion guatemalteco municipio departamento fecha nacimiento numero identificacion
+DOCUMENTO PERSONAL DE IDENTIFICACION
+DPI RENAP REPUBLICA DE GUATEMALA
+Numero: 00400404
+
+Nombre: Luis Enrique Morales Castillo
+DPI: 3322 11445 6677
+Fecha de nacimiento: 17/07/1985
+Lugar de nacimiento: Escuintla, Guatemala
+Municipio: Escuintla
+Departamento: Escuintla
+Profesion: Contador Publico
+Nacionalidad: Guatemalteco
+
+Registro Nacional de las Personas
+Fecha emision: 12/09/2019
+Vigencia: 10 anos
