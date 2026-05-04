@@ -2,23 +2,28 @@
 Tests para src/extractor.py - DataExtractor (documentos guatemaltecos)
 
 Cobertura:
-- extract_emails()      → 5 tests
-- extract_phones()      → 6 tests  (GT: XXXX-XXXX, prefijo 2-5)
-- extract_dates()       → 5 tests
-- extract_urls()        → 5 tests
-- extract_currency()    → 7 tests  (incluye Q/GTQ)
-- extract_nit()         → 5 tests  (NIT guatemalteco)
-- extract_dpi()         → 4 tests  (DPI/CUI guatemalteco)
-- extract_serie_dte()   → 5 tests  (series FAC/REC/CTR…)
-- extract_fecha_texto() → 4 tests  (fechas en español)
-- extract_forma_pago()  → 5 tests  (EFECTIVO, CHEQUE…)
-- False positives       → 4 tests  (NIT/DPI no deben ser teléfonos)
-- extract_all()         → 4 tests  (claves GT, sin dni/rfc)
-- extract_custom_pattern() → 2 tests
-- extract_lines()       → 2 tests
-- edge cases            → 5 tests
+- extract_emails()           → 5 tests
+- extract_phones()           → 6 tests  (GT: XXXX-XXXX, prefijo 2-5)
+- extract_dates()            → 5 tests
+- extract_urls()             → 5 tests
+- extract_currency()         → 7 tests  (incluye Q/GTQ)
+- extract_nit()              → 5 tests  (NIT guatemalteco clásico)
+- extract_nit() FEL          → 4 tests  (NIT sin guion con contexto)
+- extract_dpi()              → 4 tests  (DPI/CUI guatemalteco)
+- extract_serie_dte()        → 5 tests  (series FAC/REC/CTR…)
+- extract_serie_sat()        → 4 tests  (serie hex FEL)
+- extract_autorizacion_sat() → 4 tests  (UUID SAT)
+- extract_numero_dte()       → 4 tests  (número DTE)
+- extract_moneda()           → 4 tests  (campo MONEDA)
+- extract_fecha_texto()      → 4 tests  (fechas en español)
+- extract_forma_pago()       → 5 tests  (EFECTIVO, CHEQUE…)
+- False positives            → 7 tests  (NIT/DPI/UUID/DTE no como teléfonos)
+- extract_all()              → 5 tests  (claves GT, sin dni/rfc, FEL completo)
+- extract_custom_pattern()   → 2 tests
+- extract_lines()            → 2 tests
+- edge cases                 → 5 tests
 
-Total: 68 tests
+Total: 96 tests
 """
 
 
@@ -390,6 +395,11 @@ class TestExtractorFalsePositives:
         result = extractor.extract_serie_dte("FAC-2026-0001 NIT: 5356261-9")
         assert len(result) >= 1
 
+    def test_serie_dte_year_not_detected_as_phone(self, extractor):
+        """El año dentro de una serie DTE (FAC-2026-0001) no debe ser teléfono GT."""
+        result = extractor.extract_phones("FAC-2026-0001 fue emitida hoy")
+        assert len(result) == 0, f"Parte numérica de DTE detectada como teléfono: {result}"
+
 
 class TestExtractorAll:
     """Tests para el método extract_all() (orquestador)."""
@@ -404,7 +414,8 @@ class TestExtractorAll:
         result = extractor.extract_all("Test data")
         expected_keys = [
             "emails", "phones", "dates", "urls", "currency",
-            "nit", "dpi", "serie_dte", "fecha_texto", "forma_pago",
+            "nit", "dpi", "serie_dte", "serie_sat", "autorizacion_sat",
+            "numero_dte", "moneda", "fecha_texto", "forma_pago",
         ]
         for key in expected_keys:
             assert key in result, f"Clave faltante en extract_all: {key}"
@@ -486,3 +497,255 @@ class TestExtractorEdgeCases:
         result = extractor.extract_emails(text)
         assert isinstance(result, list)
         assert len(result) == len(set(result))
+
+
+class TestExtractorNITSinGuion:
+    """Tests para NIT guatemalteco sin guion en documentos FEL modernos."""
+
+    def test_nit_emisor_sin_guion(self, extractor):
+        """Extrae NIT Emisor sin guion (FEL moderno)."""
+        result = extractor.extract_nit("NIT Emisor: 80169988")
+        assert isinstance(result, list)
+        assert "80169988" in result
+
+    def test_nit_receptor_sin_guion(self, extractor):
+        """Extrae NIT Receptor sin guion."""
+        result = extractor.extract_nit("NIT Receptor: 88911969")
+        assert isinstance(result, list)
+        assert "88911969" in result
+
+    def test_nit_certificador_sin_guion(self, extractor):
+        """Extrae NIT Certificador sin guion."""
+        result = extractor.extract_nit("NIT Certificador: 16693949")
+        assert isinstance(result, list)
+        assert "16693949" in result
+
+    def test_nit_sin_guion_no_es_telefono(self, extractor):
+        """NIT sin guion con contexto NO debe detectarse como teléfono."""
+        result = extractor.extract_phones("NIT Emisor: 80169988")
+        assert len(result) == 0, f"NIT sin guion detectado como teléfono: {result}"
+
+
+class TestExtractorSerieSAT:
+    """Tests para serie alfanumérica FEL/SAT (8 chars hex)."""
+
+    def test_serie_sat_campo_serie(self, extractor):
+        """Extrae serie FEL del campo SERIE."""
+        result = extractor.extract_serie_sat("SERIE: E5742FBD")
+        assert isinstance(result, list)
+        assert "E5742FBD" in result
+
+    def test_serie_sat_no_captura_uuid_completo(self, extractor):
+        """El campo SERIE con UUID completo no debe capturar como serie_sat."""
+        text = "NUMERO DE AUTORIZACION: E5742FBD-429D-416B-AB81-9F39A6EB34A7"
+        result = extractor.extract_serie_sat(text)
+        assert len(result) == 0, f"UUID captado incorrectamente como serie_sat: {result}"
+
+    def test_serie_sat_retorna_mayusculas(self, extractor):
+        """La serie SAT siempre se retorna en mayúsculas."""
+        result = extractor.extract_serie_sat("SERIE: e5742fbd")
+        assert isinstance(result, list)
+        if result:
+            assert result[0] == result[0].upper()
+
+    def test_serie_sat_vacia(self, extractor, empty_text):
+        """Maneja texto vacío."""
+        result = extractor.extract_serie_sat(empty_text)
+        assert isinstance(result, list)
+        assert len(result) == 0
+
+
+class TestExtractorAutorizacionSAT:
+    """Tests para UUID de autorización SAT (Factura FEL)."""
+
+    def test_autorizacion_con_contexto(self, extractor):
+        """Extrae UUID con etiqueta NUMERO DE AUTORIZACION."""
+        text = "NUMERO DE AUTORIZACION: E5742FBD-429D-416B-AB81-9F39A6EB34A7"
+        result = extractor.extract_autorizacion_sat(text)
+        assert isinstance(result, list)
+        assert "E5742FBD-429D-416B-AB81-9F39A6EB34A7" in result
+
+    def test_autorizacion_uuid_raw(self, extractor):
+        """Extrae UUID sin etiqueta (fallback)."""
+        text = "Autorizado: E5742FBD-429D-416B-AB81-9F39A6EB34A7 ok"
+        result = extractor.extract_autorizacion_sat(text)
+        assert isinstance(result, list)
+        assert len(result) >= 1
+
+    def test_autorizacion_retorna_mayusculas(self, extractor):
+        """UUID siempre retornado en mayúsculas."""
+        text = "AUTORIZACION: e5742fbd-429d-416b-ab81-9f39a6eb34a7"
+        result = extractor.extract_autorizacion_sat(text)
+        assert isinstance(result, list)
+        if result:
+            assert result[0] == result[0].upper()
+
+    def test_autorizacion_vacia(self, extractor, empty_text):
+        """Maneja texto vacío."""
+        result = extractor.extract_autorizacion_sat(empty_text)
+        assert isinstance(result, list)
+        assert len(result) == 0
+
+
+class TestExtractorNumeroDTE:
+    """Tests para número DTE (Documento Tributario Electrónico SAT)."""
+
+    def test_numero_dte_con_contexto(self, extractor):
+        """Extrae número DTE con etiqueta 'NUMERO DTE'."""
+        result = extractor.extract_numero_dte("NUMERO DTE: 1117602155")
+        assert isinstance(result, list)
+        assert "1117602155" in result
+
+    def test_numero_dte_n_dte(self, extractor):
+        """Extrae número DTE con etiqueta 'N° DTE'."""
+        result = extractor.extract_numero_dte("N° DTE: 1117602155")
+        assert isinstance(result, list)
+        assert len(result) >= 1
+
+    def test_numero_dte_no_es_telefono(self, extractor):
+        """Número DTE largo NO debe detectarse como teléfono."""
+        result = extractor.extract_phones("NUMERO DTE: 1117602155")
+        assert len(result) == 0, f"DTE detectado como teléfono: {result}"
+
+    def test_numero_dte_vacio(self, extractor, empty_text):
+        """Maneja texto vacío."""
+        result = extractor.extract_numero_dte(empty_text)
+        assert isinstance(result, list)
+        assert len(result) == 0
+
+
+class TestExtractorMoneda:
+    """Tests para extracción del campo MONEDA en documentos FEL."""
+
+    def test_moneda_gtq(self, extractor):
+        """Extrae moneda GTQ del campo MONEDA."""
+        result = extractor.extract_moneda("MONEDA: GTQ")
+        assert isinstance(result, list)
+        assert "GTQ" in result
+
+    def test_moneda_usd(self, extractor):
+        """Extrae moneda USD del campo MONEDA."""
+        result = extractor.extract_moneda("MONEDA: USD")
+        assert isinstance(result, list)
+        assert "USD" in result
+
+    def test_moneda_retorna_mayusculas(self, extractor):
+        """Código de moneda siempre en mayúsculas."""
+        result = extractor.extract_moneda("Moneda: gtq")
+        assert isinstance(result, list)
+        if result:
+            assert result[0] == result[0].upper()
+
+    def test_moneda_vacia(self, extractor, empty_text):
+        """Maneja texto vacío."""
+        result = extractor.extract_moneda(empty_text)
+        assert isinstance(result, list)
+        assert len(result) == 0
+
+
+class TestExtractorFalsePositivesFEL:
+    """Verifica que UUID, DTE y NITs sin guion no generan falsos positivos."""
+
+    def test_uuid_no_es_telefono(self, extractor):
+        """UUID de autorización SAT no debe detectarse como teléfono."""
+        result = extractor.extract_phones(
+            "AUTORIZACION: E5742FBD-429D-416B-AB81-9F39A6EB34A7"
+        )
+        assert len(result) == 0, f"UUID detectado como teléfono: {result}"
+
+    def test_dte_largo_no_es_telefono(self, extractor):
+        """Número DTE de 10 dígitos no debe detectarse como teléfono."""
+        result = extractor.extract_phones("NUMERO DTE: 1117602155")
+        assert len(result) == 0, f"DTE detectado como teléfono: {result}"
+
+    def test_nit_8_digitos_no_es_telefono(self, extractor):
+        """NIT de 8 dígitos sin guion y sin contexto no debe ser teléfono."""
+        result = extractor.extract_phones("80169988")
+        assert len(result) == 0
+
+    def test_serie_sat_hex_no_es_otro_campo(self, extractor):
+        """Serie SAT hex no debe aparecer en serie_dte (formato FAC-)."""
+        result = extractor.extract_serie_dte("SERIE: E5742FBD")
+        assert len(result) == 0, f"Serie SAT hex capturada como serie_dte: {result}"
+
+
+class TestExtractorIVAConParentesis:
+    """Tests para IVA con formato '(12%)' en facturas guatemaltecas."""
+
+    def test_iva_con_porcentaje(self, extractor):
+        """Extrae monto después de 'IVA (12%):' como currency."""
+        result = extractor.extract_currency("IVA (12%): 4.29")
+        assert isinstance(result, list)
+        assert "4.29" in result
+
+    def test_iva_sin_parentesis(self, extractor):
+        """Extrae monto después de 'IVA:' (formato sin paréntesis)."""
+        result = extractor.extract_currency("IVA: 130.58")
+        assert isinstance(result, list)
+        assert "130.58" in result
+
+
+class TestExtractorFELCompleto:
+    """Tests de integración con factura FEL real guatemalteca."""
+
+    def test_fel_extrae_nit_emisor(self, extractor, sample_text_factura_fel):
+        """extract_all() detecta NIT Emisor sin guion en FEL real."""
+        result = extractor.extract_all(sample_text_factura_fel)
+        assert "80169988" in result["nit"]
+
+    def test_fel_extrae_nit_receptor(self, extractor, sample_text_factura_fel):
+        """extract_all() detecta NIT Receptor sin guion en FEL real."""
+        result = extractor.extract_all(sample_text_factura_fel)
+        assert "88911969" in result["nit"]
+
+    def test_fel_extrae_nit_certificador(self, extractor, sample_text_factura_fel):
+        """extract_all() detecta NIT Certificador sin guion en FEL real."""
+        result = extractor.extract_all(sample_text_factura_fel)
+        assert "16693949" in result["nit"]
+
+    def test_fel_extrae_autorizacion(self, extractor, sample_text_factura_fel):
+        """extract_all() detecta UUID de autorización SAT."""
+        result = extractor.extract_all(sample_text_factura_fel)
+        assert "E5742FBD-429D-416B-AB81-9F39A6EB34A7" in result["autorizacion_sat"]
+
+    def test_fel_extrae_serie_sat(self, extractor, sample_text_factura_fel):
+        """extract_all() detecta serie alfanumérica SAT."""
+        result = extractor.extract_all(sample_text_factura_fel)
+        assert "E5742FBD" in result["serie_sat"]
+
+    def test_fel_extrae_numero_dte(self, extractor, sample_text_factura_fel):
+        """extract_all() detecta número DTE."""
+        result = extractor.extract_all(sample_text_factura_fel)
+        assert "1117602155" in result["numero_dte"]
+
+    def test_fel_extrae_moneda_gtq(self, extractor, sample_text_factura_fel):
+        """extract_all() detecta MONEDA: GTQ."""
+        result = extractor.extract_all(sample_text_factura_fel)
+        assert "GTQ" in result["moneda"]
+
+    def test_fel_extrae_fecha(self, extractor, sample_text_factura_fel):
+        """extract_all() detecta fecha en formato abreviado español."""
+        result = extractor.extract_all(sample_text_factura_fel)
+        assert "28-abr-2026" in result["fecha_texto"]
+
+    def test_fel_extrae_total(self, extractor, sample_text_factura_fel):
+        """extract_all() detecta monto total como currency."""
+        result = extractor.extract_all(sample_text_factura_fel)
+        assert "40.00" in result["currency"]
+
+    def test_fel_extrae_descuento(self, extractor, sample_text_factura_fel):
+        """extract_all() detecta descuento como currency."""
+        result = extractor.extract_all(sample_text_factura_fel)
+        assert "0.00" in result["currency"]
+
+    def test_fel_no_genera_telefonos_falsos(self, extractor, sample_text_factura_fel):
+        """NITs, UUID y DTE de una FEL real NO deben aparecer como teléfonos."""
+        result = extractor.extract_all(sample_text_factura_fel)
+        assert result["phones"] == [], f"Falsos positivos en teléfonos: {result['phones']}"
+
+    def test_fel_extract_all_retorna_claves_fel(self, extractor, sample_text_factura_fel):
+        """extract_all() incluye todas las claves FEL en el resultado."""
+        result = extractor.extract_all(sample_text_factura_fel)
+        for clave in ("autorizacion_sat", "serie_sat", "numero_dte", "moneda"):
+            assert clave in result, f"Clave FEL faltante: {clave}"
+            assert isinstance(result[clave], list)
