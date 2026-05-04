@@ -462,7 +462,7 @@ st.markdown("""
                 <span class="stat-label">Documentos</span>
             </div>
             <div class="stat-pill">
-                <span class="stat-value">96/96</span>
+                <span class="stat-value">119/119</span>
                 <span class="stat-label">Tests</span>
             </div>
         </div>
@@ -946,62 +946,140 @@ else:
                 extraction = result.get("steps", {}).get("extraction", {})
                 if extraction:
                     with st.expander("🔍 Paso 2: Extracción de Datos", expanded=True):
+
+                        # ── Sección 1: Datos de Contacto y Generales ──────────────────
+                        st.markdown("#### 📬 Datos de Contacto y Generales")
                         col1, col2 = st.columns(2)
 
                         with col1:
-                            st.write("**📧 Emails encontrados:**")
+                            st.write("**📧 Emails:**")
                             emails = extraction.get("emails", [])
                             if emails:
                                 for email in emails:
                                     st.code(email, language="text")
                             else:
-                                st.info("No se encontraron emails")
+                                st.caption("No se encontraron datos")
 
-                            st.write("**📱 Teléfonos encontrados:**")
+                            st.write("**📱 Teléfonos (Guatemala):**")
                             phones = extraction.get("phones", [])
                             if phones:
                                 for phone in phones:
                                     st.code(phone, language="text")
                             else:
-                                st.info("No se encontraron teléfonos")
+                                st.caption("No se encontraron datos")
 
-                            st.write("**🔗 URLs encontradas:**")
+                            st.write("**🔗 URLs:**")
                             urls = extraction.get("urls", [])
                             if urls:
                                 for url in urls:
                                     st.code(url, language="text")
                             else:
-                                st.info("No se encontraron URLs")
+                                st.caption("No se encontraron datos")
 
                         with col2:
-                            st.write("**📅 Fechas encontradas:**")
+                            st.write("**📅 Fechas (numéricas):**")
                             dates = extraction.get("dates", [])
                             if dates:
                                 for date in dates:
                                     st.code(date, language="text")
                             else:
-                                st.info("No se encontraron fechas")
+                                st.caption("No se encontraron datos")
 
-                            st.write("**💰 Valores monetarios:**")
+                            st.write("**📅 Fechas (en español):**")
+                            fechas_texto = extraction.get("fecha_texto", [])
+                            if fechas_texto:
+                                for ft in fechas_texto:
+                                    st.code(ft, language="text")
+                            else:
+                                st.caption("No se encontraron datos")
+
+                            st.write("**💰 Moneda / Valores monetarios:**")
                             currency = extraction.get("currency", [])
                             if currency:
                                 for val in currency:
                                     st.code(val, language="text")
                             else:
-                                st.info("No se encontraron valores")
+                                st.caption("No se encontraron datos")
 
-                            st.write("**🆔 DNI/RFC encontrados:**")
-                            dni_list = extraction.get("dni", [])
-                            rfc_list = extraction.get("rfc", [])
-                            if dni_list or rfc_list:
-                                if dni_list:
-                                    for dni in dni_list:
-                                        st.code(f"DNI: {dni}", language="text")
-                                if rfc_list:
-                                    for rfc in rfc_list:
-                                        st.code(f"RFC: {rfc}", language="text")
+                        st.divider()
+
+                        # ── Sección 2: Datos Tributarios Guatemala ─────────────────────
+                        st.markdown("#### 🇬🇹 Datos Tributarios (Guatemala)")
+                        col3, col4 = st.columns(2)
+
+                        with col3:
+                            st.write("**🆔 NIT (Número de Identificación Tributaria):**")
+                            nit_list = extraction.get("nit", [])
+                            if nit_list:
+                                for nit in nit_list:
+                                    st.code(nit, language="text")
                             else:
-                                st.info("No se encontraron DNI/RFC")
+                                st.caption("No se encontraron datos")
+
+                            st.write("**🪪 DPI / CUI:**")
+                            dpi_list = extraction.get("dpi", [])
+                            if dpi_list:
+                                for dpi in dpi_list:
+                                    st.code(dpi, language="text")
+                            else:
+                                st.caption("No se encontraron datos")
+
+                            st.write("**💱 Moneda:**")
+                            moneda_list = extraction.get("moneda", [])
+                            if moneda_list:
+                                for m in moneda_list:
+                                    st.code(m, language="text")
+                            else:
+                                st.caption("No se encontraron datos")
+
+                        with col4:
+                            st.write("**📑 Serie DTE (SAT):**")
+                            serie_dte = extraction.get("serie_dte", [])
+                            if serie_dte:
+                                for s in serie_dte:
+                                    st.code(s, language="text")
+                            else:
+                                st.caption("No se encontraron datos")
+
+                            st.write("**🔑 Serie FEL (SAT):**")
+                            serie_sat = extraction.get("serie_sat", [])
+                            if serie_sat:
+                                for s in serie_sat:
+                                    st.code(s, language="text")
+                            else:
+                                st.caption("No se encontraron datos")
+
+                            st.write("**💳 Forma de Pago:**")
+                            forma_pago = extraction.get("forma_pago", [])
+                            if forma_pago:
+                                for fp in forma_pago:
+                                    st.code(fp, language="text")
+                            else:
+                                st.caption("No se encontraron datos")
+
+                        # ── Sección 3: FEL — Autorización y DTE ───────────────────────
+                        auth_list = extraction.get("autorizacion_sat", [])
+                        dte_list = extraction.get("numero_dte", [])
+                        if auth_list or dte_list:
+                            st.divider()
+                            st.markdown("#### 🏛️ Autorización SAT / FEL")
+                            fel_col1, fel_col2 = st.columns(2)
+
+                            with fel_col1:
+                                st.write("**🔐 Número de Autorización SAT:**")
+                                if auth_list:
+                                    for auth in auth_list:
+                                        st.code(auth, language="text")
+                                else:
+                                    st.caption("No se encontraron datos")
+
+                            with fel_col2:
+                                st.write("**📟 Número DTE:**")
+                                if dte_list:
+                                    for dte in dte_list:
+                                        st.code(dte, language="text")
+                                else:
+                                    st.caption("No se encontraron datos")
                 else:
                     st.warning("⚠️ Extracción de datos no disponible")
 
@@ -1144,7 +1222,7 @@ else:
         ### 3️⃣ Ver Resultados
         - En la pestaña "Resultados" verás:
           - **OCR**: Texto extraído y confianza
-          - **Extracción de Datos**: Emails, teléfonos, fechas, URLs, monedas, DNI, RFC
+          - **Extracción de Datos**: Emails, teléfonos GT, fechas, URLs, moneda Q/GTQ, NIT, DPI/CUI, Serie DTE, Forma de pago
           - **Clasificación**: Tipo de documento y probabilidades
 
         ### 4️⃣ Descargar Resultados
@@ -1155,7 +1233,7 @@ else:
 
         - **Facturas y Recibos**: Extrae montos, fechas, datos de contacto
         - **Contratos**: Identifica y extrae cláusulas importantes
-        - **Documentos de Identidad**: Extrae DNI, RFC y datos personales
+        - **Documentos de Identidad**: Extrae NIT, DPI/CUI y datos personales guatemaltecos
         - **Correspondencia**: Clasifica automáticamente tipos de documentos
 
         ## ⚠️ Limitaciones
@@ -1222,7 +1300,7 @@ st.markdown("""
     </div>
     <div class="footer-credits">
         Stack: Python 3.13 · Tesseract 5.5.0 · scikit-learn (LinearSVC + TF-IDF) · Streamlit<br/>
-        7 categorías · 245 documentos · F1-macro 0.9940 · 96/96 tests · Versión 1.0.0
+        7 categorías · 490 documentos · F1-macro 0.9940 · 120/120 tests · Versión 1.0.0
     </div>
 </div>
 """, unsafe_allow_html=True)

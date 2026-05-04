@@ -1,14 +1,14 @@
 """Módulo OCR con Pytesseract."""
 
 import logging
-from pathlib import Path
 
 import cv2
 import numpy as np
+import pdfplumber
 import pytesseract
 from PIL import Image
 
-from config import TESSERACT_PATH
+from config import TESSERACT_PATH, TESSDATA_PREFIX
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +22,62 @@ else:
         "Instala Tesseract o define la variable de entorno TESSERACT_PATH."
     )
 
+if TESSDATA_PREFIX:
+    logger.info("TESSDATA_PREFIX configurado en: %s", TESSDATA_PREFIX)
+
+
+def _get_available_languages() -> set[str]:
+    """Obtiene el conjunto de idiomas disponibles en la instalación de Tesseract."""
+    try:
+        return set(pytesseract.get_languages())
+    except pytesseract.TesseractNotFoundError:
+        logger.error("Tesseract no encontrado al consultar idiomas.")
+        return set()
+    except (OSError, RuntimeError, ValueError) as e:
+        logger.warning("No se pudo obtener lista de idiomas: %s", e)
+        return set()
+
+
+def _resolve_lang(requested: str) -> str:
+    """
+    Resuelve el idioma efectivo a usar, priorizando español.
+
+    - Si 'spa' está disponible y 'eng' también → usa 'spa+eng' para mejor cobertura.
+    - Si solo 'spa' está disponible → usa 'spa'.
+    - Si 'spa' no está disponible pero 'eng' sí → avisa y usa 'eng'.
+    - Si el idioma solicitado no es 'spa' → lo valida; si no existe cae a 'eng'.
+    """
+    available = _get_available_languages()
+
+    if not available:
+        logger.warning("No se pudo verificar idiomas disponibles; usando '%s' tal cual.", requested)
+        return requested
+
+    # Caso principal: español
+    if requested in ("spa", "spa+eng"):
+        if "spa" in available and "eng" in available:
+            return "spa+eng"
+        if "spa" in available:
+            return "spa"
+        logger.warning(
+            "Idioma 'spa' no está en la instalación de Tesseract (%s). "
+            "Usando 'eng'. Instala spa.traineddata en %s.",
+            available,
+            TESSDATA_PREFIX or "tessdata/",
+        )
+        return "eng"
+
+    # Idioma arbitrario solicitado
+    if requested in available:
+        return requested
+    logger.warning("Idioma '%s' no disponible, usando 'eng'.", requested)
+    return "eng"
+
+
+# Pre-calcular idioma efectivo al cargar el módulo para detectar problemas temprano
+_EFFECTIVE_LANG = _resolve_lang("spa")
+logger.info("Idioma OCR activo: %s", _EFFECTIVE_LANG)
+
 
 class OCRProcessor:
     """Clase para procesar OCR en imágenes y PDFs."""
@@ -31,7 +87,7 @@ class OCRProcessor:
         Inicializa el procesador OCR.
 
         Args:
-            tesseract_path: Ruta al ejecutable de Tesseract (opcional - usa config.TESSERACT_PATH por defecto)
+            tesseract_path: Ruta al ejecutable de Tesseract (opcional).
         """
         if tesseract_path:
             # Permitir override por parámetro
@@ -50,28 +106,17 @@ class OCRProcessor:
             dict: Diccionario con texto extraído y confianza
         """
         try:
-            logger.debug("Procesando imagen: %s (idioma: %s)", image_path, lang)
+            effective_lang = _resolve_lang(lang)
+            logger.debug("Procesando imagen: %s (idioma efectivo: %s)", image_path, effective_lang)
             image = Image.open(image_path)
-            try:
-                text = pytesseract.image_to_string(image, lang=lang)
-            except pytesseract.TesseractError:
-                logger.warning("Idioma '%s' no disponible, usando 'eng'", lang)
-                text = pytesseract.image_to_string(image, lang='eng')
+            text = pytesseract.image_to_string(image, lang=effective_lang)
 
             # Obtener datos detallados incluyendo confianza
-            try:
-                data = pytesseract.image_to_data(
-                    image,
-                    lang=lang,
-                    output_type=pytesseract.Output.DICT
-                )
-            except pytesseract.TesseractError:
-                logger.warning("Idioma '%s' no disponible para data, usando 'eng'", lang)
-                data = pytesseract.image_to_data(
-                    image,
-                    lang='eng',
-                    output_type=pytesseract.Output.DICT
-                )
+            data = pytesseract.image_to_data(
+                image,
+                lang=effective_lang,
+                output_type=pytesseract.Output.DICT
+            )
 
             # Calcular confianza promedio (distingue "sin texto" de "confianza baja")
             confidences = [int(conf) for conf in data['conf'] if int(conf) > 0]
@@ -83,13 +128,13 @@ class OCRProcessor:
             else:
                 avg_confidence = -1.0  # indica que no se detectó texto
 
-            logger.info("OCR imagen completado: confianza %.2f", avg_confidence)
+            logger.info("OCR imagen completado: idioma=%s confianza=%.2f", effective_lang, avg_confidence)
             return {
                 "status": "success",
                 "text": text.strip(),
                 "confidence": round(avg_confidence, 2),
                 "has_text": has_text,
-                "language": lang
+                "language": effective_lang
             }
         except (FileNotFoundError, ValueError, TypeError, OSError) as e:
             logger.error("Error en OCR de imagen: %s", e)
@@ -138,21 +183,15 @@ class OCRProcessor:
             dict: Diccionario con texto extraído por página
         """
         try:
-            import pdfplumber
-
-            logger.debug("Procesando PDF: %s", pdf_path)
+            effective_lang = _resolve_lang(lang)
+            logger.debug("Procesando PDF: %s (idioma efectivo: %s)", pdf_path, effective_lang)
             texts = []
             with pdfplumber.open(pdf_path) as pdf:
                 logger.info("PDF abierto: %d páginas", len(pdf.pages))
                 for i, page in enumerate(pdf.pages):
                     logger.debug("Procesando página %d", i + 1)
-                    # Convertir página a imagen
                     img = page.to_image()
-                    try:
-                        text = pytesseract.image_to_string(img.original, lang=lang)
-                    except pytesseract.TesseractError:
-                        logger.warning("Idioma '%s' no disponible, usando 'eng'", lang)
-                        text = pytesseract.image_to_string(img.original, lang='eng')
+                    text = pytesseract.image_to_string(img.original, lang=effective_lang)
                     texts.append({
                         "page": i + 1,
                         "text": text.strip()
@@ -163,7 +202,7 @@ class OCRProcessor:
                 "status": "success",
                 "pages": texts,
                 "total_pages": len(texts),
-                "language": lang
+                "language": effective_lang
             }
         except (FileNotFoundError, ValueError, TypeError, OSError) as e:
             logger.error("Error en OCR de PDF: %s", e)

@@ -134,6 +134,55 @@ def sample_text_factura_gt():
 
 
 @pytest.fixture
+def sample_text_factura_fel():
+    """Texto OCR de una Factura Electrónica en Línea (FEL) real guatemalteca.
+
+    Valores reales del documento de prueba:
+      Autorización: E5742FBD-429D-416B-AB81-9F39A6EB34A7
+      Serie SAT:    E5742FBD
+      DTE:          1117602155
+      NIT Emisor:   80169988
+      NIT Receptor: 88911969
+      NIT Cert.:    16693949
+      Moneda:       GTQ
+      Total:        40.00
+    """
+    return """
+FACTURA ELECTRONICA EN LINEA (FEL)
+Superintendencia de Administracion Tributaria - SAT Guatemala
+
+NUMERO DE AUTORIZACION: E5742FBD-429D-416B-AB81-9F39A6EB34A7
+SERIE: E5742FBD
+NUMERO DTE: 1117602155
+FECHA CERTIFICACION: 28-abr-2026
+MONEDA: GTQ
+
+EMISOR
+NIT Emisor: 80169988
+Razon Social: SERVICIOS TECNOLOGICOS GT S.A.
+Direccion: 15 Calle 3-20 Zona 10, Guatemala
+
+RECEPTOR
+NIT Receptor: 88911969
+Nombre: JUAN CARLOS PEREZ LOPEZ
+
+CERTIFICADOR
+NIT Certificador: 16693949
+Nombre: INFILE S.A.
+
+DETALLE
+Descripcion          Cantidad    P. Unitario    Descuento    Total
+Servicio Mensual     1           40.00          0.00         40.00
+
+TOTALES
+Descuento:   0.00
+Subtotal:    40.00
+IVA (12%):   4.29
+Total:       40.00
+"""
+
+
+@pytest.fixture
 def empty_text():
     """Texto vacío."""
     return ""
