@@ -1,1 +1,18 @@
-DPI RENAP documento personal identificacion guatemalteco municipio departamento fecha nacimiento numero identificacion
+DOCUMENTO PERSONAL DE IDENTIFICACION
+DPI - RENAP GUATEMALA
+Numero de documento: 00500505
+
+DATOS DEL TITULAR
+Nombre: Carmen Lucia Velasquez Torres
+DPI: 7788 99001 1223
+Fecha nacimiento: 22/12/2000
+Municipio: Villa Nueva
+Departamento: Guatemala
+Estado civil: Soltera
+Sexo: Femenino
+Nacionalidad: Guatemalteca
+
+RENAP - Registro Nacional de las Personas
+Centro America - Guatemala
+Emision: 05/01/2022
+Vencimiento: 05/01/2032

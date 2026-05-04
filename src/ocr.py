@@ -173,11 +173,17 @@ class OCRProcessor:
 
     def extract_text_from_pdf(self, pdf_path: str, lang: str = "spa") -> dict:
         """
-        Extrae texto de un PDF usando OCR.
+        Extrae texto de un PDF.
+
+        Estrategia:
+        1. Intenta extraer texto nativo con pdfplumber (PDFs de texto como fpdf2).
+           Si la página tiene ≥50 caracteres útiles se usa directamente.
+        2. Si el texto nativo es insuficiente (PDF escaneado/imagen) se convierte
+           la página a imagen a 300 DPI y se aplica Tesseract OCR.
 
         Args:
             pdf_path: Ruta al archivo PDF
-            lang: Idioma para OCR
+            lang: Idioma para OCR (fallback)
 
         Returns:
             dict: Diccionario con texto extraído por página
@@ -190,14 +196,21 @@ class OCRProcessor:
                 logger.info("PDF abierto: %d páginas", len(pdf.pages))
                 for i, page in enumerate(pdf.pages):
                     logger.debug("Procesando página %d", i + 1)
-                    img = page.to_image()
-                    text = pytesseract.image_to_string(img.original, lang=effective_lang)
-                    texts.append({
-                        "page": i + 1,
-                        "text": text.strip()
-                    })
 
-            logger.info("OCR PDF completado: %d páginas procesadas", len(texts))
+                    # Intento 1: texto nativo (PDFs generados digitalmente)
+                    native = (page.extract_text() or "").strip()
+                    if len(native) >= 50:
+                        logger.debug("Página %d: texto nativo (%d chars)", i + 1, len(native))
+                        text = native
+                    else:
+                        # Intento 2: OCR a 300 DPI (PDFs escaneados)
+                        logger.debug("Página %d: texto nativo insuficiente, aplicando OCR 300 DPI", i + 1)
+                        img = page.to_image(resolution=300)
+                        text = pytesseract.image_to_string(img.original, lang=effective_lang).strip()
+
+                    texts.append({"page": i + 1, "text": text})
+
+            logger.info("PDF completado: %d páginas procesadas", len(texts))
             return {
                 "status": "success",
                 "pages": texts,

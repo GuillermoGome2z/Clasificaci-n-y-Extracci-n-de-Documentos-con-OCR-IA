@@ -1,1 +1,15 @@
-DPI RENAP documento personal identificacion guatemalteco municipio departamento fecha nacimiento numero identificacion
+DOCUMENTO PERSONAL DE IDENTIFICACION
+DPI - RENAP GUATEMALA
+Numero de documento: 00200202
+
+DATOS DEL TITULAR
+Nombre: Roberto Carlos Fuentes Lopez
+DPI: 9876 54321 9876
+Fecha nacimiento: 03/11/1978
+Municipio: Quetzaltenango
+Departamento: Quetzaltenango
+Nacionalidad: Guatemalteco
+
+Registro Nacional de las Personas - RENAP
+Fecha emision: 20/06/2020
+Fecha vencimiento: 20/06/2030
