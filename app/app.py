@@ -730,8 +730,29 @@ def _badges(items: list, css_cls: str, icon: str = "") -> None:
         )
 
 
-def _conf_meter(value: float, label: str = "Confianza OCR") -> None:
-    """Renderiza un medidor de confianza con barra animada."""
+def _conf_meter(value, label: str = "Confianza OCR") -> None:
+    """Renderiza un medidor de confianza con barra animada.
+
+    value=None  → PDF con texto nativo (no aplica OCR)
+    value<0     → Sin texto detectado
+    value 0-100 → Porcentaje de confianza Tesseract
+    """
+    if value is None:
+        st.markdown(f"""
+    <div class="conf-meter-wrap">
+        <div class="conf-label">{_html.escape(label)}</div>
+        <div class="conf-value" style="color:#6366f1;">Texto digital</div>
+        <div style="font-size:0.75rem;color:#9ca3af;margin-top:0.35rem;">
+            Extraído directamente del PDF · sin OCR
+        </div>
+        <div class="conf-bar-bg" style="margin-top:0.55rem;">
+            <div class="conf-bar-fill"
+                 style="width:100%;background:linear-gradient(90deg,#818cf888,#6366f1);"></div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+        return
+
     if value < 0:
         color, text = "#9ca3af", "— Sin texto"
         pct = 0
@@ -755,6 +776,43 @@ def _conf_meter(value: float, label: str = "Confianza OCR") -> None:
         </div>
     </div>
     """, unsafe_allow_html=True)
+
+
+def _show_field(extraction: dict, key: str, icon: str, label: str,
+                css_cls: str, badge_icon: str) -> bool:
+    """Renderiza etiqueta + badges solo si hay datos. Devuelve True si renderizó."""
+    items = extraction.get(key, [])
+    if items:
+        _field_label(icon, label)
+        _badges(items, css_cls, badge_icon)
+        return True
+    return False
+
+
+# Categorías en orden canónico para mapear índices numéricos → nombres
+_CATEGORIES = ['factura', 'recibo', 'contrato', 'constancia',
+               'carta_formal', 'identificacion', 'otro']
+
+_CAT_DISPLAY = {
+    'factura':        'Factura',
+    'recibo':         'Recibo',
+    'contrato':       'Contrato',
+    'constancia':     'Constancia',
+    'carta_formal':   'Carta Formal',
+    'identificacion': 'Identificación',
+    'otro':           'Otro',
+}
+
+
+def _resolve_cls_label(cls: str) -> str:
+    """Traduce índice numérico (ej. '4') a nombre de categoría ('carta_formal')."""
+    try:
+        idx = int(cls)
+        if 0 <= idx < len(_CATEGORIES):
+            return _CATEGORIES[idx]
+    except (ValueError, TypeError):
+        pass
+    return cls
 
 
 _LANG_MAP = {
@@ -793,6 +851,8 @@ if "pipeline" not in st.session_state:
     st.session_state.pipeline = None
 if "last_result" not in st.session_state:
     st.session_state.last_result = None
+if "last_filename" not in st.session_state:
+    st.session_state.last_filename = None
 
 
 def load_pipeline(tesseract_path=None):
@@ -1020,7 +1080,12 @@ else:
         if uploaded_file is not None:
             col1, col2, col3 = st.columns(3)
             with col1:
-                st.metric("📄 Nombre", uploaded_file.name[:24] + ("…" if len(uploaded_file.name) > 24 else ""))
+                _nm = uploaded_file.name
+                st.metric(
+                    "📄 Nombre",
+                    _nm[:24] + ("…" if len(_nm) > 24 else ""),
+                    help=_nm if len(_nm) > 24 else None,
+                )
             with col2:
                 file_size_mb = uploaded_file.size / (1024 * 1024)
                 st.metric("📦 Tamaño", f"{file_size_mb:.2f} MB")
@@ -1057,6 +1122,7 @@ else:
                     )
                     progress_bar.progress(75)
                     st.session_state.last_result = result
+                    st.session_state.last_filename = uploaded_file.name
                     progress_bar.progress(100)
 
                     if result.get("status") == "success":
@@ -1069,18 +1135,35 @@ else:
 
                         with sc1:
                             ocr_data = result.get("steps", {}).get("ocr", {})
-                            confidence = ocr_data.get("confidence", 0) if ocr_data else 0
-                            if confidence < 0:
+                            confidence = ocr_data.get("confidence") if ocr_data else None
+                            if confidence is None:
+                                st.metric("🔤 Confianza OCR", "Texto digital")
+                            elif confidence < 0:
                                 st.metric("🔤 Confianza OCR", "—")
                             else:
                                 st.metric("🔤 Confianza OCR", f"{confidence:.0f}%")
 
                         with sc2:
                             ext_text = result.get("extracted_text", "") or ""
+                            if not ext_text.strip():
+                                # PDF: aggregate text from all pages
+                                ext_text = " ".join(
+                                    (p.get("text", "") or "")
+                                    for p in result.get("pages", [])
+                                )
                             st.metric("📝 Caracteres", f"{len(ext_text.strip()):,}")
 
                         with sc3:
                             extraction = result.get("steps", {}).get("extraction", {})
+                            if not extraction:
+                                _pgs = result.get("pages", [])
+                                if _pgs:
+                                    _fp = _pgs[0]
+                                    extraction = (
+                                        _fp.get("extraction")
+                                        or _fp.get("extracted_data")
+                                        or {}
+                                    )
                             total_items = sum(
                                 len(v) for v in extraction.values() if isinstance(v, list)
                             ) if extraction else 0
@@ -1094,7 +1177,9 @@ else:
                                     clf = pages[0].get("classification", {})
                             if clf:
                                 cn = (clf.get("predicted_class") or clf.get("class", "N/A"))
-                                st.metric("🏷️ Tipo doc.", cn.title())
+                                _cn_r = _resolve_cls_label(str(cn).lower())
+                                _cn_d = _CAT_DISPLAY.get(_cn_r, _cn_r.replace("_", " ").title())
+                                st.metric("🏷️ Tipo doc.", _cn_d)
                             else:
                                 st.metric("🏷️ Tipo doc.", "N/A")
 
@@ -1109,7 +1194,7 @@ else:
                             st.text_area(
                                 "Contenido del documento:",
                                 value=extracted_text,
-                                height=300,
+                                height=350,
                                 disabled=True,
                                 key="ocr_output_single",
                             )
@@ -1143,7 +1228,7 @@ else:
                                             st.text_area(
                                                 f"Contenido pág. {idx+1}:",
                                                 value=page_text,
-                                                height=250,
+                                                height=300,
                                                 disabled=True,
                                                 key=f"ocr_page_{idx}",
                                                 label_visibility="collapsed",
@@ -1291,7 +1376,7 @@ else:
                     _page_text = _primera.get("text", "") or ""
                     _steps["ocr"] = {
                         "status": "success" if _page_text.strip() else "warning",
-                        "confidence": _primera.get("confidence", 80),
+                        "confidence": _primera.get("confidence"),
                         "language": _primera.get("language", "eng"),
                     }
                     result["steps"] = _steps
@@ -1312,9 +1397,15 @@ else:
             # ── Info general ────────────────────────────────────────────────
             gc1, gc2, gc3 = st.columns(3)
             with gc1:
-                inp = result.get("input_file", "N/A")
-                fn = Path(inp).name if inp and inp != "N/A" else "N/A"
-                st.metric("📁 Archivo", fn[:22] + ("…" if len(fn) > 22 else ""))
+                fn = st.session_state.get("last_filename") or ""
+                if not fn:
+                    inp = result.get("input_file", "N/A")
+                    fn = Path(inp).name if inp and inp != "N/A" else "N/A"
+                st.metric(
+                    "📁 Archivo",
+                    fn[:22] + ("…" if len(fn) > 22 else ""),
+                    help=fn if len(fn) > 22 else None,
+                )
             with gc2:
                 fmt = result.get("format", "N/A")
                 st.metric("🔠 Formato", fmt.upper() if fmt else "N/A")
@@ -1333,7 +1424,7 @@ else:
                     if ocr_data:
                         oc1, oc2, oc3 = st.columns(3)
                         with oc1:
-                            conf = ocr_data.get("confidence", 0)
+                            conf = ocr_data.get("confidence")
                             _conf_meter(conf)
                         with oc2:
                             lang_raw = ocr_data.get("language", "—")
@@ -1365,69 +1456,108 @@ else:
                 extraction = result.get("steps", {}).get("extraction", {})
                 with st.expander("🔍 Paso 2 · Extracción de Datos", expanded=True):
                     if extraction:
+                        # Doc type drives contextual rendering
+                        _clf_s = result.get("steps", {}).get("classification", {})
+                        _raw_cls = (_clf_s.get("predicted_class") or _clf_s.get("class", "otro")).lower()
+                        _doc_type = _resolve_cls_label(_raw_cls)
+                        _fiscal_types = {"factura", "recibo", "contrato", "constancia"}
 
                         # ── Sección A: Contacto y generales ─────────────────
-                        st.markdown("""
-<div class="section-chip">📬 Contacto y generales</div>
-""", unsafe_allow_html=True)
-                        ca1, ca2 = st.columns(2)
-
-                        with ca1:
-                            _field_label("📧", "Correos electrónicos")
-                            _badges(extraction.get("emails", []), "db-email", "📧")
-
-                            _field_label("📱", "Teléfonos (Guatemala)")
-                            _badges(extraction.get("phones", []), "db-phone", "📱")
-
-                            _field_label("🔗", "URLs")
-                            _badges(extraction.get("urls", []), "db-url", "🔗")
-
-                        with ca2:
-                            _field_label("📅", "Fechas numéricas")
-                            _badges(extraction.get("dates", []), "db-date", "📅")
-
-                            _field_label("📆", "Fechas en español")
-                            _badges(extraction.get("fecha_texto", []), "db-date", "📆")
-
-                            _field_label("💰", "Moneda / Valores")
-                            _badges(extraction.get("currency", []), "db-currency", "💰")
-
-                        st.divider()
+                        _contact_defs = [
+                            ("emails",      "📧", "Correos electrónicos", "db-email",    "📧"),
+                            ("phones",      "📱", "Teléfonos",            "db-phone",    "📱"),
+                            ("urls",        "🔗", "URLs",                 "db-url",      "🔗"),
+                            ("dates",       "📅", "Fechas numéricas",     "db-date",     "📅"),
+                            ("fecha_texto", "📆", "Fechas en español",    "db-date",     "📆"),
+                            ("currency",    "💰", "Moneda / Valores",     "db-currency", "💰"),
+                        ]
+                        _active_contact = [
+                            (k, ic, lb, cs, bi)
+                            for k, ic, lb, cs, bi in _contact_defs
+                            if extraction.get(k)
+                        ]
+                        if _active_contact:
+                            st.markdown(
+                                '<div class="section-chip">📬 Contacto y generales</div>',
+                                unsafe_allow_html=True,
+                            )
+                            _mid = (len(_active_contact) + 1) // 2
+                            ca1, ca2 = st.columns(2)
+                            for _fi, (_fk, _fic, _flb, _fcs, _fbi) in enumerate(_active_contact):
+                                with (ca1 if _fi < _mid else ca2):
+                                    _show_field(extraction, _fk, _fic, _flb, _fcs, _fbi)
 
                         # ── Sección B: Tributaria Guatemala ──────────────────
-                        st.markdown("""
-<div class="section-chip">🇬🇹 Datos tributarios Guatemala</div>
-""", unsafe_allow_html=True)
-                        cb1, cb2 = st.columns(2)
+                        # Shown only for fiscal doc types; for carta_formal only "Referencia"
+                        _serie_label = (
+                            "Referencia del documento"
+                            if _doc_type == "carta_formal"
+                            else "Serie DTE clásica"
+                        )
+                        _trib_defs = [
+                            ("nit",        "🆔", "NIT — Número de Identificación Tributaria", "db-nit",    "🆔"),
+                            ("dpi",        "🪪", "DPI / CUI",                                 "db-dpi",    "🪪"),
+                            ("moneda",     "💱", "Moneda del documento",                       "db-moneda", "💱"),
+                            ("serie_dte",  "📑", _serie_label,                                 "db-serie",  "📑"),
+                            ("serie_sat",  "🔑", "Serie FEL / SAT (hex)",                     "db-auth",   "🔑"),
+                            ("forma_pago", "💳", "Forma de pago",                             "db-pago",   "💳"),
+                        ]
+                        _active_trib = [
+                            (k, ic, lb, cs, bi)
+                            for k, ic, lb, cs, bi in _trib_defs
+                            if extraction.get(k)
+                        ]
 
-                        with cb1:
-                            _field_label("🆔", "NIT — Número de Identificación Tributaria")
-                            _badges(extraction.get("nit", []), "db-nit", "🆔")
+                        if _active_trib and _doc_type in _fiscal_types:
+                            st.divider()
+                            st.markdown(
+                                '<div class="section-chip">🇬🇹 Datos tributarios Guatemala</div>',
+                                unsafe_allow_html=True,
+                            )
+                            _mid2 = (len(_active_trib) + 1) // 2
+                            cb1, cb2 = st.columns(2)
+                            for _fi, (_fk, _fic, _flb, _fcs, _fbi) in enumerate(_active_trib):
+                                with (cb1 if _fi < _mid2 else cb2):
+                                    _show_field(extraction, _fk, _fic, _flb, _fcs, _fbi)
 
-                            _field_label("🪪", "DPI / CUI")
-                            _badges(extraction.get("dpi", []), "db-dpi", "🪪")
+                        elif _doc_type == "carta_formal":
+                            # Only show serie_dte as "Referencia del documento"
+                            _carta_ref = [
+                                (k, ic, lb, cs, bi)
+                                for k, ic, lb, cs, bi in _active_trib
+                                if k == "serie_dte"
+                            ]
+                            if _carta_ref:
+                                st.divider()
+                                st.markdown(
+                                    '<div class="section-chip">📄 Datos del documento</div>',
+                                    unsafe_allow_html=True,
+                                )
+                                for (_fk, _fic, _flb, _fcs, _fbi) in _carta_ref:
+                                    _show_field(extraction, _fk, _fic, _flb, _fcs, _fbi)
 
-                            _field_label("💱", "Moneda del documento")
-                            _badges(extraction.get("moneda", []), "db-moneda", "💱")
-
-                        with cb2:
-                            _field_label("📑", "Serie DTE clásica")
-                            _badges(extraction.get("serie_dte", []), "db-serie", "📑")
-
-                            _field_label("🔑", "Serie FEL / SAT (hex)")
-                            _badges(extraction.get("serie_sat", []), "db-auth", "🔑")
-
-                            _field_label("💳", "Forma de pago")
-                            _badges(extraction.get("forma_pago", []), "db-pago", "💳")
+                        elif _active_trib and _doc_type not in {"carta_formal"}:
+                            # otro / identificacion — show whatever data is there
+                            st.divider()
+                            st.markdown(
+                                '<div class="section-chip">🇬🇹 Datos tributarios Guatemala</div>',
+                                unsafe_allow_html=True,
+                            )
+                            _mid2 = (len(_active_trib) + 1) // 2
+                            cb1, cb2 = st.columns(2)
+                            for _fi, (_fk, _fic, _flb, _fcs, _fbi) in enumerate(_active_trib):
+                                with (cb1 if _fi < _mid2 else cb2):
+                                    _show_field(extraction, _fk, _fic, _flb, _fcs, _fbi)
 
                         # ── Sección C: Autorización SAT / FEL ────────────────
                         auth_list = extraction.get("autorizacion_sat", [])
                         dte_list  = extraction.get("numero_dte", [])
-                        if auth_list or dte_list:
+                        if (auth_list or dte_list) and _doc_type in (_fiscal_types | {"otro"}):
                             st.divider()
-                            st.markdown("""
-<div class="section-chip">🏛️ Autorización SAT · FEL</div>
-""", unsafe_allow_html=True)
+                            st.markdown(
+                                '<div class="section-chip">🏛️ Autorización SAT · FEL</div>',
+                                unsafe_allow_html=True,
+                            )
                             cc1, cc2 = st.columns(2)
                             with cc1:
                                 _field_label("🔐", "Número de Autorización SAT")
@@ -1435,6 +1565,14 @@ else:
                             with cc2:
                                 _field_label("📟", "Número DTE")
                                 _badges(dte_list, "db-dte", "📟")
+
+                        if not _active_contact and not _active_trib and not auth_list and not dte_list:
+                            st.markdown("""
+<div class="nx-card nx-info">
+    ℹ️ <strong>Sin datos estructurados encontrados.</strong>
+    El texto fue extraído pero no contiene patrones reconocibles.
+</div>
+""", unsafe_allow_html=True)
 
                     else:
                         st.markdown("""
@@ -1448,14 +1586,17 @@ else:
                 classification = result.get("steps", {}).get("classification", {})
                 with st.expander("🏷️ Paso 3 · Clasificación de Documento", expanded=True):
                     if classification:
-                        class_name = (
-                            classification.get("predicted_class")
-                            or classification.get("class", "desconocida")
-                        ).lower()
+                        class_name = _resolve_cls_label(
+                            (
+                                classification.get("predicted_class")
+                                or classification.get("class", "desconocida")
+                            ).lower()
+                        )
                         confidence = classification.get("confidence", 0) or 0
 
                         badge_css, badge_icon = _BADGE_MAP.get(class_name, ("badge-otro", "📁"))
-                        safe_label = _html.escape(class_name.upper().replace("_", " "))
+                        _display_name = _CAT_DISPLAY.get(class_name, class_name.replace("_", " ").title())
+                        safe_label = _html.escape(_display_name.upper())
 
                         cl1, cl2 = st.columns([1, 2])
 
@@ -1490,11 +1631,13 @@ else:
                                 )
                                 rows_html = ""
                                 for cls, prob in sorted_probs:
-                                    color = _COLOR_MAP.get(cls.lower(), "#6b7280")
+                                    _resolved = _resolve_cls_label(str(cls))
+                                    _disp = _CAT_DISPLAY.get(_resolved, _resolved.replace("_", " ").title())
+                                    color = _COLOR_MAP.get(_resolved.lower(), "#6b7280")
                                     pct = prob * 100
                                     rows_html += f"""
 <div class="prob-row">
-    <div class="prob-label">{_html.escape(cls)}</div>
+    <div class="prob-label">{_html.escape(_disp)}</div>
     <div class="prob-bar-bg">
         <div class="prob-bar-fill"
              style="width:{pct:.1f}%;background:linear-gradient(90deg,{color}88,{color});"></div>
@@ -1530,7 +1673,7 @@ else:
                 )
             with ec2:
                 st.markdown(
-                    '<div class="nx-card nx-info" style="margin:0;">📋 JSON listo para copiar arriba.</div>',
+                    '<div class="nx-card nx-success" style="margin:0;">✅ JSON generado correctamente.</div>',
                     unsafe_allow_html=True,
                 )
             with ec3:
