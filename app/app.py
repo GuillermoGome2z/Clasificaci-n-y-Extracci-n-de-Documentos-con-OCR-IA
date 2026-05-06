@@ -8,7 +8,6 @@ import logging
 import os
 import sys
 import tempfile
-from datetime import datetime
 from pathlib import Path
 
 # Agregar raíz del proyecto al path antes de cualquier import local.
@@ -853,6 +852,17 @@ if "last_result" not in st.session_state:
     st.session_state.last_result = None
 if "last_filename" not in st.session_state:
     st.session_state.last_filename = None
+# Tracks which file was last processed to detect new uploads and avoid stale results
+if "processed_file_id" not in st.session_state:
+    st.session_state.processed_file_id = None
+# Named result vars — completely independent from widget keys to prevent re-processing
+if "resultado_actual" not in st.session_state:
+    st.session_state.resultado_actual = None
+if "pages_actuales" not in st.session_state:
+    st.session_state.pages_actuales = []
+# Page selector stored independently; 1-indexed page number
+if "selected_page_idx" not in st.session_state:
+    st.session_state.selected_page_idx = 1
 
 
 def load_pipeline(tesseract_path=None):
@@ -1055,9 +1065,10 @@ else:
         with col1:
             uploaded_file = st.file_uploader(
                 "Arrastra o selecciona tu archivo",
-                type=["jpg", "jpeg", "png", "pdf", "bmp", "gif"],
+                type=["jpg", "jpeg", "png", "pdf", "bmp"],
+                accept_multiple_files=False,
                 key="file_uploader",
-                help="Formatos soportados: JPG, PNG, BMP, GIF, PDF",
+                help="Sube un único archivo: PDF, JPG, PNG o BMP. No se permiten carpetas.",
             )
 
         with col2:
@@ -1078,56 +1089,112 @@ else:
 
         # ── Info del archivo cargado ────────────────────────────────────────
         if uploaded_file is not None:
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                _nm = uploaded_file.name
-                st.metric(
-                    "📄 Nombre",
-                    _nm[:24] + ("…" if len(_nm) > 24 else ""),
-                    help=_nm if len(_nm) > 24 else None,
+            # Validate extension and MIME type before any processing
+            _ext = uploaded_file.name.rsplit(".", 1)[-1].lower() if "." in uploaded_file.name else ""
+            _mime = (uploaded_file.type or "").lower()
+            _allowed_ext = {"jpg", "jpeg", "png", "pdf", "bmp"}
+            _allowed_mime = {
+                "image/jpeg", "image/png", "application/pdf",
+                "image/bmp", "image/x-bmp", "image/x-ms-bmp",
+            }
+            _file_valid = _ext in _allowed_ext and (_mime in _allowed_mime or not _mime)
+
+            if not _file_valid:
+                st.error(
+                    "⛔ **Formato no permitido.** "
+                    "Sube únicamente PDF o imágenes JPG, PNG o BMP."
                 )
-            with col2:
-                file_size_mb = uploaded_file.size / (1024 * 1024)
-                st.metric("📦 Tamaño", f"{file_size_mb:.2f} MB")
-            with col3:
-                st.metric("🔠 Tipo", uploaded_file.name.split(".")[-1].upper())
-
-            st.divider()
-
-            col_btn, _ = st.columns([1, 4])
-            with col_btn:
-                process_button = st.button(
-                    "🚀 PROCESAR",
-                    use_container_width=True,
-                    type="primary",
-                )
-
-            if process_button:
-                with tempfile.NamedTemporaryFile(
-                    suffix=f".{uploaded_file.name.split('.')[-1]}",
-                    delete=False,
-                ) as tmp_file:
-                    tmp_file.write(uploaded_file.getbuffer())
-                    temp_path = tmp_file.name
-
-                try:
-                    progress_bar = st.progress(0)
-                    status_text = st.empty()
-
-                    status_text.info("⏳ Iniciando reconocimiento óptico…")
-                    progress_bar.progress(25)
-
-                    result = st.session_state.pipeline.process_file(
-                        temp_path, lang=ocr_lang
+            else:
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    _nm = uploaded_file.name
+                    st.metric(
+                        "📄 Nombre",
+                        _nm[:24] + ("…" if len(_nm) > 24 else ""),
+                        help=_nm if len(_nm) > 24 else None,
                     )
-                    progress_bar.progress(75)
-                    st.session_state.last_result = result
-                    st.session_state.last_filename = uploaded_file.name
-                    progress_bar.progress(100)
+                with col2:
+                    file_size_mb = uploaded_file.size / (1024 * 1024)
+                    st.metric("📦 Tamaño", f"{file_size_mb:.2f} MB")
+                with col3:
+                    st.metric("🔠 Tipo", uploaded_file.name.split(".")[-1].upper())
 
+                st.divider()
+
+                col_btn, _ = st.columns([1, 4])
+                with col_btn:
+                    process_button = st.button(
+                        "🚀 PROCESAR",
+                        use_container_width=True,
+                        type="primary",
+                    )
+
+                # Identifier changes when a different file is uploaded
+                _file_id = f"{uploaded_file.name}_{uploaded_file.size}"
+
+                # ── PROCESS (only runs on button click) ─────────────────────
+                if process_button:
+                    with tempfile.NamedTemporaryFile(
+                        suffix=f".{uploaded_file.name.split('.')[-1]}",
+                        delete=False,
+                    ) as tmp_file:
+                        tmp_file.write(uploaded_file.getbuffer())
+                        temp_path = tmp_file.name
+
+                    _proc_status = st.empty()
+                    _prog_bar = st.progress(0)
+                    try:
+                        _proc_status.info("⏳ Iniciando reconocimiento óptico…")
+                        _prog_bar.progress(25)
+
+                        result = st.session_state.pipeline.process_file(
+                            temp_path, lang=ocr_lang
+                        )
+                        _prog_bar.progress(75)
+
+                        # Persist result in named session state — decoupled from widget keys
+                        st.session_state.resultado_actual = result
+                        st.session_state.last_result = result           # Tab 2 compat
+                        st.session_state.last_filename = uploaded_file.name
+                        st.session_state.processed_file_id = _file_id
+                        st.session_state.pages_actuales = result.get("pages", [])
+                        # Reset page to 1 for new document (set BEFORE selectbox renders)
+                        st.session_state.selected_page_idx = 1
+
+                        _prog_bar.progress(100)
+                        if result.get("status") == "success":
+                            _proc_status.success("✅ ¡Documento procesado correctamente!")
+                        else:
+                            _proc_status.error(
+                                f"❌ Error: {result.get('error', 'Error desconocido')}"
+                            )
+
+                    except (ValueError, TypeError, FileNotFoundError, OSError, RuntimeError) as e:
+                        _proc_status.error(f"❌ Excepción: {e}")
+                        st.session_state.processed_file_id = None
+
+                    finally:
+                        for _ in range(3):
+                            try:
+                                Path(temp_path).unlink(missing_ok=True)
+                                break
+                            except PermissionError:
+                                import time as _time
+                                _time.sleep(0.1)
+                        else:
+                            logger.warning("No se pudo eliminar temp: %s", temp_path)
+
+                # ── SHOW RESULTS (reads session_state; persists across ALL reruns) ──
+                # This block is completely independent from process_button.
+                # It runs on page-selector changes, tab switches, any rerun —
+                # pipeline.process_file() is NEVER called from this block.
+                _result_for_this_file = (
+                    st.session_state.get("processed_file_id") == _file_id
+                    and st.session_state.resultado_actual is not None
+                )
+                if _result_for_this_file:
+                    result = st.session_state.resultado_actual
                     if result.get("status") == "success":
-                        status_text.success("✅ ¡Documento procesado correctamente!")
-
                         st.divider()
                         st.markdown('<div class="section-chip">📊 Resumen rápido</div>', unsafe_allow_html=True)
 
@@ -1188,7 +1255,9 @@ else:
                         st.markdown('<div class="section-chip">📋 Texto extraído (OCR)</div>', unsafe_allow_html=True)
 
                         extracted_text = result.get("extracted_text", "").strip()
-                        pages = result.get("pages", [])
+                        # Use pages_actuales from session_state — avoids re-extracting
+                        # from result dict each rerun and guarantees no pipeline call
+                        pages = st.session_state.pages_actuales or (result or {}).get("pages", [])
 
                         if extracted_text:
                             st.text_area(
@@ -1248,13 +1317,19 @@ else:
                                                 f"({pconf:.1%} confianza)"
                                             )
                             else:
+                                # key="selected_page_idx" persists in session_state
+                                # across reruns; set to 1 on new file process above.
                                 selected_page = st.selectbox(
                                     "Selecciona página:",
                                     options=list(range(1, num_pages + 1)),
                                     format_func=lambda x: f"📄 Página {x} / {num_pages}",
-                                    key="page_selector",
+                                    key="selected_page_idx",
                                 )
-                                page_data = pages[selected_page - 1]
+                                logger.debug(
+                                    "Mostrando página %d desde session_state, sin reprocesar",
+                                    selected_page,
+                                )
+                                page_data = st.session_state.pages_actuales[selected_page - 1]
                                 page_text = page_data.get("text", "").strip()
                                 if page_text:
                                     st.text_area(
@@ -1328,22 +1403,10 @@ else:
 """, unsafe_allow_html=True)
 
                     else:
-                        err = result.get("error", "Error desconocido")
-                        status_text.error(f"❌ Error: {err}")
-
-                except (ValueError, TypeError, FileNotFoundError, OSError, RuntimeError) as e:
-                    status_text.error(f"❌ Excepción: {e}")
-
-                finally:
-                    for _ in range(3):
-                        try:
-                            Path(temp_path).unlink(missing_ok=True)
-                            break
-                        except PermissionError:
-                            import time as _time
-                            _time.sleep(0.1)
-                    else:
-                        logger.warning("No se pudo eliminar temp: %s", temp_path)
+                        st.error(
+                            f"❌ Error al procesar: "
+                            f"{(result or {}).get('error', 'Error desconocido')}"
+                        )
 
     # ════════════════════════════════════════════════════════════════════════
     #  TAB 2 — RESULTADOS DETALLADOS
@@ -1664,21 +1727,30 @@ else:
 
             with ec1:
                 json_str = json.dumps(result, indent=2, ensure_ascii=False)
+                _orig_fn = st.session_state.get("last_filename") or "resultado"
+                _base_fn = Path(_orig_fn).stem
                 st.download_button(
                     label="📥 Descargar JSON",
                     data=json_str,
-                    file_name=f"resultado_ocr_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                    file_name=f"resultado_ocr_ia_{_base_fn}.json",
                     mime="application/json",
                     use_container_width=True,
                 )
             with ec2:
                 st.markdown(
-                    '<div class="nx-card nx-success" style="margin:0;">✅ JSON generado correctamente.</div>',
+                    '<div class="nx-card nx-success" style="margin:0;">'
+                    "✅ JSON generado. Si Windows lo abre en VS Code, "
+                    "es la asociación de archivos del sistema — no es un error de la app."
+                    "</div>",
                     unsafe_allow_html=True,
                 )
             with ec3:
                 if st.button("🔄 Limpiar resultados", use_container_width=True):
                     st.session_state.last_result = None
+                    st.session_state.resultado_actual = None
+                    st.session_state.pages_actuales = []
+                    st.session_state.processed_file_id = None
+                    st.session_state.selected_page_idx = 1
                     st.rerun()
 
     # ════════════════════════════════════════════════════════════════════════
