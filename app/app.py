@@ -5,7 +5,6 @@ Aplicación Streamlit para OCR IA Project
 import html as _html
 import json
 import logging
-import os
 import sys
 import tempfile
 from datetime import datetime
@@ -17,9 +16,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 logger = logging.getLogger(__name__)
 
-import streamlit as st
+import streamlit as st  # pylint: disable=wrong-import-position
 
-from src.pipeline import OCRPipeline
+from src.pipeline import OCRPipeline  # pylint: disable=wrong-import-position
 
 
 def _build_export_json(result: dict, original_filename: str) -> str:
@@ -1647,7 +1646,10 @@ else:
                 result = st.session_state.resultado_actual or {}
                 if result.get("status") == "success":
                     st.divider()
-                    st.markdown('<div class="section-chip">📊 Resumen rápido</div>', unsafe_allow_html=True)
+                    st.markdown(
+                        '<div class="section-chip">📊 Resumen rápido</div>',
+                        unsafe_allow_html=True,
+                    )
 
                     sc1, sc2, sc3, sc4 = st.columns(4)
 
@@ -1703,21 +1705,26 @@ else:
 
                     # ── Texto OCR ──────────────────────────────────────
                     st.divider()
-                    st.markdown('<div class="section-chip">📋 Texto extraído (OCR)</div>', unsafe_allow_html=True)
+                    st.markdown(
+                        '<div class="section-chip">📋 Texto extraído (OCR)</div>',
+                        unsafe_allow_html=True,
+                    )
 
                     # pages_actuales tiene prioridad absoluta sobre extracted_text (PDF > imagen).
                     pages = st.session_state.pages_actuales or (result or {}).get("pages", [])
 
                     if pages:
                         num_pages = len(pages)
-                        st.markdown(f"""
-<div class="nx-card nx-info">
-    📑 <strong>PDF con {num_pages} página(s)</strong> · navega entre páginas en la pestaña <strong>📊 Resultados</strong>.
-</div>
-""", unsafe_allow_html=True)
+                        st.markdown(
+                            f'<div class="nx-card nx-info">'
+                            f'📑 <strong>PDF con {num_pages} página(s)</strong>'
+                            f' · navega entre páginas en la pestaña'
+                            f' <strong>📊 Resultados</strong>.</div>',
+                            unsafe_allow_html=True,
+                        )
 
                         # Selector sincronizado con Tab 2.
-                        # Usa key distinto (_ocr_page_sel) + on_change que copia a selected_page_idx.
+                        # Usa key distinto (_ocr_page_sel); on_change copia a selected_page_idx.
                         # Tab 2 usa key="selected_page_idx" como fuente de verdad;
                         # pre-set aquí para evitar valor obsoleto al cambiar de documento.
                         _ocr_clamped = max(1, min(st.session_state.selected_page_idx, num_pages))
@@ -1734,7 +1741,10 @@ else:
                             key="_ocr_page_sel",
                             on_change=_sync_ocr_page_cb,
                         )
-                        st.caption(f"📄 Mostrando página {_ocr_sel} de {num_pages} · sin reprocesar.")
+                        st.caption(
+                            f"📄 Mostrando página {_ocr_sel} de {num_pages}"
+                            " · sin reprocesar."
+                        )
                         logger.debug("OCR tab: página %d de %d", _ocr_sel, num_pages)
 
                         _ocr_pg_idx = _ocr_sel - 1
@@ -1767,25 +1777,32 @@ else:
                             )
                             _ocr_conf_v = _ocr_clf_d.get("confidence", 0) or 0
                             _oc1, _oc2, _oc3, _oc4 = st.columns(4)
-                            with _oc1: st.metric("📝 Palabras", len(_ocr_txt.split()))
-                            with _oc2: st.metric("📏 Caracteres", len(_ocr_txt))
+                            with _oc1:
+                                st.metric("📝 Palabras", len(_ocr_txt.split()))
+                            with _oc2:
+                                st.metric("📏 Caracteres", len(_ocr_txt))
                             with _oc3:
                                 st.metric(
                                     "🏷️ Tipo pág.",
                                     _ocr_cls_n.upper() if _ocr_cls_n != "N/A" else "N/A",
                                 )
-                            with _oc4: st.metric("🔍 Datos ext.", str(_ocr_items))
+                            with _oc4:
+                                st.metric("🔍 Datos ext.", str(_ocr_items))
                             if _ocr_conf_v:
                                 st.caption(f"Confianza clasificación: {_ocr_conf_v:.1%}")
                         else:
                             st.markdown(
-                                f'<div class="nx-card nx-warn">⚠️ Sin texto en página {_ocr_sel}.</div>',
+                                '<div class="nx-card nx-warn">'
+                                f'⚠️ Sin texto en página {_ocr_sel}.</div>',
                                 unsafe_allow_html=True,
                             )
 
                         # Resumen multi-página
                         st.divider()
-                        st.markdown('<div class="section-chip">📊 Resumen del documento</div>', unsafe_allow_html=True)
+                        st.markdown(
+                            '<div class="section-chip">📊 Resumen del documento</div>',
+                            unsafe_allow_html=True,
+                        )
                         total_palabras = sum(
                             len((p.get("text", "") or "").split()) for p in pages
                         )
@@ -1798,12 +1815,16 @@ else:
                             for p in pages
                         ]
                         from collections import Counter
-                        clase_dom, freq = Counter(clases).most_common(1)[0] if clases else ("N/A", 0)
+                        _most_common = Counter(clases).most_common(1)
+                        clase_dom, freq = _most_common[0] if _most_common else ("N/A", 0)
 
                         sc = st.columns(4)
-                        with sc[0]: st.metric("📑 Páginas", num_pages)
-                        with sc[1]: st.metric("✅ Con texto", paginas_con_texto)
-                        with sc[2]: st.metric("📝 Palabras tot.", f"{total_palabras:,}")
+                        with sc[0]:
+                            st.metric("📑 Páginas", num_pages)
+                        with sc[1]:
+                            st.metric("✅ Con texto", paginas_con_texto)
+                        with sc[2]:
+                            st.metric("📝 Palabras tot.", f"{total_palabras:,}")
                         with sc[3]:
                             st.metric(
                                 "🏷️ Tipo dominante",
@@ -1955,8 +1976,11 @@ else:
 </div>
 """, unsafe_allow_html=True)
                     else:
-                        st.markdown('<div class="nx-card nx-warn">⚠️ Datos OCR no disponibles.</div>',
-                                    unsafe_allow_html=True)
+                        st.markdown(
+                            '<div class="nx-card nx-warn">'
+                            '⚠️ Datos OCR no disponibles.</div>',
+                            unsafe_allow_html=True,
+                        )
 
                 # ── PASO 2: EXTRACCIÓN ──────────────────────────────────────
                 extraction = result.get("steps", {}).get("extraction", {})
@@ -2031,7 +2055,7 @@ else:
                                 # NIT: hasta 3 valores
                                 _t2nit = _t2ext.get("nit", []) or []
 
-                                # Fecha: fecha_texto tiene prioridad; combinar con dates si hay espacio
+                                # Fecha: fecha_texto prioridad; combinar con dates si aplica
                                 _t2ft  = _t2ext.get("fecha_texto", []) or []
                                 _t2dt  = _t2ext.get("dates", []) or []
                                 _t2fecha = (_t2ft + [d for d in _t2dt if d not in _t2ft])[:2]
@@ -2041,7 +2065,7 @@ else:
                                 _t2dte_s = _t2ext.get("serie_dte", []) or []
                                 _t2serie = (_t2sat + [s for s in _t2dte_s if s not in _t2sat])[:2]
 
-                                # Autorización: xxxxxxxx-xxxx… (13 chars = primer + segundo segmento UUID)
+                                # Autorización: xxxxxxxx-xxxx… (13 chars, segmentos 1+2 del UUID)
                                 _t2auth = _t2ext.get("autorizacion_sat", []) or []
                                 if _t2auth:
                                     _a = _t2auth[0]
@@ -2116,8 +2140,14 @@ else:
                     if extraction:
                         # Doc type drives contextual rendering;
                         # for multi-page PDFs uses the selected page's classification.
-                        _clf_s = _t2_clf_override or result.get("steps", {}).get("classification", {})
-                        _raw_cls = (_clf_s.get("predicted_class") or _clf_s.get("class", "otro")).lower()
+                        _clf_s = (
+                            _t2_clf_override
+                            or result.get("steps", {}).get("classification", {})
+                        )
+                        _raw_cls = (
+                            _clf_s.get("predicted_class")
+                            or _clf_s.get("class", "otro")
+                        ).lower()
                         _doc_type = _resolve_cls_label(_raw_cls)
                         _fiscal_types = {"factura", "recibo", "contrato", "constancia"}
 
@@ -2154,12 +2184,19 @@ else:
                             else "Serie DTE clásica"
                         )
                         _trib_defs = [
-                            ("nit",        "🆔", "NIT — Número de Identificación Tributaria", "db-nit",    "🆔"),
-                            ("dpi",        "🪪", "DPI / CUI",                                 "db-dpi",    "🪪"),
-                            ("moneda",     "💱", "Moneda del documento",                       "db-moneda", "💱"),
-                            ("serie_dte",  "📑", _serie_label,                                 "db-serie",  "📑"),
-                            ("serie_sat",  "🔑", "Serie FEL / SAT (hex)",                     "db-auth",   "🔑"),
-                            ("forma_pago", "💳", "Forma de pago",                             "db-pago",   "💳"),
+                            ("nit", "🆔",
+                             "NIT — Número de Identificación Tributaria",
+                             "db-nit", "🆔"),
+                            ("dpi", "🪪", "DPI / CUI",
+                             "db-dpi", "🪪"),
+                            ("moneda", "💱", "Moneda del documento",
+                             "db-moneda", "💱"),
+                            ("serie_dte", "📑", _serie_label,
+                             "db-serie", "📑"),
+                            ("serie_sat", "🔑", "Serie FEL / SAT (hex)",
+                             "db-auth", "🔑"),
+                            ("forma_pago", "💳", "Forma de pago",
+                             "db-pago", "💳"),
                         ]
                         _active_trib = [
                             (k, ic, lb, cs, bi)
@@ -2225,7 +2262,12 @@ else:
                                 _field_label("📟", "Número DTE")
                                 _badges(dte_list, "db-dte", "📟")
 
-                        if not _active_contact and not _active_trib and not auth_list and not dte_list:
+                        if (
+                            not _active_contact
+                            and not _active_trib
+                            and not auth_list
+                            and not dte_list
+                        ):
                             st.markdown("""
 <div class="nx-card nx-info">
     ℹ️ <strong>Sin datos estructurados encontrados.</strong>
@@ -2245,7 +2287,8 @@ else:
                 # Para PDFs multipágina, usa la clasificación de la página seleccionada.
                 _t3_pages = st.session_state.pages_actuales
                 if len(_t3_pages) > 1:
-                    _t3_idx = max(0, min(st.session_state.selected_page_idx - 1, len(_t3_pages) - 1))
+                    _t3_raw = st.session_state.selected_page_idx - 1
+                    _t3_idx = max(0, min(_t3_raw, len(_t3_pages) - 1))
                     classification = _t3_pages[_t3_idx].get("classification", {}) or {}
                     if not classification:
                         classification = result.get("steps", {}).get("classification", {})
@@ -2267,7 +2310,9 @@ else:
                         confidence = classification.get("confidence", 0) or 0
 
                         badge_css, badge_icon = _BADGE_MAP.get(class_name, ("badge-otro", "📁"))
-                        _display_name = _CAT_DISPLAY.get(class_name, class_name.replace("_", " ").title())
+                        _display_name = _CAT_DISPLAY.get(
+                            class_name, class_name.replace("_", " ").title()
+                        )
                         safe_label = _html.escape(_display_name.upper())
 
                         cl1, cl2 = st.columns([1, 2])
@@ -2304,7 +2349,10 @@ else:
                                 rows_html = ""
                                 for cls, prob in sorted_probs:
                                     _resolved = _resolve_cls_label(str(cls))
-                                    _disp = _CAT_DISPLAY.get(_resolved, _resolved.replace("_", " ").title())
+                                    _disp = _CAT_DISPLAY.get(
+                                        _resolved,
+                                        _resolved.replace("_", " ").title(),
+                                    )
                                     color = _COLOR_MAP.get(_resolved.lower(), "#6b7280")
                                     pct = prob * 100
                                     rows_html += f"""
@@ -2319,7 +2367,8 @@ else:
                                 st.markdown(rows_html, unsafe_allow_html=True)
                             else:
                                 st.markdown(
-                                    '<div class="nx-card nx-info">Probabilidades no disponibles.</div>',
+                                    '<div class="nx-card nx-info">'
+                                    'Probabilidades no disponibles.</div>',
                                     unsafe_allow_html=True,
                                 )
                     else:
@@ -2331,7 +2380,10 @@ else:
             st.divider()
 
             # ── Exportar ────────────────────────────────────────────────────
-            st.markdown('<div class="section-chip">💾 Exportar resultados</div>', unsafe_allow_html=True)
+            st.markdown(
+                '<div class="section-chip">💾 Exportar resultados</div>',
+                unsafe_allow_html=True,
+            )
             ec1, ec2, ec3 = st.columns(3)
 
             with ec1:
@@ -2347,7 +2399,6 @@ else:
                 )
             with ec2:
                 st.markdown("✅ **Resultado listo para exportar.**")
-                
             with ec3:
                 if st.button("🔄 Limpiar resultados", use_container_width=True):
                     st.session_state.last_result = None
