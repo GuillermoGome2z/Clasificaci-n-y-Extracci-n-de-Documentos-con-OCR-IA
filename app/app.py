@@ -863,6 +863,10 @@ if "pages_actuales" not in st.session_state:
 # Page selector stored independently; 1-indexed page number
 if "selected_page_idx" not in st.session_state:
     st.session_state.selected_page_idx = 1
+if "upload_key_counter" not in st.session_state:
+    st.session_state.upload_key_counter = 0
+if "upload_error" not in st.session_state:
+    st.session_state.upload_error = None
 
 
 def load_pipeline(tesseract_path=None):
@@ -1063,11 +1067,11 @@ else:
         col1, col2 = st.columns([2, 1])
 
         with col1:
-            uploaded_file = st.file_uploader(
+            uploaded_files = st.file_uploader(
                 "Arrastra o selecciona tu archivo",
-                type=["jpg", "jpeg", "png", "pdf", "bmp"],
-                accept_multiple_files=False,
-                key="file_uploader",
+                type=["pdf", "jpg", "jpeg", "png", "bmp"],
+                accept_multiple_files=True,
+                key=f"file_uploader_{st.session_state.upload_key_counter}",
                 help="Sube un único archivo: PDF, JPG, PNG o BMP. No se permiten carpetas.",
             )
 
@@ -1087,53 +1091,104 @@ else:
                 label_visibility="collapsed",
             )
 
-        # ── Info del archivo cargado ────────────────────────────────────────
-        if uploaded_file is not None:
-            # Validate extension and MIME type before any processing
-            _ext = uploaded_file.name.rsplit(".", 1)[-1].lower() if "." in uploaded_file.name else ""
-            _mime = (uploaded_file.type or "").lower()
+        # ── Normalizar: lista → archivo único validado ──────────────────────
+        uploaded_file = None
+        file_valid = False
+
+        if not uploaded_files:
+            pass
+        elif len(uploaded_files) > 1:
+            st.session_state.upload_error = (
+                "No se permiten carpetas ni múltiples archivos. "
+                "Sube únicamente un archivo PDF o una imagen individual."
+            )
+            st.session_state.upload_key_counter += 1
+            st.session_state.resultado_actual = None
+            st.session_state.pages_actuales = []
+            st.session_state.processed_file_id = None
+            st.session_state.selected_page_idx = 1
+            st.rerun()
+        else:
+            _candidate = uploaded_files[0]
+            _ext = _candidate.name.rsplit(".", 1)[-1].lower() if "." in _candidate.name else ""
+            _mime = (_candidate.type or "").lower()
             _allowed_ext = {"jpg", "jpeg", "png", "pdf", "bmp"}
             _allowed_mime = {
                 "image/jpeg", "image/png", "application/pdf",
                 "image/bmp", "image/x-bmp", "image/x-ms-bmp",
             }
-            _file_valid = _ext in _allowed_ext and (_mime in _allowed_mime or not _mime)
-
-            if not _file_valid:
-                st.error(
-                    "⛔ **Formato no permitido.** "
+            if _ext in _allowed_ext and (_mime in _allowed_mime or not _mime):
+                uploaded_file = _candidate
+                file_valid = True
+                st.session_state.upload_error = None
+            else:
+                st.session_state.upload_error = (
+                    "⛔ Formato no permitido. "
                     "Sube únicamente PDF o imágenes JPG, PNG o BMP."
                 )
-            else:
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    _nm = uploaded_file.name
-                    st.metric(
-                        "📄 Nombre",
-                        _nm[:24] + ("…" if len(_nm) > 24 else ""),
-                        help=_nm if len(_nm) > 24 else None,
+                st.session_state.upload_key_counter += 1
+                st.rerun()
+
+        # ── Mostrar error (múltiples archivos o formato no válido) ──────────
+        if st.session_state.upload_error:
+            st.error(st.session_state.upload_error)
+            st.markdown("""
+<div class="nx-card nx-danger">
+    <strong>⛔ Formatos no permitidos:</strong> carpetas, archivos múltiples, ZIP, DOC, DOCX, XLS, etc.<br/>
+    <strong>✅ Formatos permitidos:</strong> PDF, JPG, JPEG, PNG, BMP (un archivo a la vez).
+</div>
+""", unsafe_allow_html=True)
+
+        # ── Info del archivo cargado ────────────────────────────────────────
+        if file_valid and uploaded_file is not None:
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                _nm = uploaded_file.name
+                st.metric(
+                    "📄 Nombre",
+                    _nm[:24] + ("…" if len(_nm) > 24 else ""),
+                    help=_nm if len(_nm) > 24 else None,
+                )
+            with col2:
+                file_size_mb = uploaded_file.size / (1024 * 1024)
+                st.metric("📦 Tamaño", f"{file_size_mb:.2f} MB")
+            with col3:
+                st.metric("🔠 Tipo", uploaded_file.name.split(".")[-1].upper())
+
+            st.divider()
+
+            col_btn, _ = st.columns([1, 4])
+            with col_btn:
+                # key= explícito evita que el contador auto-generado se desplace
+                # cuando upload_error cambia entre reruns, lo que causaría que
+                # Streamlit trate el botón como recién clickeado en un rerun posterior.
+                process_button = st.button(
+                    "🚀 PROCESAR",
+                    key="procesar_btn",
+                    use_container_width=True,
+                    type="primary",
+                )
+
+            # Identifier changes when a different file is uploaded
+            _file_id = f"{uploaded_file.name}_{uploaded_file.size}"
+
+            # ── PROCESS (only runs on button click) ─────────────────────
+            if process_button and file_valid and uploaded_file is not None:
+                # Guard de idempotencia: si este archivo ya fue procesado y el
+                # resultado está en session_state, no volver a llamar al pipeline.
+                # Protege contra reruns espurios donde process_button puede ser
+                # True más de una vez (ej. key-shift por widgets condicionales,
+                # o interacciones del usuario durante un procesamiento largo).
+                _already_processed = (
+                    st.session_state.processed_file_id == _file_id
+                    and st.session_state.resultado_actual is not None
+                )
+
+                if _already_processed:
+                    st.caption(
+                        "✅ Documento ya procesado. Usando resultados guardados."
                     )
-                with col2:
-                    file_size_mb = uploaded_file.size / (1024 * 1024)
-                    st.metric("📦 Tamaño", f"{file_size_mb:.2f} MB")
-                with col3:
-                    st.metric("🔠 Tipo", uploaded_file.name.split(".")[-1].upper())
-
-                st.divider()
-
-                col_btn, _ = st.columns([1, 4])
-                with col_btn:
-                    process_button = st.button(
-                        "🚀 PROCESAR",
-                        use_container_width=True,
-                        type="primary",
-                    )
-
-                # Identifier changes when a different file is uploaded
-                _file_id = f"{uploaded_file.name}_{uploaded_file.size}"
-
-                # ── PROCESS (only runs on button click) ─────────────────────
-                if process_button:
+                else:
                     with tempfile.NamedTemporaryFile(
                         suffix=f".{uploaded_file.name.split('.')[-1]}",
                         delete=False,
@@ -1184,206 +1239,200 @@ else:
                         else:
                             logger.warning("No se pudo eliminar temp: %s", temp_path)
 
-                # ── SHOW RESULTS (reads session_state; persists across ALL reruns) ──
-                # This block is completely independent from process_button.
-                # It runs on page-selector changes, tab switches, any rerun —
-                # pipeline.process_file() is NEVER called from this block.
-                _result_for_this_file = (
-                    st.session_state.get("processed_file_id") == _file_id
-                    and st.session_state.resultado_actual is not None
-                )
-                if _result_for_this_file:
-                    result = st.session_state.resultado_actual
-                    if result.get("status") == "success":
-                        st.divider()
-                        st.markdown('<div class="section-chip">📊 Resumen rápido</div>', unsafe_allow_html=True)
+            # ── SHOW RESULTS (reads session_state; persists across ALL reruns) ──
+            # This block is completely independent from process_button.
+            # It runs on page-selector changes, tab switches, any rerun —
+            # pipeline.process_file() is NEVER called from this block.
+            _result_for_this_file = (
+                st.session_state.get("processed_file_id") == _file_id
+                and st.session_state.resultado_actual is not None
+            )
+            if _result_for_this_file:
+                result = st.session_state.resultado_actual or {}
+                if result.get("status") == "success":
+                    st.divider()
+                    st.markdown('<div class="section-chip">📊 Resumen rápido</div>', unsafe_allow_html=True)
 
-                        sc1, sc2, sc3, sc4 = st.columns(4)
+                    sc1, sc2, sc3, sc4 = st.columns(4)
 
-                        with sc1:
-                            ocr_data = result.get("steps", {}).get("ocr", {})
-                            confidence = ocr_data.get("confidence") if ocr_data else None
-                            if confidence is None:
-                                st.metric("🔤 Confianza OCR", "Texto digital")
-                            elif confidence < 0:
-                                st.metric("🔤 Confianza OCR", "—")
-                            else:
-                                st.metric("🔤 Confianza OCR", f"{confidence:.0f}%")
+                    with sc1:
+                        ocr_data = result.get("steps", {}).get("ocr", {})
+                        confidence = ocr_data.get("confidence") if ocr_data else None
+                        if confidence is None:
+                            st.metric("🔤 Confianza OCR", "Texto digital")
+                        elif confidence < 0:
+                            st.metric("🔤 Confianza OCR", "—")
+                        else:
+                            st.metric("🔤 Confianza OCR", f"{confidence:.0f}%")
 
-                        with sc2:
-                            ext_text = result.get("extracted_text", "") or ""
-                            if not ext_text.strip():
-                                # PDF: aggregate text from all pages
-                                ext_text = " ".join(
-                                    (p.get("text", "") or "")
-                                    for p in result.get("pages", [])
-                                )
-                            st.metric("📝 Caracteres", f"{len(ext_text.strip()):,}")
-
-                        with sc3:
-                            extraction = result.get("steps", {}).get("extraction", {})
-                            if not extraction:
-                                _pgs = result.get("pages", [])
-                                if _pgs:
-                                    _fp = _pgs[0]
-                                    extraction = (
-                                        _fp.get("extraction")
-                                        or _fp.get("extracted_data")
-                                        or {}
-                                    )
-                            total_items = sum(
-                                len(v) for v in extraction.values() if isinstance(v, list)
-                            ) if extraction else 0
-                            st.metric("🔍 Datos extraídos", str(total_items))
-
-                        with sc4:
-                            clf = result.get("steps", {}).get("classification", {})
-                            if not clf:
-                                pages = result.get("pages", [])
-                                if pages:
-                                    clf = pages[0].get("classification", {})
-                            if clf:
-                                cn = (clf.get("predicted_class") or clf.get("class", "N/A"))
-                                _cn_r = _resolve_cls_label(str(cn).lower())
-                                _cn_d = _CAT_DISPLAY.get(_cn_r, _cn_r.replace("_", " ").title())
-                                st.metric("🏷️ Tipo doc.", _cn_d)
-                            else:
-                                st.metric("🏷️ Tipo doc.", "N/A")
-
-                        # ── Texto OCR ──────────────────────────────────────
-                        st.divider()
-                        st.markdown('<div class="section-chip">📋 Texto extraído (OCR)</div>', unsafe_allow_html=True)
-
-                        extracted_text = result.get("extracted_text", "").strip()
-                        # Use pages_actuales from session_state — avoids re-extracting
-                        # from result dict each rerun and guarantees no pipeline call
-                        pages = st.session_state.pages_actuales or (result or {}).get("pages", [])
-
-                        if extracted_text:
-                            st.text_area(
-                                "Contenido del documento:",
-                                value=extracted_text,
-                                height=350,
-                                disabled=True,
-                                key="ocr_output_single",
+                    with sc2:
+                        ext_text = result.get("extracted_text", "") or ""
+                        if not ext_text.strip():
+                            # PDF: aggregate text from all pages
+                            ext_text = " ".join(
+                                (p.get("text", "") or "")
+                                for p in result.get("pages", [])
                             )
+                        st.metric("📝 Caracteres", f"{len(ext_text.strip()):,}")
 
-                        elif pages:
-                            num_pages = len(pages)
-                            st.markdown(f"""
+                    with sc3:
+                        extraction = result.get("steps", {}).get("extraction", {})
+                        if not extraction:
+                            _pgs = result.get("pages", [])
+                            if _pgs:
+                                _fp = _pgs[0]
+                                extraction = (
+                                    _fp.get("extraction")
+                                    or _fp.get("extracted_data")
+                                    or {}
+                                )
+                        total_items = sum(
+                            len(v) for v in extraction.values() if isinstance(v, list)
+                        ) if extraction else 0
+                        st.metric("🔍 Datos extraídos", str(total_items))
+
+                    with sc4:
+                        clf = result.get("steps", {}).get("classification", {})
+                        if not clf:
+                            pages = result.get("pages", [])
+                            if pages:
+                                clf = pages[0].get("classification", {})
+                        if clf:
+                            cn = (clf.get("predicted_class") or clf.get("class", "N/A"))
+                            _cn_r = _resolve_cls_label(str(cn).lower())
+                            _cn_d = _CAT_DISPLAY.get(_cn_r, _cn_r.replace("_", " ").title())
+                            st.metric("🏷️ Tipo doc.", _cn_d)
+                        else:
+                            st.metric("🏷️ Tipo doc.", "N/A")
+
+                    # ── Texto OCR ──────────────────────────────────────
+                    st.divider()
+                    st.markdown('<div class="section-chip">📋 Texto extraído (OCR)</div>', unsafe_allow_html=True)
+
+                    # pages_actuales tiene prioridad absoluta sobre extracted_text (PDF > imagen).
+                    pages = st.session_state.pages_actuales or (result or {}).get("pages", [])
+
+                    if pages:
+                        num_pages = len(pages)
+                        st.markdown(f"""
 <div class="nx-card nx-info">
-    📑 <strong>PDF con {num_pages} página(s)</strong> · navegación instantánea entre páginas.
+    📑 <strong>PDF con {num_pages} página(s)</strong> · navega entre páginas en la pestaña <strong>📊 Resultados</strong>.
 </div>
 """, unsafe_allow_html=True)
 
-                            if num_pages <= 5:
-                                page_tabs = st.tabs([f"📄 Pág. {i+1}" for i in range(num_pages)])
-                                for idx, page_tab in enumerate(page_tabs):
-                                    with page_tab:
-                                        page_data = pages[idx]
-                                        page_text = page_data.get("text", "").strip()
-                                        col_a, col_b = st.columns([3, 1])
-                                        with col_a:
-                                            st.markdown(f"**Texto extraído — Página {idx+1}:**")
-                                        with col_b:
-                                            if page_text:
-                                                wc = len(page_text.split())
-                                                st.markdown(
-                                                    f"<span style='float:right;font-size:0.82rem;"
-                                                    f"color:#059669;'>✅ {wc} palabras</span>",
-                                                    unsafe_allow_html=True,
-                                                )
-                                        if page_text:
-                                            st.text_area(
-                                                f"Contenido pág. {idx+1}:",
-                                                value=page_text,
-                                                height=300,
-                                                disabled=True,
-                                                key=f"ocr_page_{idx}",
-                                                label_visibility="collapsed",
-                                            )
-                                        else:
-                                            st.markdown(
-                                                '<div class="nx-card nx-warn">⚠️ Sin texto en esta página.</div>',
-                                                unsafe_allow_html=True,
-                                            )
+                        # Selector sincronizado con Tab 2.
+                        # Usa key distinto (_ocr_page_sel) + on_change que copia a selected_page_idx.
+                        # Tab 2 usa key="selected_page_idx" como fuente de verdad;
+                        # pre-set aquí para evitar valor obsoleto al cambiar de documento.
+                        _ocr_clamped = max(1, min(st.session_state.selected_page_idx, num_pages))
+                        st.session_state["_ocr_page_sel"] = _ocr_clamped
 
-                                        page_clf = page_data.get("classification", {})
-                                        if page_clf:
-                                            pc = (page_clf.get("predicted_class") or page_clf.get("class", "?"))
-                                            pconf = page_clf.get("confidence", 0) or 0
-                                            st.markdown(
-                                                f"**Clasificación:** `{pc.upper()}` "
-                                                f"({pconf:.1%} confianza)"
-                                            )
-                            else:
-                                # key="selected_page_idx" persists in session_state
-                                # across reruns; set to 1 on new file process above.
-                                selected_page = st.selectbox(
-                                    "Selecciona página:",
-                                    options=list(range(1, num_pages + 1)),
-                                    format_func=lambda x: f"📄 Página {x} / {num_pages}",
-                                    key="selected_page_idx",
-                                )
-                                logger.debug(
-                                    "Mostrando página %d desde session_state, sin reprocesar",
-                                    selected_page,
-                                )
-                                page_data = st.session_state.pages_actuales[selected_page - 1]
-                                page_text = page_data.get("text", "").strip()
-                                if page_text:
-                                    st.text_area(
-                                        f"Contenido página {selected_page}:",
-                                        value=page_text,
-                                        height=300,
-                                        disabled=True,
-                                        key=f"ocr_multi_{selected_page}",
-                                    )
-                                    cols = st.columns(3)
-                                    with cols[0]:
-                                        st.metric("📝 Palabras", len(page_text.split()))
-                                    with cols[1]:
-                                        st.metric("📏 Caracteres", len(page_text))
-                                    with cols[2]:
-                                        pc_data = page_data.get("classification", {})
-                                        pc_name = pc_data.get("predicted_class") or pc_data.get("class", "?")
-                                        st.metric("🏷️ Tipo", pc_name.upper() if pc_name else "N/A")
-                                else:
-                                    st.markdown(
-                                        f'<div class="nx-card nx-warn">⚠️ Sin texto en página {selected_page}.</div>',
-                                        unsafe_allow_html=True,
-                                    )
+                        def _sync_ocr_page_cb():
+                            st.session_state.selected_page_idx = st.session_state["_ocr_page_sel"]
 
-                            # Resumen multi-página
-                            st.divider()
-                            st.markdown('<div class="section-chip">📊 Resumen del documento</div>', unsafe_allow_html=True)
-                            total_palabras = sum(
-                                len((p.get("text", "") or "").split()) for p in pages
+                        _ocr_sel = st.selectbox(
+                            "Selecciona página / factura:",
+                            options=list(range(1, num_pages + 1)),
+                            index=_ocr_clamped - 1,
+                            format_func=lambda x: f"📄 Página {x} de {num_pages}",
+                            key="_ocr_page_sel",
+                            on_change=_sync_ocr_page_cb,
+                        )
+                        st.caption(f"📄 Mostrando página {_ocr_sel} de {num_pages} · sin reprocesar.")
+                        logger.debug("OCR tab: página %d de %d", _ocr_sel, num_pages)
+
+                        _ocr_pg_idx = _ocr_sel - 1
+                        _ocr_pd = (
+                            st.session_state.pages_actuales[_ocr_pg_idx]
+                            if 0 <= _ocr_pg_idx < len(st.session_state.pages_actuales)
+                            else {}
+                        )
+                        _ocr_txt = (_ocr_pd.get("text", "") or "").strip()
+
+                        if _ocr_txt:
+                            st.text_area(
+                                f"Texto OCR — Página {_ocr_sel}:",
+                                value=_ocr_txt,
+                                height=300,
+                                disabled=True,
+                                key=f"ocr_txt_{_ocr_sel}",
+                                label_visibility="collapsed",
                             )
-                            paginas_con_texto = sum(
-                                1 for p in pages if (p.get("text", "") or "").strip()
+                            _ocr_clf_d = _ocr_pd.get("classification", {}) or {}
+                            _ocr_ext_d = _ocr_pd.get("extraction", {}) or {}
+                            _ocr_items = (
+                                sum(len(v) for v in _ocr_ext_d.values() if isinstance(v, list))
+                                if _ocr_ext_d else 0
                             )
-                            clases = [
-                                (p.get("classification", {}).get("predicted_class")
-                                 or p.get("classification", {}).get("class", "?"))
-                                for p in pages
-                            ]
-                            from collections import Counter
-                            clase_dom, freq = Counter(clases).most_common(1)[0] if clases else ("N/A", 0)
-
-                            sc = st.columns(4)
-                            with sc[0]: st.metric("📑 Páginas", num_pages)
-                            with sc[1]: st.metric("✅ Con texto", paginas_con_texto)
-                            with sc[2]: st.metric("📝 Palabras tot.", f"{total_palabras:,}")
-                            with sc[3]:
+                            _ocr_cls_n = (
+                                _ocr_clf_d.get("predicted_class")
+                                or _ocr_clf_d.get("class", "")
+                                or "N/A"
+                            )
+                            _ocr_conf_v = _ocr_clf_d.get("confidence", 0) or 0
+                            _oc1, _oc2, _oc3, _oc4 = st.columns(4)
+                            with _oc1: st.metric("📝 Palabras", len(_ocr_txt.split()))
+                            with _oc2: st.metric("📏 Caracteres", len(_ocr_txt))
+                            with _oc3:
                                 st.metric(
-                                    "🏷️ Tipo dominante",
-                                    clase_dom.upper() if clase_dom != "N/A" else "N/A",
-                                    delta=f"{freq}/{num_pages} páginas",
+                                    "🏷️ Tipo pág.",
+                                    _ocr_cls_n.upper() if _ocr_cls_n != "N/A" else "N/A",
                                 )
-
+                            with _oc4: st.metric("🔍 Datos ext.", str(_ocr_items))
+                            if _ocr_conf_v:
+                                st.caption(f"Confianza clasificación: {_ocr_conf_v:.1%}")
                         else:
-                            st.markdown("""
+                            st.markdown(
+                                f'<div class="nx-card nx-warn">⚠️ Sin texto en página {_ocr_sel}.</div>',
+                                unsafe_allow_html=True,
+                            )
+
+                        # Resumen multi-página
+                        st.divider()
+                        st.markdown('<div class="section-chip">📊 Resumen del documento</div>', unsafe_allow_html=True)
+                        total_palabras = sum(
+                            len((p.get("text", "") or "").split()) for p in pages
+                        )
+                        paginas_con_texto = sum(
+                            1 for p in pages if (p.get("text", "") or "").strip()
+                        )
+                        clases = [
+                            (p.get("classification", {}).get("predicted_class")
+                             or p.get("classification", {}).get("class", "?"))
+                            for p in pages
+                        ]
+                        from collections import Counter
+                        clase_dom, freq = Counter(clases).most_common(1)[0] if clases else ("N/A", 0)
+
+                        sc = st.columns(4)
+                        with sc[0]: st.metric("📑 Páginas", num_pages)
+                        with sc[1]: st.metric("✅ Con texto", paginas_con_texto)
+                        with sc[2]: st.metric("📝 Palabras tot.", f"{total_palabras:,}")
+                        with sc[3]:
+                            st.metric(
+                                "🏷️ Tipo dominante",
+                                clase_dom.upper() if clase_dom != "N/A" else "N/A",
+                                delta=f"{freq}/{num_pages} páginas",
+                            )
+
+                    elif (result or {}).get("extracted_text", "").strip():
+                        _img_text = (result or {}).get("extracted_text", "").strip()
+                        st.text_area(
+                            "Contenido del documento:",
+                            value=_img_text,
+                            height=300,
+                            disabled=True,
+                            label_visibility="collapsed",
+                        )
+                        _wc = len(_img_text.split())
+                        _cc = len(_img_text)
+                        ic1, ic2 = st.columns(2)
+                        with ic1:
+                            st.metric("📝 Palabras", _wc)
+                        with ic2:
+                            st.metric("📏 Caracteres", _cc)
+                    else:
+                        st.markdown("""
 <div class="nx-card nx-warn">
     ⚠️ <strong>OCR no extrajo texto.</strong><br/>
     <ul style="margin-top:0.4rem;font-size:0.87rem;">
@@ -1394,19 +1443,19 @@ else:
 </div>
 """, unsafe_allow_html=True)
 
-                        st.divider()
-                        st.markdown("""
+                    st.divider()
+                    st.markdown("""
 <div class="nx-card nx-success">
     💡 <strong>Procesamiento completo.</strong>
     Ve a <strong>📊 Resultados</strong> para ver los datos extraídos y la clasificación.
 </div>
 """, unsafe_allow_html=True)
 
-                    else:
-                        st.error(
-                            f"❌ Error al procesar: "
-                            f"{(result or {}).get('error', 'Error desconocido')}"
-                        )
+                else:
+                    st.error(
+                        f"❌ Error al procesar: "
+                        f"{(result or {}).get('error', 'Error desconocido')}"
+                    )
 
     # ════════════════════════════════════════════════════════════════════════
     #  TAB 2 — RESULTADOS DETALLADOS
@@ -1453,8 +1502,6 @@ else:
                     if _clf:
                         _steps["classification"] = _clf
                         result["steps"] = _steps
-                if not result.get("extracted_text"):
-                    result["extracted_text"] = _primera.get("text", "") or ""
             # ── FIN DEL FIX ────────────────────────────────────────────────
 
             # ── Info general ────────────────────────────────────────────────
@@ -1518,9 +1565,162 @@ else:
                 # ── PASO 2: EXTRACCIÓN ──────────────────────────────────────
                 extraction = result.get("steps", {}).get("extraction", {})
                 with st.expander("🔍 Paso 2 · Extracción de Datos", expanded=True):
+                    _t2_pages        = st.session_state.pages_actuales
+                    _t2_multi        = len(_t2_pages) > 1
+                    _t2_clf_override = None
+                    _t2_suppress_no_data = False
+
+                    if _t2_multi:
+                        _t2_mode = st.radio(
+                            "",
+                            ["📄 Ver factura seleccionada", "📋 Ver todas las facturas"],
+                            horizontal=True,
+                            key="t2_view_mode",
+                            label_visibility="collapsed",
+                        )
+
+                        if _t2_mode == "📋 Ver todas las facturas":
+                            st.caption(
+                                "Esta tabla es un resumen por página. "
+                                "Para ver todos los campos extraídos, selecciona una factura "
+                                "en el modo **Ver factura seleccionada**."
+                            )
+
+                            # Selector "Ir al detalle": cambia modo y página en un solo paso
+                            def _goto_detail_cb():
+                                _gp = st.session_state.get("_t2_goto_pg")
+                                if _gp is not None:
+                                    st.session_state.selected_page_idx = _gp
+                                    st.session_state["t2_view_mode"] = "📄 Ver factura seleccionada"
+                                    st.session_state["_t2_goto_pg"] = None
+
+                            _gc1, _ = st.columns([2, 3])
+                            with _gc1:
+                                st.selectbox(
+                                    "Ir al detalle de la página:",
+                                    options=[None] + list(range(1, len(_t2_pages) + 1)),
+                                    format_func=lambda x: (
+                                        "— selecciona para ver detalle —"
+                                        if x is None else f"📄 Ir a página {x}"
+                                    ),
+                                    key="_t2_goto_pg",
+                                    on_change=_goto_detail_cb,
+                                )
+
+                            # ── Tabla resumen mejorada ─────────────────────────
+                            st.markdown(
+                                '<div class="section-chip">📋 Resumen de todas las páginas</div>',
+                                unsafe_allow_html=True,
+                            )
+                            _GT_FISCAL = {"factura", "recibo", "constancia", "contrato"}
+                            _t2_rows = []
+                            for _t2r in _t2_pages:
+                                _t2ext  = _t2r.get("extraction", {}) or {}
+                                _t2clf  = _t2r.get("classification", {}) or {}
+                                _t2num  = _t2r.get("page_number", "?")
+
+                                _t2tipo_raw = (
+                                    _t2clf.get("predicted_class") or _t2clf.get("class", "")
+                                ) or ""
+                                _t2tipo_r = (
+                                    _resolve_cls_label(str(_t2tipo_raw).lower())
+                                    if _t2tipo_raw else ""
+                                )
+                                _t2tipo_d = (
+                                    _CAT_DISPLAY.get(_t2tipo_r, _t2tipo_r.replace("_", " ").title())
+                                    if _t2tipo_r else "—"
+                                )
+                                _t2conf = _t2clf.get("confidence", 0) or 0
+
+                                # NIT: hasta 3 valores
+                                _t2nit = _t2ext.get("nit", []) or []
+
+                                # Fecha: fecha_texto tiene prioridad; combinar con dates si hay espacio
+                                _t2ft  = _t2ext.get("fecha_texto", []) or []
+                                _t2dt  = _t2ext.get("dates", []) or []
+                                _t2fecha = (_t2ft + [d for d in _t2dt if d not in _t2ft])[:2]
+
+                                # Serie: combinar serie_sat + serie_dte (sin corto-circuito)
+                                _t2sat = _t2ext.get("serie_sat", []) or []
+                                _t2dte_s = _t2ext.get("serie_dte", []) or []
+                                _t2serie = (_t2sat + [s for s in _t2dte_s if s not in _t2sat])[:2]
+
+                                # Autorización: xxxxxxxx-xxxx… (13 chars = primer + segundo segmento UUID)
+                                _t2auth = _t2ext.get("autorizacion_sat", []) or []
+                                if _t2auth:
+                                    _a = _t2auth[0]
+                                    _auth_str = (_a[:13] + "…") if len(_a) > 13 else _a
+                                else:
+                                    _auth_str = "—"
+
+                                # No. DTE
+                                _t2dte = _t2ext.get("numero_dte", []) or []
+
+                                # Moneda: campo MONEDA primero, luego inferir de currency
+                                _t2mon = _t2ext.get("moneda", []) or []
+
+                                # Valores: para docs GT priorizar Q/GTQ; filtrar ruido simbólico
+                                _t2cur_all = _t2ext.get("currency", []) or []
+                                if _t2tipo_r in _GT_FISCAL:
+                                    _t2cur_gt = [
+                                        v for v in _t2cur_all
+                                        if str(v).startswith(("Q ", "Q", "GTQ"))
+                                    ]
+                                    _t2cur = (_t2cur_gt or _t2cur_all)[:3]
+                                else:
+                                    _t2cur = _t2cur_all[:3]
+
+                                _t2items = sum(
+                                    len(v) for v in _t2ext.values() if isinstance(v, list)
+                                )
+
+                                _t2_rows.append({
+                                    "Página":        _t2num,
+                                    "Tipo":          _t2tipo_d,
+                                    "Confianza":     f"{_t2conf:.0%}" if _t2conf else "—",
+                                    "NIT":           ", ".join(_t2nit[:3]) if _t2nit else "—",
+                                    "Fecha":         ", ".join(_t2fecha) if _t2fecha else "—",
+                                    "Serie FEL/SAT": ", ".join(_t2serie) if _t2serie else "—",
+                                    "Autorización":  _auth_str,
+                                    "No. DTE":       ", ".join(_t2dte[:2]) if _t2dte else "—",
+                                    "Moneda":        ", ".join(_t2mon[:2]) if _t2mon else "—",
+                                    "Valores":       ", ".join(_t2cur) if _t2cur else "—",
+                                    "Datos ext.":    _t2items,
+                                })
+                            if _t2_rows:
+                                import pandas as _t2_pd
+                                st.dataframe(
+                                    _t2_pd.DataFrame(_t2_rows),
+                                    use_container_width=True,
+                                    hide_index=True,
+                                )
+                            extraction = {}
+                            _t2_suppress_no_data = True
+
+                        else:
+                            # ── Selector + detalle con cards/badges ───────────
+                            _t2_np = len(_t2_pages)
+                            _t2_clamped = max(1, min(st.session_state.selected_page_idx, _t2_np))
+                            _t2_sel = st.selectbox(
+                                "Selecciona la página/factura que deseas revisar:",
+                                options=list(range(1, _t2_np + 1)),
+                                index=_t2_clamped - 1,
+                                format_func=lambda x: f"📄 Página {x} de {_t2_np}",
+                                key="selected_page_idx",
+                            )
+                            _t2_seldata      = _t2_pages[_t2_sel - 1]
+                            extraction       = _t2_seldata.get("extraction", {}) or {}
+                            _t2_clf_override = _t2_seldata.get("classification", {}) or {}
+                            st.markdown(
+                                f'<div class="section-chip">📋 Detalle de la página {_t2_sel}</div>',
+                                unsafe_allow_html=True,
+                            )
+                            st.divider()
+
                     if extraction:
-                        # Doc type drives contextual rendering
-                        _clf_s = result.get("steps", {}).get("classification", {})
+                        # Doc type drives contextual rendering;
+                        # for multi-page PDFs uses the selected page's classification.
+                        _clf_s = _t2_clf_override or result.get("steps", {}).get("classification", {})
                         _raw_cls = (_clf_s.get("predicted_class") or _clf_s.get("class", "otro")).lower()
                         _doc_type = _resolve_cls_label(_raw_cls)
                         _fiscal_types = {"factura", "recibo", "contrato", "constancia"}
@@ -1637,7 +1837,7 @@ else:
 </div>
 """, unsafe_allow_html=True)
 
-                    else:
+                    elif not _t2_suppress_no_data:
                         st.markdown("""
 <div class="nx-card nx-warn">
     ⚠️ <strong>Extracción no disponible.</strong>
@@ -1646,8 +1846,21 @@ else:
 """, unsafe_allow_html=True)
 
                 # ── PASO 3: CLASIFICACIÓN ────────────────────────────────────
-                classification = result.get("steps", {}).get("classification", {})
+                # Para PDFs multipágina, usa la clasificación de la página seleccionada.
+                _t3_pages = st.session_state.pages_actuales
+                if len(_t3_pages) > 1:
+                    _t3_idx = max(0, min(st.session_state.selected_page_idx - 1, len(_t3_pages) - 1))
+                    classification = _t3_pages[_t3_idx].get("classification", {}) or {}
+                    if not classification:
+                        classification = result.get("steps", {}).get("classification", {})
+                else:
+                    classification = result.get("steps", {}).get("classification", {})
                 with st.expander("🏷️ Paso 3 · Clasificación de Documento", expanded=True):
+                    if len(_t3_pages) > 1:
+                        st.caption(
+                            f"Mostrando clasificación de página "
+                            f"{st.session_state.selected_page_idx} de {len(_t3_pages)}"
+                        )
                     if classification:
                         class_name = _resolve_cls_label(
                             (
@@ -1737,13 +1950,8 @@ else:
                     use_container_width=True,
                 )
             with ec2:
-                st.markdown(
-                    '<div class="nx-card nx-success" style="margin:0;">'
-                    "✅ JSON generado. Si Windows lo abre en VS Code, "
-                    "es la asociación de archivos del sistema — no es un error de la app."
-                    "</div>",
-                    unsafe_allow_html=True,
-                )
+                st.markdown("✅ **Resultado listo para exportar.**")
+                
             with ec3:
                 if st.button("🔄 Limpiar resultados", use_container_width=True):
                     st.session_state.last_result = None
