@@ -111,12 +111,17 @@ class DocumentClassifier:
                 else:
                     predicted_class = str(raw_pred)
 
-                # Mapear probabilidades usando model.classes_ si está disponible
-                model_classes = list(getattr(model, "classes_", categories))
-                prob_dict = {
-                    str(cls): float(prob)
-                    for cls, prob in zip(model_classes, probabilities)
-                }
+                # Mapear probabilidades usando model.classes_ si está disponible.
+                # model.classes_ suele ser [0,1,2,...] cuando el modelo fue entrenado
+                # con etiquetas numéricas; se traduce a nombres de categoría.
+                model_classes = list(getattr(model, "classes_", range(len(categories))))
+                prob_dict = {}
+                for cls, prob in zip(model_classes, probabilities):
+                    if isinstance(cls, (int, np.integer)) and int(cls) < len(categories):
+                        key = categories[int(cls)]
+                    else:
+                        key = str(cls)
+                    prob_dict[key] = float(prob)
 
                 result = {
                     "predicted_class": predicted_class,  # Compatibilidad histórica

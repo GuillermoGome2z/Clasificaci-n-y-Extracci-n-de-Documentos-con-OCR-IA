@@ -91,11 +91,24 @@ class DataExtractor:
                 r'-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12})\b'
             ),
 
+            # ── Autorización SAT con tolerancia OCR ───────────────────────
+            # Misma estructura 8-4-4-4-12 pero permite caracteres no-hex
+            # por confusión OCR: 1↔I, 5↔S, 0↔O, 6↔G, etc.
+            # Solo se activa con contexto explícito de AUTORIZACIÓN.
+            "_auth_ocr": (
+                r'(?:AUTORIZACI[OÓ]N|N[°º]?\s*(?:DE\s*)?AUTORIZACI[OÓ]N'
+                r'|N[úu]mero\s+DE\s+AUTORIZACI[OÓ]N'
+                r'|NUMERO\s+DE\s+AUTORIZACION)\s*:?\s*'
+                r'([A-Za-z0-9]{8}-[A-Za-z0-9]{4}-[A-Za-z0-9]{4}'
+                r'-[A-Za-z0-9]{4}-[A-Za-z0-9]{12})'
+            ),
+
             # ── Número DTE (Documento Tributario Electrónico SAT) ─────────
             # Número correlativo largo: 8-12 dígitos con contexto "DTE".
+            # Cubre "NUMERO DTE", "N° DTE" y "Número de DTE" (FEL con tilde).
             "_dte_ctx": (
-                r'(?:N[°º]?\s*(?:DE\s*)?DTE|NUMERO\s+(?:DE\s*)?DTE'
-                r'|DTE\s*N[°º]?)\s*:?\s*(\d{8,12})\b'
+                r'(?:N[°º]?\s*(?:DE\s*)?DTE|N[úu]mero\s+(?:[Dd]e\s+)?DTE'
+                r'|NUMERO\s+(?:DE\s*)?DTE|DTE\s*N[°º]?)\s*:?\s*(\d{8,12})\b'
             ),
 
             # ── Moneda como campo (no como valor monetario) ───────────────
@@ -121,10 +134,11 @@ class DataExtractor:
 
             # ── Montos rotulados sin símbolo (TOTAL, IVA, Subtotal…) ──────
             # IVA acepta paréntesis: "IVA (12%):"
-            # P. Unitario y Precio Unitario incluidos para tablas FEL.
+            # P. Unitario\w* cubre "P. UnitarioconIVA" (OCR sin espacio).
+            # TOTALES? cubre "TOTALES:" además de "TOTAL:".
             "_monto_kw": (
-                r'(?:TOTAL|IVA(?:\s*\([^)]+\))?|Subtotal|Descuento|Monto'
-                r'|P\.\s*Unitario|Precio\s+Unitario|Gran\s+Total)'
+                r'(?:TOTALES?|TOTAL|IVA(?:\s*\([^)]+\))?|Subtotal|Descuento|Monto'
+                r'|P\.\s*Unitario\w*|Precio\s+Unitario|Gran\s+Total)'
                 r'\s*:?\s*([\d,]+(?:\.\d{2})?)'
             ),
         }
@@ -154,7 +168,13 @@ class DataExtractor:
         """Extrae valores monetarios (Q, GTQ, $, €, £, códigos ISO)."""
         with_symbol = re.findall(self.patterns["currency"], text)
         labelled = re.findall(self.patterns["_monto_kw"], text, re.IGNORECASE)
-        return list(set(with_symbol + labelled))
+        # Montos decimales en filas de tabla FEL marcadas con Bien/Servicio
+        item_lines = re.findall(r'(?:Bien|Servicio)\b[^\n]*', text, re.IGNORECASE)
+        tabla_amounts = [
+            m for line in item_lines
+            for m in re.findall(r'\d{1,6}(?:,\d{3})*\.\d{2}', line)
+        ]
+        return list(set(with_symbol + labelled + tabla_amounts))
 
     def extract_nit(self, text: str) -> List[str]:
         """Extrae NIT guatemalteco.
@@ -186,6 +206,17 @@ class DataExtractor:
         with_ctx = re.findall(self.patterns["_auth_ctx"], text, re.IGNORECASE)
         raw = re.findall(self.patterns["_uuid_raw"], text)
         return list({u.upper() for u in with_ctx + raw})
+
+    def extract_autorizacion_sat_ocr(self, text: str) -> List[str]:
+        """Detecta posibles autorizaciones SAT deformadas por OCR.
+
+        Usa el mismo contexto que autorizacion_sat pero tolera caracteres
+        no-hexadecimales (I→1, S→5, O→0, G→6) producidos por confusión OCR.
+        Solo devuelve valores que NO son UUID hexadecimales válidos.
+        """
+        matches = re.findall(self.patterns["_auth_ocr"], text, re.IGNORECASE)
+        valid = set(self.extract_autorizacion_sat(text))
+        return list({m.upper() for m in matches if m.upper() not in valid})
 
     def extract_numero_dte(self, text: str) -> List[str]:
         """Extrae número DTE (Documento Tributario Electrónico SAT)."""
@@ -231,20 +262,21 @@ class DataExtractor:
                 "Iniciando extracción GT (texto: %d caracteres)", len(text)
             )
             result: Dict[str, Any] = {
-                "emails":           self.extract_emails(text),
-                "phones":           self.extract_phones(text),
-                "dates":            self.extract_dates(text),
-                "urls":             self.extract_urls(text),
-                "currency":         self.extract_currency(text),
-                "nit":              self.extract_nit(text),
-                "dpi":              self.extract_dpi(text),
-                "serie_dte":        self.extract_serie_dte(text),
-                "serie_sat":        self.extract_serie_sat(text),
-                "autorizacion_sat": self.extract_autorizacion_sat(text),
-                "numero_dte":       self.extract_numero_dte(text),
-                "moneda":           self.extract_moneda(text),
-                "fecha_texto":      self.extract_fecha_texto(text),
-                "forma_pago":       self.extract_forma_pago(text),
+                "emails":               self.extract_emails(text),
+                "phones":               self.extract_phones(text),
+                "dates":                self.extract_dates(text),
+                "urls":                 self.extract_urls(text),
+                "currency":             self.extract_currency(text),
+                "nit":                  self.extract_nit(text),
+                "dpi":                  self.extract_dpi(text),
+                "serie_dte":            self.extract_serie_dte(text),
+                "serie_sat":            self.extract_serie_sat(text),
+                "autorizacion_sat":     self.extract_autorizacion_sat(text),
+                "autorizacion_sat_ocr": self.extract_autorizacion_sat_ocr(text),
+                "numero_dte":           self.extract_numero_dte(text),
+                "moneda":               self.extract_moneda(text),
+                "fecha_texto":          self.extract_fecha_texto(text),
+                "forma_pago":           self.extract_forma_pago(text),
             }
             total = sum(len(v) for v in result.values())
             logger.info("Extracción completada: %d items extraídos", total)
@@ -254,8 +286,8 @@ class DataExtractor:
             return {
                 "emails": [], "phones": [], "dates": [], "urls": [],
                 "currency": [], "nit": [], "dpi": [], "serie_dte": [],
-                "serie_sat": [], "autorizacion_sat": [], "numero_dte": [],
-                "moneda": [], "fecha_texto": [], "forma_pago": [],
+                "serie_sat": [], "autorizacion_sat": [], "autorizacion_sat_ocr": [],
+                "numero_dte": [], "moneda": [], "fecha_texto": [], "forma_pago": [],
                 "error": str(e),
             }
 
