@@ -8,6 +8,7 @@ import logging
 import os
 import sys
 import tempfile
+from datetime import datetime
 from pathlib import Path
 
 # Agregar raíz del proyecto al path antes de cualquier import local.
@@ -19,6 +20,65 @@ logger = logging.getLogger(__name__)
 import streamlit as st
 
 from src.pipeline import OCRPipeline
+
+
+def _build_export_json(result: dict, original_filename: str) -> str:
+    """Build clean, professional export JSON from a pipeline result dict.
+
+    Replaces the temp input_file path with the original filename, adds
+    processed_at timestamp, flattens the steps nesting, and ensures
+    classification probabilities use category names as keys.
+    """
+    export: dict = {
+        "original_filename": original_filename,
+        "processed_at": datetime.now().isoformat(timespec="seconds"),
+        "format": result.get("format", "unknown"),
+        "status": result.get("status", "unknown"),
+    }
+
+    fmt = result.get("format", "")
+
+    if fmt == "image":
+        ocr_step = result.get("steps", {}).get("ocr", {})
+        export["ocr"] = {
+            "confidence": ocr_step.get("confidence"),
+            "language": ocr_step.get("language"),
+            "has_text": ocr_step.get("has_text"),
+        }
+        export["extraction"] = result.get("steps", {}).get("extraction", {})
+        clf = result.get("steps", {}).get("classification", {})
+        export["classification"] = {
+            "class": clf.get("class"),
+            "confidence": clf.get("confidence"),
+            "probabilities": clf.get("probabilities", {}),
+            "model_type": clf.get("model_type"),
+        }
+        export["extracted_text"] = result.get("extracted_text", "")
+        export["lines"] = result.get("lines", [])
+    else:
+        # PDF — one entry per page
+        pages_out = []
+        for p in result.get("pages", []):
+            clf_p = p.get("classification", {})
+            pages_out.append({
+                "page_number": p.get("page_number"),
+                "extraction": p.get("extraction", {}),
+                "classification": {
+                    "class": clf_p.get("class"),
+                    "confidence": clf_p.get("confidence"),
+                    "probabilities": clf_p.get("probabilities", {}),
+                    "model_type": clf_p.get("model_type"),
+                },
+                "text": p.get("text", ""),
+            })
+        export["total_pages"] = len(pages_out)
+        export["pages"] = pages_out
+
+    errors = result.get("errors", [])
+    if errors:
+        export["errors"] = errors
+
+    return json.dumps(export, indent=2, ensure_ascii=False)
 
 # ── Configuración de la página ───────────────────────────────────────────────
 st.set_page_config(
@@ -685,13 +745,349 @@ html, body, [class*="css"] {
 
 .animate-pulse-once { animation: pulse-ring 1.5s ease-out 1; }
 
-/* ── Responsive ─────────────────────────────────────────────────────────── */
+/* ── Responsive base ─────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
     .hero { padding: 1.75rem 1.25rem; }
     .hero-title { font-size: 1.6rem; }
     .hero-stats { gap: 0.5rem; }
     .stat-pill { min-width: 70px; padding: 0.5rem 0.75rem; }
     .stat-val { font-size: 1.2rem; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   DARK PREMIUM UPGRADE — expoferia edition
+   Overrides CSS: reglas posteriores ganan sin tocar las anteriores.
+══════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Nuevas keyframes ────────────────────────────────────────────────────── */
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(22px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes glowPulse {
+    0%,100% { box-shadow: 0 4px 16px rgba(67,56,202,0.35); }
+    50%      { box-shadow: 0 4px 36px rgba(99,102,241,0.75),
+                           0 0  60px rgba(99,102,241,0.22); }
+}
+@keyframes neonBorder {
+    0%,100% { border-color: rgba(99,102,241,0.25); }
+    50%      { border-color: rgba(99,102,241,0.55); }
+}
+@keyframes slideInRight {
+    from { opacity: 0; transform: translateX(16px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.94); }
+    to   { opacity: 1; transform: scale(1); }
+}
+
+/* ── Fondo principal oscuro ──────────────────────────────────────────────── */
+.stApp {
+    background:
+        radial-gradient(ellipse at 20% 0%,   rgba(99,102,241,0.07) 0%, transparent 55%),
+        radial-gradient(ellipse at 80% 100%,  rgba(14,165,233,0.06) 0%, transparent 55%),
+        linear-gradient(160deg, #09081f 0%, #0d0b28 50%, #090f1c 100%) !important;
+    background-attachment: fixed !important;
+}
+.main .block-container {
+    max-width: 1240px !important;
+    padding-top: 1.25rem !important;
+}
+
+/* Scrollbar personalizado */
+::-webkit-scrollbar              { width: 5px; height: 5px; }
+::-webkit-scrollbar-track        { background: rgba(255,255,255,0.02); }
+::-webkit-scrollbar-thumb        { background: rgba(99,102,241,0.3); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover  { background: rgba(99,102,241,0.5); }
+
+/* ── Texto base ──────────────────────────────────────────────────────────── */
+h1, h2, h3, h4, h5 { color: #f1f5f9 !important; }
+p  { color: #cbd5e1; }
+label { color: #94a3b8 !important; }
+[data-testid="stMarkdownContainer"] p { color: #cbd5e1; }
+[data-testid="stCaptionContainer"]    { color: #64748b !important; }
+hr { border-color: rgba(99,102,241,0.14) !important; }
+
+/* ── Streamlit widgets — dark override ───────────────────────────────────── */
+
+/* Text area */
+.stTextArea textarea {
+    background: rgba(13,11,38,0.92) !important;
+    color: #e2e8f0 !important;
+    border: 1px solid rgba(99,102,241,0.22) !important;
+    border-radius: var(--radius-sm) !important;
+    caret-color: #818cf8;
+}
+.stTextArea textarea:focus {
+    border-color: rgba(99,102,241,0.5) !important;
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.1) !important;
+}
+
+/* Selectbox */
+[data-testid="stSelectbox"] > div > div,
+[data-testid="stSelectbox"] [data-baseweb="select"] {
+    background: rgba(13,11,38,0.88) !important;
+    border: 1px solid rgba(99,102,241,0.22) !important;
+    border-radius: var(--radius-sm) !important;
+}
+[data-testid="stSelectbox"] [data-baseweb="select"] div { color: #e2e8f0 !important; }
+
+/* Expander */
+[data-testid="stExpander"] {
+    background: rgba(13,11,38,0.55) !important;
+    border: 1px solid rgba(99,102,241,0.18) !important;
+    border-radius: var(--radius-md) !important;
+    backdrop-filter: blur(10px) !important;
+    margin-bottom: 1rem !important;
+    animation: fadeInUp 0.4s ease-out !important;
+}
+[data-testid="stExpander"] summary {
+    color: #e2e8f0 !important;
+    font-weight: 600 !important;
+}
+[data-testid="stExpander"] summary:hover { color: #a5b4fc !important; }
+[data-testid="stExpander"] details > div { animation: fadeInUp 0.3s ease-out; }
+
+/* Metric cards */
+[data-testid="stMetric"] {
+    background: rgba(13,11,38,0.6) !important;
+    border: 1px solid rgba(99,102,241,0.2) !important;
+    border-top: 3px solid var(--p500) !important;
+    border-radius: var(--radius-sm) !important;
+    backdrop-filter: blur(8px) !important;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.35) !important;
+}
+[data-testid="stMetric"]:hover {
+    border-color: rgba(99,102,241,0.4) !important;
+    box-shadow: 0 4px 24px rgba(99,102,241,0.18) !important;
+    transform: translateY(-2px) !important;
+}
+[data-testid="stMetricLabel"] { color: #94a3b8 !important; }
+[data-testid="stMetricValue"] { color: #f1f5f9 !important; }
+[data-testid="stMetricDelta"]  { color: #64748b !important; }
+
+/* Radio buttons */
+.stRadio [data-testid="stWidgetLabel"],
+.stRadio label { color: #cbd5e1 !important; }
+.stRadio > div[role="radiogroup"] {
+    background: rgba(13,11,38,0.55);
+    border-radius: var(--radius-sm);
+    padding: 0.3rem;
+    border: 1px solid rgba(99,102,241,0.18);
+    gap: 0.25rem;
+}
+
+/* Checkbox */
+.stCheckbox label > span:last-child { color: #cbd5e1 !important; }
+
+/* DataFrame */
+[data-testid="stDataFrame"] {
+    border-radius: var(--radius-sm) !important;
+    border: 1px solid rgba(99,102,241,0.18) !important;
+    overflow: hidden !important;
+    animation: scaleIn 0.35s ease-out !important;
+}
+
+/* ── Tabs premium dark ───────────────────────────────────────────────────── */
+.stTabs [data-baseweb="tab-list"] {
+    background: rgba(13,11,38,0.7) !important;
+    border: 1px solid rgba(99,102,241,0.2) !important;
+    backdrop-filter: blur(8px) !important;
+}
+.stTabs [data-baseweb="tab"] { color: #64748b !important; }
+.stTabs [aria-selected="true"] {
+    background: linear-gradient(135deg, rgba(67,56,202,0.35), rgba(99,102,241,0.2)) !important;
+    color: #a5b4fc !important;
+    box-shadow: 0 0 14px rgba(99,102,241,0.22) !important;
+    border: 1px solid rgba(99,102,241,0.32) !important;
+}
+.stTabs [data-baseweb="tab-panel"] { animation: fadeInUp 0.35s ease-out; }
+
+/* ── NX Cards — versión dark ─────────────────────────────────────────────── */
+.nx-card { backdrop-filter: blur(8px) !important; }
+.nx-info  {
+    background: rgba(29,78,216,0.13) !important;
+    border-color: rgba(96,165,250,0.35) !important;
+    color: #93c5fd !important;
+}
+.nx-success {
+    background: rgba(5,150,105,0.13) !important;
+    border-color: rgba(52,211,153,0.35) !important;
+    color: #6ee7b7 !important;
+}
+.nx-warn {
+    background: rgba(217,119,6,0.13) !important;
+    border-color: rgba(251,191,36,0.35) !important;
+    color: #fcd34d !important;
+}
+.nx-danger {
+    background: rgba(225,29,72,0.13) !important;
+    border-color: rgba(252,165,165,0.35) !important;
+    color: #fca5a5 !important;
+}
+.nx-card:hover { box-shadow: 0 8px 28px rgba(0,0,0,0.4) !important; }
+
+/* ── Section chip dark glow ──────────────────────────────────────────────── */
+.section-chip {
+    background: rgba(99,102,241,0.12) !important;
+    color: #a5b4fc !important;
+    border-color: rgba(99,102,241,0.32) !important;
+    box-shadow: 0 0 14px rgba(99,102,241,0.1);
+    animation: slideInRight 0.3s ease-out;
+}
+
+/* ── Textos de helpers ───────────────────────────────────────────────────── */
+.section-title-premium    { color: #f1f5f9 !important; }
+.section-subtitle-premium { color: #64748b !important; }
+.field-lbl    { color: #94a3b8 !important; }
+.step-title   { color: #f1f5f9 !important; }
+.step-desc    { color: #64748b !important; }
+.prob-label   { color: #94a3b8 !important; }
+
+/* ── Cards auxiliares dark ───────────────────────────────────────────────── */
+.step-header {
+    background: rgba(13,11,38,0.55) !important;
+    border-color: rgba(99,102,241,0.2) !important;
+    backdrop-filter: blur(8px) !important;
+}
+.conf-meter-wrap {
+    background: rgba(13,11,38,0.6) !important;
+    border-color: rgba(99,102,241,0.2) !important;
+    backdrop-filter: blur(8px) !important;
+}
+.conf-label  { color: #94a3b8 !important; }
+.conf-bar-bg { background: rgba(255,255,255,0.06) !important; }
+
+.class-badge-wrap {
+    background: rgba(13,11,38,0.6) !important;
+    border-color: rgba(99,102,241,0.2) !important;
+    backdrop-filter: blur(8px) !important;
+}
+.class-conf-text { color: #94a3b8 !important; }
+
+.prob-bar-bg { background: rgba(255,255,255,0.06) !important; }
+
+.empty-state {
+    background: rgba(255,255,255,0.03) !important;
+    border-color: rgba(255,255,255,0.08) !important;
+    color: #475569 !important;
+}
+.info-card    { background: rgba(29,78,216,0.1) !important; color: #93c5fd !important; }
+.success-card { background: rgba(5,150,105,0.1) !important; color: #6ee7b7 !important; }
+
+/* ── Glass card class (nueva utilidad) ───────────────────────────────────── */
+.glass-card {
+    background: rgba(255,255,255,0.04);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: var(--radius-md);
+    padding: 1.25rem 1.5rem;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.32);
+    transition: var(--transition);
+}
+.glass-card:hover {
+    background: rgba(255,255,255,0.06);
+    border-color: rgba(99,102,241,0.3);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.42), 0 0 20px rgba(99,102,241,0.09);
+    transform: translateY(-2px);
+}
+
+/* ── PROCESAR — glow pulse ───────────────────────────────────────────────── */
+.stButton > button[kind="primary"] {
+    background: linear-gradient(135deg, #3730a3 0%, #4f46e5 50%, #6366f1 100%) !important;
+    border: 1px solid rgba(99,102,241,0.5) !important;
+    font-size: 1rem !important;
+    letter-spacing: 2px !important;
+    padding: 0.8rem 2.5rem !important;
+    cursor: pointer !important;
+    animation: glowPulse 3s ease-in-out infinite !important;
+}
+.stButton > button[kind="primary"]:hover {
+    animation: none !important;
+    background: linear-gradient(135deg, #4f46e5 0%, #6366f1 50%, #818cf8 100%) !important;
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.28),
+                0 8px 32px rgba(99,102,241,0.52) !important;
+    transform: translateY(-3px) scale(1.035) !important;
+}
+
+/* ── Descargar JSON — teal themed ────────────────────────────────────────── */
+[data-testid="stDownloadButton"] > button {
+    background: linear-gradient(135deg, #0f766e, #0d9488) !important;
+    color: #f0fdfa !important;
+    border: none !important;
+    border-radius: 10px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.5px !important;
+    box-shadow: 0 4px 16px rgba(13,148,136,0.38) !important;
+    transition: var(--transition) !important;
+    cursor: pointer !important;
+}
+[data-testid="stDownloadButton"] > button:hover {
+    background: linear-gradient(135deg, #0d9488, #14b8a6) !important;
+    box-shadow: 0 8px 28px rgba(13,148,136,0.55) !important;
+    transform: translateY(-2px) !important;
+}
+
+/* ── Botones secundarios dark ────────────────────────────────────────────── */
+.stButton > button:not([kind="primary"]) {
+    background: rgba(13,11,38,0.65) !important;
+    color: #a5b4fc !important;
+    border: 1px solid rgba(99,102,241,0.28) !important;
+    cursor: pointer !important;
+}
+.stButton > button:not([kind="primary"]):hover {
+    background: rgba(67,56,202,0.22) !important;
+    border-color: rgba(99,102,241,0.5) !important;
+    color: #c7d2fe !important;
+    transform: translateY(-1px) !important;
+}
+
+/* ── File uploader dark + neon border ────────────────────────────────────── */
+[data-testid="stFileUploader"] {
+    background: rgba(13,11,38,0.55) !important;
+    border: 2px dashed rgba(99,102,241,0.35) !important;
+    border-radius: var(--radius-md) !important;
+    backdrop-filter: blur(8px) !important;
+    animation: neonBorder 4s ease-in-out infinite !important;
+}
+[data-testid="stFileUploader"]:hover {
+    animation: none !important;
+    background: rgba(67,56,202,0.09) !important;
+    border-color: rgba(99,102,241,0.65) !important;
+    box-shadow: 0 0 20px rgba(99,102,241,0.15) !important;
+}
+[data-testid="stFileUploader"] section * { color: #a5b4fc !important; }
+[data-testid="stFileUploader"] button { color: #a5b4fc !important; }
+
+/* ── Sidebar widgets dark overrides ──────────────────────────────────────── */
+[data-testid="stSidebar"] [data-testid="stSelectbox"] > div > div {
+    background: rgba(255,255,255,0.08) !important;
+    border-color: rgba(99,102,241,0.25) !important;
+    color: #e2e8f0 !important;
+}
+[data-testid="stSidebar"] .stCheckbox label > span:last-child {
+    color: #cbd5e1 !important;
+}
+[data-testid="stSidebar"] .stTextInput input {
+    background: rgba(255,255,255,0.06) !important;
+    color: #e2e8f0 !important;
+    border-color: rgba(99,102,241,0.25) !important;
+    border-radius: var(--radius-sm) !important;
+}
+
+/* ── Animación de entrada para paneles y expanders ───────────────────────── */
+.stTabs [data-baseweb="tab-panel"] > div { animation: fadeInUp 0.38s ease-out; }
+[data-testid="stExpander"] > details > div > div { animation: fadeInUp 0.3s ease-out; }
+[data-testid="stMetric"]     { animation: scaleIn 0.3s ease-out; }
+
+/* ── Responsive dark ─────────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+    .main .block-container { padding: 1.25rem !important; }
+}
+@media (max-width: 768px) {
+    .glass-card { padding: 1rem; }
 }
 </style>
 """, unsafe_allow_html=True)
@@ -1939,9 +2335,9 @@ else:
             ec1, ec2, ec3 = st.columns(3)
 
             with ec1:
-                json_str = json.dumps(result, indent=2, ensure_ascii=False)
                 _orig_fn = st.session_state.get("last_filename") or "resultado"
                 _base_fn = Path(_orig_fn).stem
+                json_str = _build_export_json(result, _orig_fn)
                 st.download_button(
                     label="📥 Descargar JSON",
                     data=json_str,
