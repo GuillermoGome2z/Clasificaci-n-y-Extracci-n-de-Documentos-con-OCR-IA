@@ -81,10 +81,13 @@ reporte_*.md
 *.xlsx
 *.csv
 
-# Modelos entrenados (pueden ser grandes; regenerables con train_classifier.py)
-models/classifier_model.joblib
+# Modelos entrenados grandes o regenerables
 models/training_metrics.json
 models/dataset_validation.json
+
+# El modelo principal SÍ se incluye en el repo (846 KB < 25 MB)
+# para que cualquier persona pueda clonar y ejecutar sin reentrenar.
+!models/classifier_model.joblib
 
 # Archivos de configuración de entorno
 .env
