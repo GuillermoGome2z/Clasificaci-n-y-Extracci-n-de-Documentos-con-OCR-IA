@@ -1363,6 +1363,27 @@ with st.sidebar:
 </div>
 """, unsafe_allow_html=True)
 
+    st.markdown("""
+<div style="
+    background:rgba(234,179,8,0.07);
+    border:1px solid rgba(234,179,8,0.28);
+    border-left:3px solid #f59e0b;
+    border-radius:8px;
+    padding:0.65rem 0.8rem;
+    margin-top:0.5rem;
+    font-size:0.69rem;
+    color:#fde68a;
+    line-height:1.55;
+">
+<div style="font-weight:700;margin-bottom:0.3rem;letter-spacing:0.3px;">
+    ⚠️ Aviso Ético
+</div>
+Usar únicamente documentos <strong>ficticios, propios o anonimizados</strong>.
+Los resultados de OCR e IA deben ser <strong>verificados por un humano</strong>
+antes de tomar decisiones. No procesar datos sensibles sin autorización.
+</div>
+""", unsafe_allow_html=True)
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  HERO HEADER
@@ -2499,11 +2520,41 @@ En la pestaña **📊 Resultados** encontrarás:
 
         st.divider()
         st.markdown("""
+<div style="
+    background:rgba(234,179,8,0.07);
+    border:1px solid rgba(234,179,8,0.3);
+    border-left:4px solid #f59e0b;
+    border-radius:12px;
+    padding:1.1rem 1.4rem;
+    color:#fde68a;
+    font-size:0.88rem;
+    line-height:1.7;
+">
+<div style="font-weight:700;font-size:0.95rem;margin-bottom:0.6rem;">
+    ⚠️ Aviso Ético y de Privacidad
+</div>
+<ul style="margin:0;padding-left:1.2rem;">
+<li>Usar <strong>únicamente</strong> documentos ficticios, sintéticos, propios
+    o debidamente anonimizados. Nunca documentos reales de terceros.</li>
+<li>Los resultados de OCR e IA deben ser <strong>verificados por una persona</strong>
+    antes de tomar cualquier decisión basada en ellos.</li>
+<li>No procesar documentos con datos sensibles o confidenciales
+    sin la autorización correspondiente.</li>
+<li><strong>Sin almacenamiento</strong>: los archivos se procesan en memoria
+    y se descartan tras mostrar el resultado (privacidad por diseño).</li>
+<li>Proyecto académico — no apto para uso en producción
+    sin validación profesional adicional.</li>
+</ul>
+</div>
+""", unsafe_allow_html=True)
+
+        st.markdown("""
 ### 🚀 Versión
 **OCR IA Project v1.0.0** · Python 3.13 · Tesseract 5.5.0
 
 ### 👨‍💻 Desarrollo
 Universidad Mariano Gálvez de Guatemala — Curso 045, Inteligencia Artificial
+Catedrático: Ing. MA. Carmelo Estuardo Mayén Monterroso
 
 ### 📝 Licencia
 Proyecto académico de código abierto
