@@ -54,12 +54,18 @@ def _build_export_json(result: dict, original_filename: str) -> str:
         }
         export["extracted_text"] = result.get("extracted_text", "")
         export["lines"] = result.get("lines", [])
+        sem = result.get("steps", {}).get("semantic")
+        if sem is not None:
+            export["semantic"] = sem
+        ctx = result.get("steps", {}).get("contextual")
+        if ctx is not None:
+            export["contextual"] = ctx
     else:
         # PDF — one entry per page
         pages_out = []
         for p in result.get("pages", []):
             clf_p = p.get("classification", {})
-            pages_out.append({
+            page_entry: dict = {
                 "page_number": p.get("page_number"),
                 "extraction": p.get("extraction", {}),
                 "classification": {
@@ -69,7 +75,14 @@ def _build_export_json(result: dict, original_filename: str) -> str:
                     "model_type": clf_p.get("model_type"),
                 },
                 "text": p.get("text", ""),
-            })
+            }
+            sem_p = p.get("semantic")
+            if sem_p is not None:
+                page_entry["semantic"] = sem_p
+            ctx_p = p.get("contextual")
+            if ctx_p is not None:
+                page_entry["contextual"] = ctx_p
+            pages_out.append(page_entry)
         export["total_pages"] = len(pages_out)
         export["pages"] = pages_out
 
@@ -78,6 +91,321 @@ def _build_export_json(result: dict, original_filename: str) -> str:
         export["errors"] = errors
 
     return json.dumps(export, indent=2, ensure_ascii=False)
+
+
+
+def _ctx_field(label: str, value, full: bool = False) -> str:
+    """Genera el HTML de un campo contextual (label + valor)."""
+    css = "ctx-field ctx-full" if full else "ctx-field"
+    if value and str(value).strip():
+        val_html = f'<span class="ctx-value">{_html.escape(str(value).strip())}</span>'
+    else:
+        val_html = '<span class="ctx-value-na">—</span>'
+    return (
+        f'<div class="{css}">'
+        f'<span class="ctx-label">{_html.escape(label)}</span>'
+        f'{val_html}</div>'
+    )
+
+
+def _render_factura_summary(inner: dict, sem: dict) -> None:
+    """Renderiza la card 📌 Resumen interpretado para facturas FEL con secciones."""
+    _cat     = sem.get("categoria_contenido") or inner.get("categoria_gasto") or None
+    _consumo = inner.get("consumo_detectado")
+    _prod    = inner.get("producto_servicio") or _consumo
+    _moneda  = inner.get("moneda") or ""
+    _total_raw = inner.get("total")
+    _total_fmt = f"Q {_total_raw}" if (_total_raw and _moneda.upper() == "GTQ") else _total_raw
+    _imp_raw = inner.get("impuesto")
+    _imp_fmt = f"Q {_imp_raw}" if (_imp_raw and _moneda.upper() == "GTQ") else _imp_raw
+
+    def _sec(title: str) -> str:
+        return f'<div class="ctx-section-title">{_html.escape(title)}</div>'
+
+    sec_doc = (
+        _sec("🧾 DATOS DEL DOCUMENTO")
+        + '<div class="ctx-grid">'
+        + _ctx_field("Tipo de documento", "Factura Electrónica (FEL)")
+        + _ctx_field("Tipo fiscal", inner.get("tipo_fiscal"))
+        + _ctx_field("Categoría de gasto", _cat)
+        + _ctx_field("Consumo detectado", _consumo)
+        + _ctx_field("Producto / Servicio", _prod)
+        + _ctx_field("Forma de pago", inner.get("forma_pago"))
+        + '</div>'
+    )
+    sec_emisor = (
+        '<hr class="ctx-divider">'
+        + _sec("🏪 EMISOR / PROVEEDOR")
+        + '<div class="ctx-grid">'
+        + _ctx_field("Razón social", inner.get("nombre_emisor"))
+        + _ctx_field("Nombre comercial", inner.get("nombre_comercial"))
+        + _ctx_field("NIT Emisor", inner.get("nit_emisor"))
+        + _ctx_field("Teléfono", inner.get("telefono_emisor"))
+        + _ctx_field("Correo", inner.get("email_emisor"))
+        + _ctx_field("Dirección", inner.get("direccion_emisor"), full=True)
+        + '</div>'
+    )
+    sec_receptor = (
+        '<hr class="ctx-divider">'
+        + _sec("👤 RECEPTOR / CLIENTE")
+        + '<div class="ctx-grid">'
+        + _ctx_field("Nombre / Cliente", inner.get("receptor"))
+        + _ctx_field("NIT Receptor", inner.get("nit_receptor"))
+        + _ctx_field("Dirección receptor", inner.get("direccion_receptor"), full=True)
+        + '</div>'
+    )
+    sec_fel = (
+        '<hr class="ctx-divider">'
+        + _sec("🏛️ DATOS SAT / FEL")
+        + '<div class="ctx-grid">'
+        + _ctx_field("Autorización SAT", inner.get("autorizacion_sat"), full=True)
+        + _ctx_field("Serie FEL", inner.get("serie_fel"))
+        + _ctx_field("N° DTE", inner.get("numero_dte"))
+        + _ctx_field("Fecha de emisión", inner.get("fecha_emision"))
+        + _ctx_field("Fecha de certificación", inner.get("fecha_certificacion"))
+        + _ctx_field("Certificador", inner.get("certificador"))
+        + _ctx_field("NIT Certificador", inner.get("nit_certificador"))
+        + '</div>'
+    )
+    sec_economico = (
+        '<hr class="ctx-divider">'
+        + _sec("💰 DETALLE ECONÓMICO")
+        + '<div class="ctx-grid">'
+        + _ctx_field("Moneda", inner.get("moneda"))
+        + _ctx_field("Cantidad", inner.get("cantidad"))
+        + _ctx_field("Precio unitario", inner.get("precio_unitario"))
+        + _ctx_field("Descuento", inner.get("descuento"))
+        + _ctx_field("Impuesto (IVA)", _imp_fmt)
+        + _ctx_field("Total", _total_fmt)
+        + '</div>'
+    )
+    items = inner.get("items") or []
+    items_html = ""
+    if items:
+        item_rows = ""
+        for it in items:
+            desc  = _html.escape(str(it.get("descripcion", "") or ""))
+            cant  = _html.escape(str(it.get("cantidad", "") or ""))
+            pu    = _html.escape(str(it.get("precio_unitario", "") or ""))
+            disc  = _html.escape(str(it.get("descuento", "") or ""))
+            tot   = _html.escape(str(it.get("total", "") or ""))
+            chips = ""
+            if cant:  chips += '<span class="ctx-item-chip">Cant: '  + cant + '</span>'
+            if pu:    chips += '<span class="ctx-item-chip">P.U.: '  + pu   + '</span>'
+            if disc:  chips += '<span class="ctx-item-chip">Desc: '  + disc + '</span>'
+            if tot:   chips += '<span class="ctx-item-chip ctx-item-total">Total: ' + tot + '</span>'
+            item_rows += (
+                '<div class="ctx-item-row">'
+                '<div class="ctx-item-desc">' + (desc or '—') + '</div>'
+                '<div class="ctx-item-meta">' + chips + '</div>'
+                '</div>'
+            )
+        items_html = (
+            '<hr class="ctx-divider">'
+            + _sec("📋 LÍNEAS DE DETALLE")
+            + '<div class="ctx-items-list">' + item_rows + '</div>'
+        )
+    html = (
+        '<div class="ctx-card">'
+        '<div class="ctx-header">'
+        '<span>📌</span>'
+        '<span class="ctx-title">Resumen interpretado del documento</span>'
+        '<span class="ctx-subtitle">Factura Electrónica (FEL)</span>'
+        '</div>'
+        '<div class="ctx-body">'
+        + sec_doc + sec_emisor + sec_receptor + sec_fel + sec_economico + items_html
+        + '</div></div>'
+    )
+    st.markdown(html, unsafe_allow_html=True)
+
+
+def _render_contextual_summary(contextual: dict, semantic: dict | None = None) -> None:
+    """Renderiza la card 📌 Resumen interpretado, integrando análisis semántico."""
+    if not contextual:
+        st.markdown(
+            '<div class="ctx-not-available">📌 Resumen interpretado no disponible.</div>',
+            unsafe_allow_html=True,
+        )
+        return
+
+    if "error" in contextual:
+        st.markdown(
+            '<div class="nx-card nx-warn">⚠️ Error en extracción contextual: '
+            + _html.escape(str(contextual["error"])) + '</div>',
+            unsafe_allow_html=True,
+        )
+        return
+
+    inner = contextual.get("contextual") or {}
+    if not inner or "error" in inner:
+        st.markdown(
+            '<div class="ctx-not-available">📌 Resumen interpretado no disponible para este documento.</div>',
+            unsafe_allow_html=True,
+        )
+        return
+
+    tipo = inner.get("tipo", "otro")
+    sem = semantic or {}
+
+    if tipo == "factura":
+        _render_factura_summary(inner, sem)
+        return
+
+    # ── Helpers locales ────────────────────────────────────────────────────────
+    def _sec(title: str) -> str:
+        return f'<div class="ctx-section-title">{_html.escape(title)}</div>'
+
+    def _grid(*flds) -> str:
+        return (
+            '<div class="ctx-grid">'
+            + ''.join(_ctx_field(lb, v, fw) for lb, v, fw in flds)
+            + '</div>'
+        )
+
+    def _section(title: str, *flds) -> str:
+        return '<hr class="ctx-divider">' + _sec(title) + _grid(*flds)
+
+    # ── Cuerpo por tipo ────────────────────────────────────────────────────────
+    body = ""
+    subtitle = "Información organizada según el tipo detectado"
+
+    if tipo == "recibo":
+        subtitle = "Recibo de Pago"
+        body = (
+            _sec("🧾 DATOS DEL RECIBO")
+            + _grid(
+                ("Tipo de documento",  "Recibo",              False),
+                ("Referencia / N°",    inner.get("referencia"), False),
+                ("Fecha",              inner.get("fecha"),      False),
+                ("Concepto",           inner.get("concepto"),   True),
+                ("Monto en letras",    inner.get("letras"),     True),
+            )
+            + _section("🏪 EMISOR",
+                ("Emisor",     inner.get("emisor"),     False),
+                ("NIT Emisor", inner.get("nit_emisor"), False),
+            )
+            + _section("👤 RECEPTOR / CLIENTE",
+                ("Cliente / Receptor", inner.get("receptor"),   False),
+                ("Monto",              inner.get("monto"),       False),
+                ("Forma de pago",      inner.get("forma_pago"),  False),
+            )
+        )
+
+    elif tipo == "contrato":
+        subtitle = inner.get("tipo_contrato") or "Contrato"
+        partes_val = ", ".join(inner.get("partes") or []) or None
+        body = (
+            _sec("🧾 DATOS DEL CONTRATO")
+            + _grid(
+                ("Tipo de contrato", inner.get("tipo_contrato") or "Contrato", False),
+                ("Lugar",            inner.get("lugar"),                        False),
+                ("Fecha",            inner.get("fecha"),                        False),
+            )
+            + _section("👥 PARTES INVOLUCRADAS",
+                ("Partes",                partes_val,                 True),
+                ("Representante legal",   inner.get("representante"), False),
+                ("NIT / DPI relacionado", inner.get("nit_relacionado"), False),
+            )
+            + _section("📋 OBJETO Y CONDICIONES",
+                ("Objeto del contrato", inner.get("objeto"),   True),
+                ("Vigencia / Plazo",    inner.get("vigencia"), False),
+                ("Monto / Valor",       inner.get("monto"),    False),
+            )
+        )
+
+    elif tipo == "constancia":
+        subtitle = inner.get("tipo_constancia") or "Constancia"
+        body = (
+            _sec("🧾 DATOS DE LA CONSTANCIA")
+            + _grid(
+                ("Tipo de constancia", inner.get("tipo_constancia") or "Constancia", False),
+                ("Entidad emisora",    inner.get("entidad_emisora"),                  False),
+                ("Lugar",              inner.get("lugar"),                             False),
+                ("Fecha",              inner.get("fecha"),                             False),
+            )
+            + _section("👤 PERSONA",
+                ("Nombre / Persona",   inner.get("nombre"),  False),
+                ("Cargo / Función",    inner.get("cargo"),   False),
+                ("Motivo / Actividad", inner.get("motivo"),  True),
+            )
+        )
+
+    elif tipo == "carta_formal":
+        subtitle = "Carta Formal"
+        body = (
+            _sec("🧾 DATOS DE LA CARTA")
+            + _grid(
+                ("Lugar",             inner.get("lugar"),  False),
+                ("Fecha",             inner.get("fecha"),  False),
+                ("Asunto / Referencia", inner.get("asunto"), True),
+            )
+            + _section("👤 DESTINATARIO",
+                ("Destinatario", inner.get("destinatario"), False),
+            )
+            + _section("✍️ REMITENTE",
+                ("Remitente / Firma",  inner.get("remitente"), False),
+                ("Cargo del firmante", inner.get("cargo"),     False),
+                ("Correo",             inner.get("email"),      False),
+                ("Teléfono",           inner.get("telefono"),   False),
+            )
+        )
+
+    elif tipo == "identificacion":
+        subtitle = inner.get("subtipo") or "Documento de Identificación"
+        body = (
+            _sec("🧾 DATOS DEL DOCUMENTO")
+            + _grid(
+                ("Tipo",           "Identificación",                      False),
+                ("Subtipo",        inner.get("subtipo") or "No determinado", False),
+                ("Entidad emisora", inner.get("entidad_emisora"),          False),
+            )
+            + _section("👤 DATOS PERSONALES",
+                ("Nombre completo",      inner.get("nombre"),           False),
+                ("Fecha de nacimiento",  inner.get("fecha_nacimiento"), False),
+                ("Fecha de vencimiento", inner.get("fecha_vencimiento"), False),
+                ("Nacionalidad",         inner.get("nacionalidad"),      False),
+                ("Género",               inner.get("genero"),            False),
+                ("Dirección",            inner.get("direccion"),         True),
+            )
+            + _section("🔢 IDENTIFICADORES",
+                ("DPI / CUI",    inner.get("cui"),             False),
+                ("N° Licencia",  inner.get("numero_licencia"), False),
+                ("N° Pasaporte", inner.get("numero_pasaporte"), False),
+                ("N° Carné",     inner.get("numero_carne"),    False),
+            )
+        )
+
+    else:
+        subtitle = "Documento no clasificado"
+        body = (
+            _sec("🧾 DATOS GENERALES")
+            + _grid(
+                ("Tipo detectado", tipo or "No determinado", False),
+                ("Resumen",        inner.get("resumen"),      True),
+            )
+            + _section("📅 INFORMACIÓN EXTRAÍDA",
+                ("Fechas encontradas", inner.get("fechas"),     False),
+                ("Valores / Montos",   inner.get("valores"),    False),
+                ("NITs encontrados",   inner.get("nits"),       False),
+                ("Códigos / Series",   inner.get("codigos"),    False),
+                ("Correos",            inner.get("emails"),     False),
+                ("Teléfonos",          inner.get("telefonos"),  False),
+            )
+        )
+
+    html = (
+        '<div class="ctx-card">'
+        '<div class="ctx-header">'
+        '<span>📌</span>'
+        '<span class="ctx-title">Resumen interpretado del documento</span>'
+        '<span class="ctx-subtitle">' + _html.escape(subtitle) + '</span>'
+        '</div>'
+        '<div class="ctx-body">'
+        + body
+        + '</div></div>'
+    )
+    st.markdown(html, unsafe_allow_html=True)
+
 
 # ── Configuración de la página ───────────────────────────────────────────────
 st.set_page_config(
@@ -1088,6 +1416,149 @@ hr { border-color: rgba(99,102,241,0.14) !important; }
 @media (max-width: 768px) {
     .glass-card { padding: 1rem; }
 }
+
+/* ── Card semántica 🧠 ───────────────────────────────────────────────────── */
+.sem-card {
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 60%, #1e293b 100%);
+    border: 1px solid rgba(99,102,241,0.3);
+    border-radius: 14px;
+    overflow: hidden;
+    margin: 0.5rem 0 0.75rem 0;
+    box-shadow: 0 6px 24px rgba(99,102,241,0.15), 0 2px 8px rgba(0,0,0,0.25);
+    animation: slideDownFadeIn 0.5s cubic-bezier(0.23,1,0.32,1) both;
+}
+.sem-header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.75rem 1.2rem;
+    background: rgba(99,102,241,0.12);
+    border-bottom: 1px solid rgba(99,102,241,0.2);
+}
+.sem-brain  { font-size: 1.25rem; line-height: 1; }
+.sem-title  { font-weight: 700; font-size: 0.95rem; color: #a5b4fc; letter-spacing: 0.02em; }
+.sem-page-note { margin-left: auto; font-size: 0.75rem; color: #64748b; }
+.sem-body   { padding: 1rem 1.2rem 1.1rem; }
+.sem-main-row { display: flex; align-items: center; gap: 0.65rem; margin-bottom: 0.6rem; }
+.sem-icon   { font-size: 1.4rem; line-height: 1; flex-shrink: 0; }
+.sem-content{ font-size: 1.1rem; font-weight: 700; color: #e2e8f0; }
+.sem-desc   { font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.55rem; }
+.sem-indicators { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.6rem; }
+.sem-badge  {
+    background: rgba(99,102,241,0.18);
+    border: 1px solid rgba(99,102,241,0.35);
+    color: #a5b4fc;
+    border-radius: 6px;
+    padding: 0.15rem 0.55rem;
+    font-size: 0.78rem;
+    font-weight: 500;
+}
+.sem-conf   { font-size: 0.82rem; margin-top: 0.4rem; }
+.sem-na     {
+    background: rgba(30,27,75,0.4);
+    border: 1px dashed rgba(99,102,241,0.2);
+    border-radius: 10px;
+    padding: 0.7rem 1rem;
+    color: #64748b;
+    font-size: 0.87rem;
+    font-style: italic;
+}
+
+/* ── Card contextual 📌 ──────────────────────────────────────────────────── */
+.ctx-card {
+    background: linear-gradient(135deg, #0a1f1a 0%, #0f2d25 55%, #0f1f1a 100%);
+    border: 1px solid rgba(16,185,129,0.3);
+    border-radius: 14px;
+    overflow: hidden;
+    margin: 0.5rem 0 0.9rem;
+    box-shadow: 0 6px 24px rgba(16,185,129,0.1), 0 2px 8px rgba(0,0,0,0.3);
+    animation: slideDownFadeIn 0.5s cubic-bezier(0.23,1,0.32,1) both;
+}
+.ctx-header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.75rem 1.2rem;
+    background: rgba(16,185,129,0.1);
+    border-bottom: 1px solid rgba(16,185,129,0.2);
+}
+.ctx-title    { font-weight: 700; font-size: 0.95rem; color: #6ee7b7; letter-spacing: 0.02em; }
+.ctx-subtitle { font-size: 0.75rem; color: #4b7a68; margin-left: auto; }
+.ctx-body     { padding: 1rem 1.2rem 1.1rem; }
+.ctx-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.65rem 1.5rem;
+}
+.ctx-field { display: flex; flex-direction: column; gap: 0.12rem; }
+.ctx-full  { grid-column: 1 / -1; }
+.ctx-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: #6ee7b7;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    opacity: 0.85;
+}
+.ctx-value    { font-size: 0.88rem; font-weight: 500; color: #e2e8f0; word-break: break-word; }
+.ctx-value-na { font-size: 0.85rem; color: #334155; font-style: italic; }
+.ctx-divider  { border: none; border-top: 1px solid rgba(16,185,129,0.12); margin: 0.8rem 0; }
+.ctx-cat-badge {
+    display: inline-block;
+    background: rgba(16,185,129,0.16);
+    border: 1px solid rgba(16,185,129,0.35);
+    color: #6ee7b7;
+    border-radius: 6px;
+    padding: 0.2rem 0.7rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    margin-top: 0.15rem;
+}
+.ctx-meta-grid {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.2rem;
+}
+.ctx-items-list { margin-top: 0.35rem; display: flex; flex-direction: column; gap: 0.3rem; }
+.ctx-item-row {
+    background: rgba(16,185,129,0.05);
+    border: 1px solid rgba(16,185,129,0.1);
+    border-radius: 6px;
+    padding: 0.4rem 0.7rem;
+}
+.ctx-item-desc { font-size: 0.85rem; color: #e2e8f0; font-weight: 500; margin-bottom: 0.2rem; }
+.ctx-item-meta { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.ctx-item-chip {
+    font-size: 0.72rem;
+    color: #94a3b8;
+    background: rgba(255,255,255,0.05);
+    border-radius: 4px;
+    padding: 0.1rem 0.35rem;
+}
+.ctx-item-total {
+    color: #6ee7b7;
+    font-weight: 600;
+    background: rgba(16,185,129,0.12);
+}
+.ctx-not-available {
+    background: rgba(15,23,42,0.5);
+    border: 1px dashed rgba(16,185,129,0.15);
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    color: #334155;
+    font-size: 0.87rem;
+    font-style: italic;
+}
+.ctx-section-title {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #34d399;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.5rem;
+    opacity: 0.9;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -1547,11 +2018,87 @@ else:
 
         # ── Mostrar error (múltiples archivos o formato no válido) ──────────
         if st.session_state.upload_error:
-            st.error(st.session_state.upload_error)
-            st.markdown("""
-<div class="nx-card nx-danger">
-    <strong>⛔ Formatos no permitidos:</strong> carpetas, archivos múltiples, ZIP, DOC, DOCX, XLS, etc.<br/>
-    <strong>✅ Formatos permitidos:</strong> PDF, JPG, JPEG, PNG, BMP (un archivo a la vez).
+            st.markdown(f"""
+<style>
+@keyframes slideDownFadeIn {{
+    0%   {{ opacity: 0; transform: translateY(-18px) scaleY(0.96); }}
+    100% {{ opacity: 1; transform: translateY(0)     scaleY(1);    }}
+}}
+.upload-error-card {{
+    animation: slideDownFadeIn 0.55s cubic-bezier(0.23, 1, 0.320, 1) both;
+    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+    box-shadow: 0 8px 32px rgba(99,102,241,0.18), 0 2px 8px rgba(0,0,0,0.32);
+}}
+.upload-error-bar {{
+    height: 4px;
+    background: linear-gradient(90deg, #ef4444, #f97316);
+    width: 100%;
+}}
+.upload-error-body {{
+    padding: 1rem 1.2rem 1.1rem 1.2rem;
+    display: flex;
+    gap: 0.85rem;
+    align-items: flex-start;
+}}
+.upload-error-icon {{
+    font-size: 1.5rem;
+    line-height: 1;
+    flex-shrink: 0;
+    margin-top: 2px;
+}}
+.upload-error-text {{
+    color: #e0e7ff;
+    font-size: 0.93rem;
+    line-height: 1.5;
+}}
+.upload-error-title {{
+    font-weight: 700;
+    color: #fca5a5;
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+    display: block;
+}}
+.upload-info-card {{
+    animation: slideDownFadeIn 0.7s cubic-bezier(0.23, 1, 0.320, 1) 0.08s both;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    border: 1px solid #334155;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(99,102,241,0.10);
+}}
+.upload-info-bar {{
+    height: 3px;
+    background: linear-gradient(90deg, #6366f1, #818cf8);
+    width: 100%;
+}}
+.upload-info-body {{
+    padding: 0.8rem 1.2rem;
+    color: #cbd5e1;
+    font-size: 0.88rem;
+    line-height: 1.6;
+}}
+.upload-info-body strong {{ color: #a5b4fc; }}
+</style>
+<div class="upload-error-card">
+    <div class="upload-error-bar"></div>
+    <div class="upload-error-body">
+        <span class="upload-error-icon">⛔</span>
+        <div class="upload-error-text">
+            <span class="upload-error-title">Archivo no permitido</span>
+            {st.session_state.upload_error}
+        </div>
+    </div>
+</div>
+<div class="upload-info-card">
+    <div class="upload-info-bar"></div>
+    <div class="upload-info-body">
+        <strong>✅ Formatos permitidos:</strong> PDF, JPG, JPEG, PNG, BMP &nbsp;·&nbsp;
+        <strong>⛔ No permitido:</strong> carpetas, múltiples archivos, ZIP, DOC, XLS, etc.
+        &nbsp;·&nbsp; <strong>📄 Límite:</strong> un único archivo por carga.
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -2005,10 +2552,11 @@ else:
 
                 # ── PASO 2: EXTRACCIÓN ──────────────────────────────────────
                 extraction = result.get("steps", {}).get("extraction", {})
+                _t2_contextual = result.get("steps", {}).get("contextual", {}) or {}
+                _t2_semantic   = result.get("steps", {}).get("semantic", {}) or {}
                 with st.expander("🔍 Paso 2 · Extracción de Datos", expanded=True):
                     _t2_pages        = st.session_state.pages_actuales
                     _t2_multi        = len(_t2_pages) > 1
-                    _t2_clf_override = None
                     _t2_suppress_no_data = False
 
                     if _t2_multi:
@@ -2151,7 +2699,8 @@ else:
                             )
                             _t2_seldata      = _t2_pages[_t2_sel - 1]
                             extraction       = _t2_seldata.get("extraction", {}) or {}
-                            _t2_clf_override = _t2_seldata.get("classification", {}) or {}
+                            _t2_contextual   = _t2_seldata.get("contextual", {}) or {}
+                            _t2_semantic     = _t2_seldata.get("semantic", {}) or {}
                             st.markdown(
                                 f'<div class="section-chip">📋 Detalle de la página {_t2_sel}</div>',
                                 unsafe_allow_html=True,
@@ -2159,142 +2708,8 @@ else:
                             st.divider()
 
                     if extraction:
-                        # Doc type drives contextual rendering;
-                        # for multi-page PDFs uses the selected page's classification.
-                        _clf_s = (
-                            _t2_clf_override
-                            or result.get("steps", {}).get("classification", {})
-                        )
-                        _raw_cls = (
-                            _clf_s.get("predicted_class")
-                            or _clf_s.get("class", "otro")
-                        ).lower()
-                        _doc_type = _resolve_cls_label(_raw_cls)
-                        _fiscal_types = {"factura", "recibo", "contrato", "constancia"}
-
-                        # ── Sección A: Contacto y generales ─────────────────
-                        _contact_defs = [
-                            ("emails",      "📧", "Correos electrónicos", "db-email",    "📧"),
-                            ("phones",      "📱", "Teléfonos",            "db-phone",    "📱"),
-                            ("urls",        "🔗", "URLs",                 "db-url",      "🔗"),
-                            ("dates",       "📅", "Fechas numéricas",     "db-date",     "📅"),
-                            ("fecha_texto", "📆", "Fechas en español",    "db-date",     "📆"),
-                            ("currency",    "💰", "Moneda / Valores",     "db-currency", "💰"),
-                        ]
-                        _active_contact = [
-                            (k, ic, lb, cs, bi)
-                            for k, ic, lb, cs, bi in _contact_defs
-                            if extraction.get(k)
-                        ]
-                        if _active_contact:
-                            st.markdown(
-                                '<div class="section-chip">📬 Contacto y generales</div>',
-                                unsafe_allow_html=True,
-                            )
-                            _mid = (len(_active_contact) + 1) // 2
-                            ca1, ca2 = st.columns(2)
-                            for _fi, (_fk, _fic, _flb, _fcs, _fbi) in enumerate(_active_contact):
-                                with (ca1 if _fi < _mid else ca2):
-                                    _show_field(extraction, _fk, _fic, _flb, _fcs, _fbi)
-
-                        # ── Sección B: Tributaria Guatemala ──────────────────
-                        # Shown only for fiscal doc types; for carta_formal only "Referencia"
-                        _serie_label = (
-                            "Referencia del documento"
-                            if _doc_type == "carta_formal"
-                            else "Serie DTE clásica"
-                        )
-                        _trib_defs = [
-                            ("nit", "🆔",
-                             "NIT — Número de Identificación Tributaria",
-                             "db-nit", "🆔"),
-                            ("dpi", "🪪", "DPI / CUI",
-                             "db-dpi", "🪪"),
-                            ("moneda", "💱", "Moneda del documento",
-                             "db-moneda", "💱"),
-                            ("serie_dte", "📑", _serie_label,
-                             "db-serie", "📑"),
-                            ("serie_sat", "🔑", "Serie FEL / SAT (hex)",
-                             "db-auth", "🔑"),
-                            ("forma_pago", "💳", "Forma de pago",
-                             "db-pago", "💳"),
-                        ]
-                        _active_trib = [
-                            (k, ic, lb, cs, bi)
-                            for k, ic, lb, cs, bi in _trib_defs
-                            if extraction.get(k)
-                        ]
-
-                        if _active_trib and _doc_type in _fiscal_types:
-                            st.divider()
-                            st.markdown(
-                                '<div class="section-chip">🇬🇹 Datos tributarios Guatemala</div>',
-                                unsafe_allow_html=True,
-                            )
-                            _mid2 = (len(_active_trib) + 1) // 2
-                            cb1, cb2 = st.columns(2)
-                            for _fi, (_fk, _fic, _flb, _fcs, _fbi) in enumerate(_active_trib):
-                                with (cb1 if _fi < _mid2 else cb2):
-                                    _show_field(extraction, _fk, _fic, _flb, _fcs, _fbi)
-
-                        elif _doc_type == "carta_formal":
-                            # Only show serie_dte as "Referencia del documento"
-                            _carta_ref = [
-                                (k, ic, lb, cs, bi)
-                                for k, ic, lb, cs, bi in _active_trib
-                                if k == "serie_dte"
-                            ]
-                            if _carta_ref:
-                                st.divider()
-                                st.markdown(
-                                    '<div class="section-chip">📄 Datos del documento</div>',
-                                    unsafe_allow_html=True,
-                                )
-                                for (_fk, _fic, _flb, _fcs, _fbi) in _carta_ref:
-                                    _show_field(extraction, _fk, _fic, _flb, _fcs, _fbi)
-
-                        elif _active_trib and _doc_type not in {"carta_formal"}:
-                            # otro / identificacion — show whatever data is there
-                            st.divider()
-                            st.markdown(
-                                '<div class="section-chip">🇬🇹 Datos tributarios Guatemala</div>',
-                                unsafe_allow_html=True,
-                            )
-                            _mid2 = (len(_active_trib) + 1) // 2
-                            cb1, cb2 = st.columns(2)
-                            for _fi, (_fk, _fic, _flb, _fcs, _fbi) in enumerate(_active_trib):
-                                with (cb1 if _fi < _mid2 else cb2):
-                                    _show_field(extraction, _fk, _fic, _flb, _fcs, _fbi)
-
-                        # ── Sección C: Autorización SAT / FEL ────────────────
-                        auth_list = extraction.get("autorizacion_sat", [])
-                        dte_list  = extraction.get("numero_dte", [])
-                        if (auth_list or dte_list) and _doc_type in (_fiscal_types | {"otro"}):
-                            st.divider()
-                            st.markdown(
-                                '<div class="section-chip">🏛️ Autorización SAT · FEL</div>',
-                                unsafe_allow_html=True,
-                            )
-                            cc1, cc2 = st.columns(2)
-                            with cc1:
-                                _field_label("🔐", "Número de Autorización SAT")
-                                _badges(auth_list, "db-uuid", "🔐")
-                            with cc2:
-                                _field_label("📟", "Número DTE")
-                                _badges(dte_list, "db-dte", "📟")
-
-                        if (
-                            not _active_contact
-                            and not _active_trib
-                            and not auth_list
-                            and not dte_list
-                        ):
-                            st.markdown("""
-<div class="nx-card nx-info">
-    ℹ️ <strong>Sin datos estructurados encontrados.</strong>
-    El texto fue extraído pero no contiene patrones reconocibles.
-</div>
-""", unsafe_allow_html=True)
+                        # ── 📌 Resumen interpretado (ContextualExtractor) ─────
+                        _render_contextual_summary(_t2_contextual, _t2_semantic)
 
                     elif not _t2_suppress_no_data:
                         st.markdown("""
