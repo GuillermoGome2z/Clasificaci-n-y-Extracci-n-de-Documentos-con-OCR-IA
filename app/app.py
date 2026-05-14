@@ -274,20 +274,24 @@ def _render_contextual_summary(contextual: dict, semantic: dict | None = None) -
         body = (
             _sec("🧾 DATOS DEL RECIBO")
             + _grid(
-                ("Tipo de documento",  "Recibo",              False),
-                ("Referencia / N°",    inner.get("referencia"), False),
-                ("Fecha",              inner.get("fecha"),      False),
-                ("Concepto",           inner.get("concepto"),   True),
-                ("Monto en letras",    inner.get("letras"),     True),
+                ("Tipo de documento",  "Recibo",               False),
+                ("Referencia / N°",    inner.get("referencia"),  False),
+                ("Fecha",              inner.get("fecha"),        False),
+                ("Concepto",           inner.get("concepto"),     True),
+                ("Monto en letras",    inner.get("letras"),       True),
+                ("Observaciones",      inner.get("observaciones"), True),
             )
             + _section("🏪 EMISOR",
                 ("Emisor",     inner.get("emisor"),     False),
                 ("NIT Emisor", inner.get("nit_emisor"), False),
             )
             + _section("👤 RECEPTOR / CLIENTE",
-                ("Cliente / Receptor", inner.get("receptor"),   False),
-                ("Monto",              inner.get("monto"),       False),
-                ("Forma de pago",      inner.get("forma_pago"),  False),
+                ("Cliente / Receptor", inner.get("receptor"), False),
+            )
+            + _section("💰 DETALLE ECONÓMICO",
+                ("Monto",         inner.get("monto"),      False),
+                ("Moneda",        inner.get("moneda"),      False),
+                ("Forma de pago", inner.get("forma_pago"),  False),
             )
         )
 
@@ -302,14 +306,24 @@ def _render_contextual_summary(contextual: dict, semantic: dict | None = None) -
                 ("Fecha",            inner.get("fecha"),                        False),
             )
             + _section("👥 PARTES INVOLUCRADAS",
-                ("Partes",                partes_val,                 True),
-                ("Representante legal",   inner.get("representante"), False),
+                ("Contratante",           inner.get("contratante"),     False),
+                ("Contratado / Prestador", inner.get("contratado"),     False),
+                ("Partes (texto)",        partes_val,                   True),
+                ("Representante legal",   inner.get("representante"),   False),
                 ("NIT / DPI relacionado", inner.get("nit_relacionado"), False),
             )
-            + _section("📋 OBJETO Y CONDICIONES",
-                ("Objeto del contrato", inner.get("objeto"),   True),
-                ("Vigencia / Plazo",    inner.get("vigencia"), False),
-                ("Monto / Valor",       inner.get("monto"),    False),
+            + _section("📄 OBJETO Y VIGENCIA",
+                ("Objeto del contrato", inner.get("objeto"),        True),
+                ("Vigencia / Plazo",    inner.get("vigencia"),      False),
+                ("Fecha de inicio",     inner.get("fecha_inicio"),  False),
+                ("Fecha de fin",        inner.get("fecha_fin"),     False),
+            )
+            + _section("💰 CONDICIONES ECONÓMICAS",
+                ("Monto / Valor",  inner.get("monto"),      False),
+                ("Forma de pago",  inner.get("forma_pago"), False),
+            )
+            + _section("✍️ FIRMAS",
+                ("Firmante", inner.get("firmante"), False),
             )
         )
 
@@ -319,14 +333,20 @@ def _render_contextual_summary(contextual: dict, semantic: dict | None = None) -
             _sec("🧾 DATOS DE LA CONSTANCIA")
             + _grid(
                 ("Tipo de constancia", inner.get("tipo_constancia") or "Constancia", False),
-                ("Entidad emisora",    inner.get("entidad_emisora"),                  False),
                 ("Lugar",              inner.get("lugar"),                             False),
                 ("Fecha",              inner.get("fecha"),                             False),
+            )
+            + _section("🏢 ENTIDAD EMISORA",
+                ("Entidad emisora", inner.get("entidad_emisora"), False),
             )
             + _section("👤 PERSONA",
                 ("Nombre / Persona",   inner.get("nombre"),  False),
                 ("Cargo / Función",    inner.get("cargo"),   False),
                 ("Motivo / Actividad", inner.get("motivo"),  True),
+            )
+            + _section("✍️ FIRMA",
+                ("Firmante",         inner.get("firmante"),        False),
+                ("Cargo del firmante", inner.get("cargo_firmante"), False),
             )
         )
 
@@ -335,9 +355,9 @@ def _render_contextual_summary(contextual: dict, semantic: dict | None = None) -
         body = (
             _sec("🧾 DATOS DE LA CARTA")
             + _grid(
-                ("Lugar",             inner.get("lugar"),  False),
-                ("Fecha",             inner.get("fecha"),  False),
-                ("Asunto / Referencia", inner.get("asunto"), True),
+                ("Lugar",               inner.get("lugar"),   False),
+                ("Fecha",               inner.get("fecha"),   False),
+                ("Asunto / Referencia", inner.get("asunto"),  True),
             )
             + _section("👤 DESTINATARIO",
                 ("Destinatario", inner.get("destinatario"), False),
@@ -348,6 +368,9 @@ def _render_contextual_summary(contextual: dict, semantic: dict | None = None) -
                 ("Correo",             inner.get("email"),      False),
                 ("Teléfono",           inner.get("telefono"),   False),
             )
+            + _section("📄 CONTENIDO",
+                ("Resumen del cuerpo", inner.get("resumen_cuerpo"), True),
+            )
         )
 
     elif tipo == "identificacion":
@@ -355,23 +378,27 @@ def _render_contextual_summary(contextual: dict, semantic: dict | None = None) -
         body = (
             _sec("🧾 DATOS DEL DOCUMENTO")
             + _grid(
-                ("Tipo",           "Identificación",                      False),
-                ("Subtipo",        inner.get("subtipo") or "No determinado", False),
-                ("Entidad emisora", inner.get("entidad_emisora"),          False),
+                ("Tipo",    "Identificación",                          False),
+                ("Subtipo", inner.get("subtipo") or "No determinado",  False),
             )
             + _section("👤 DATOS PERSONALES",
-                ("Nombre completo",      inner.get("nombre"),           False),
-                ("Fecha de nacimiento",  inner.get("fecha_nacimiento"), False),
-                ("Fecha de vencimiento", inner.get("fecha_vencimiento"), False),
-                ("Nacionalidad",         inner.get("nacionalidad"),      False),
-                ("Género",               inner.get("genero"),            False),
-                ("Dirección",            inner.get("direccion"),         True),
+                ("Nombre completo",      inner.get("nombre"),            False),
+                ("Fecha de nacimiento",  inner.get("fecha_nacimiento"),   False),
+                ("Fecha de vencimiento", inner.get("fecha_vencimiento"),  False),
+                ("Nacionalidad",         inner.get("nacionalidad"),        False),
+                ("País",                 inner.get("pais"),                False),
+                ("Género",               inner.get("genero"),              False),
+                ("Dirección",            inner.get("direccion"),           True),
             )
             + _section("🔢 IDENTIFICADORES",
-                ("DPI / CUI",    inner.get("cui"),             False),
-                ("N° Licencia",  inner.get("numero_licencia"), False),
+                ("DPI / CUI",    inner.get("cui"),              False),
+                ("N° Licencia",  inner.get("numero_licencia"),  False),
+                ("Clase",        inner.get("clase_licencia"),   False),
                 ("N° Pasaporte", inner.get("numero_pasaporte"), False),
-                ("N° Carné",     inner.get("numero_carne"),    False),
+                ("N° Carné",     inner.get("numero_carne"),     False),
+            )
+            + _section("🏛️ ENTIDAD EMISORA",
+                ("Entidad", inner.get("entidad_emisora"), False),
             )
         )
 
@@ -383,13 +410,15 @@ def _render_contextual_summary(contextual: dict, semantic: dict | None = None) -
                 ("Tipo detectado", tipo or "No determinado", False),
                 ("Resumen",        inner.get("resumen"),      True),
             )
-            + _section("📅 INFORMACIÓN EXTRAÍDA",
+            + _section("🔎 DATOS DETECTADOS",
                 ("Fechas encontradas", inner.get("fechas"),     False),
                 ("Valores / Montos",   inner.get("valores"),    False),
                 ("NITs encontrados",   inner.get("nits"),       False),
+                ("DPIs encontrados",   inner.get("dpis"),       False),
                 ("Códigos / Series",   inner.get("codigos"),    False),
                 ("Correos",            inner.get("emails"),     False),
                 ("Teléfonos",          inner.get("telefonos"),  False),
+                ("URLs",               inner.get("urls"),       False),
             )
         )
 
@@ -2706,6 +2735,13 @@ else:
                                 unsafe_allow_html=True,
                             )
                             st.divider()
+
+                    elif _t2_pages and not _t2_multi:
+                        # ── PDF de UNA sola página: tomar datos de pages[0] ──
+                        _t2_seldata    = _t2_pages[0]
+                        extraction     = _t2_seldata.get("extraction", {}) or {}
+                        _t2_contextual = _t2_seldata.get("contextual", {}) or {}
+                        _t2_semantic   = _t2_seldata.get("semantic", {}) or {}
 
                     if extraction:
                         # ── 📌 Resumen interpretado (ContextualExtractor) ─────
