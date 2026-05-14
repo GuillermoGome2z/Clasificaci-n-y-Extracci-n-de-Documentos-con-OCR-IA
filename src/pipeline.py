@@ -8,8 +8,10 @@ from typing import Any, Dict, Optional
 from config import MODELS_DIR
 
 from .classifier import DocumentClassifier
+from .contextual_extractor import ContextualExtractor
 from .extractor import DataExtractor
 from .ocr import OCRProcessor
+from .semantic_analyzer import SemanticAnalyzer
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +47,8 @@ class OCRPipeline:
             model_path = str(default_model_path) if default_model_path.exists() else None
 
         self.classifier = DocumentClassifier(model_path=model_path)
+        self.semantic_analyzer = SemanticAnalyzer()
+        self.contextual_extractor = ContextualExtractor()
         self.last_result = None
 
     def process_image(self, image_path: str, lang: str = "spa") -> Dict[str, Any]:
@@ -113,6 +117,40 @@ class OCRPipeline:
                 "confidence": 0.0,
                 "error": str(e)
             }
+
+        # Paso 4: Análisis semántico (con error boundary)
+        try:
+            logger.info("Iniciando análisis semántico")
+            semantic_result = self.semantic_analyzer.analyze(
+                text=extracted_text,
+                extracted_fields=extraction_result,
+                document_class=classification_result.get("class", "otro"),
+            )
+            result["steps"]["semantic"] = semantic_result
+            logger.debug(
+                "Análisis semántico completado: categoria=%s subtipo=%s",
+                semantic_result.get("categoria_contenido"),
+                semantic_result.get("subtipo_documento"),
+            )
+        except Exception as e:  # noqa: BLE001
+            result["steps"]["semantic"] = {"error": str(e)}
+            logger.error("Excepción en análisis semántico: %s", e)
+
+        # Paso 5: Extracción contextual (con error boundary)
+        try:
+            logger.info("Iniciando extracción contextual")
+            contextual_result = self.contextual_extractor.extract(
+                text=extracted_text,
+                generic_fields=extraction_result,
+                document_class=classification_result.get("class", "otro"),
+                semantic=result["steps"].get("semantic"),
+            )
+            result["steps"]["contextual"] = contextual_result
+            logger.debug("Extracción contextual completada: tipo=%s",
+                         contextual_result.get("contextual", {}).get("tipo"))
+        except Exception as e:  # noqa: BLE001
+            result["steps"]["contextual"] = {"error": str(e)}
+            logger.error("Excepción en extracción contextual: %s", e)
 
         # Información adicional
         result["extracted_text"] = extracted_text
@@ -203,6 +241,33 @@ class OCRPipeline:
                     "confidence": 0.0,
                     "error": str(e)
                 }
+
+            # Análisis semántico de página (con error boundary)
+            try:
+                logger.debug("Analizando semánticamente página %d", page_num)
+                semantic = self.semantic_analyzer.analyze(
+                    text=page_text,
+                    extracted_fields=extraction,
+                    document_class=classification.get("class", "otro"),
+                )
+                page_result["semantic"] = semantic
+            except Exception as e:  # noqa: BLE001
+                page_result["semantic"] = {"error": str(e)}
+                logger.error("Excepción en análisis semántico página %d: %s", page_num, e)
+
+            # Extracción contextual de página (con error boundary)
+            try:
+                logger.debug("Extracción contextual página %d", page_num)
+                contextual = self.contextual_extractor.extract(
+                    text=page_text,
+                    generic_fields=extraction,
+                    document_class=classification.get("class", "otro"),
+                    semantic=page_result.get("semantic"),
+                )
+                page_result["contextual"] = contextual
+            except Exception as e:  # noqa: BLE001
+                page_result["contextual"] = {"error": str(e)}
+                logger.error("Excepción en extracción contextual página %d: %s", page_num, e)
 
             result["pages"].append(page_result)
 
