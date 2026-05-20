@@ -3,7 +3,7 @@
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional
 
 from config import MODELS_DIR
 
@@ -14,6 +14,9 @@ from .ocr import OCRProcessor
 from .semantic_analyzer import SemanticAnalyzer
 
 logger = logging.getLogger(__name__)
+
+
+ProgressCallback = Callable[[str, str], None]
 
 
 
@@ -51,7 +54,12 @@ class OCRPipeline:
         self.contextual_extractor = ContextualExtractor()
         self.last_result = None
 
-    def process_image(self, image_path: str, lang: str = "spa") -> Dict[str, Any]:
+    def process_image(
+        self,
+        image_path: str,
+        lang: str = "spa",
+        progress_callback: Optional[ProgressCallback] = None,
+    ) -> Dict[str, Any]:
         """
         Procesa una imagen a través del pipeline completo con error boundaries.
 
@@ -68,6 +76,9 @@ class OCRPipeline:
             "steps": {},
             "errors": []
         }
+
+        if progress_callback is not None:
+            progress_callback("ocr", "start")
 
         # Paso 1: OCR (con error boundary)
         try:
@@ -90,6 +101,12 @@ class OCRPipeline:
             result["status"] = "error"
             return result
 
+        if progress_callback is not None:
+            progress_callback("ocr", "done")
+
+        if progress_callback is not None:
+            progress_callback("extraction", "start")
+
         # Paso 2: Extracción de datos (con error boundary)
         try:
             logger.info("Iniciando extracción de datos")
@@ -101,6 +118,12 @@ class OCRPipeline:
             result["errors"].append(error_msg)
             logger.error("Excepción en extracción: %s", e)
             extraction_result = {}
+
+        if progress_callback is not None:
+            progress_callback("extraction", "done")
+
+        if progress_callback is not None:
+            progress_callback("classification", "start")
 
         # Paso 3: Clasificación (con error boundary)
         try:
@@ -163,10 +186,18 @@ class OCRPipeline:
         # Determinar estado final
         result["status"] = "error" if result["errors"] else "success"
 
+        if progress_callback is not None:
+            progress_callback("classification", "done")
+
         self.last_result = result
         return result
 
-    def process_pdf(self, pdf_path: str, lang: str = "spa") -> Dict[str, Any]:
+    def process_pdf(
+        self,
+        pdf_path: str,
+        lang: str = "spa",
+        progress_callback: Optional[ProgressCallback] = None,
+    ) -> Dict[str, Any]:
         """
         Procesa un PDF a través del pipeline con error boundaries por página.
 
@@ -183,6 +214,9 @@ class OCRPipeline:
             "pages": [],
             "errors": []
         }
+
+        if progress_callback is not None:
+            progress_callback("ocr", "start")
 
         # Paso 1: OCR en PDF (con error boundary)
         try:
@@ -203,18 +237,30 @@ class OCRPipeline:
             result["status"] = "error"
             return result
 
-        # Procesar cada página (con error boundary por página)
+        if progress_callback is not None:
+            progress_callback("ocr", "done")
+
+        # Preparar estructura de páginas
+        pages_data = []
         for page_data in ocr_result["pages"]:
             page_num = page_data["page"]
             page_text = page_data["text"]
+            pages_data.append(
+                {
+                    "page_number": page_num,
+                    "text": page_text,
+                    "page_errors": [],
+                }
+            )
 
-            page_result = {
-                "page_number": page_num,
-                "text": page_text,
-                "page_errors": []
-            }
+        if progress_callback is not None:
+            progress_callback("extraction", "start")
 
-            # Extracción (con error boundary)
+        # Paso 2: Extracción por página
+        for page_result in pages_data:
+            page_num = page_result["page_number"]
+            page_text = page_result["text"]
+
             try:
                 logger.debug("Extrayendo datos de página %d", page_num)
                 extraction = self.extractor.extract_all(page_text)
@@ -224,9 +270,20 @@ class OCRPipeline:
                 page_result["page_errors"].append(error_msg)
                 result["errors"].append(error_msg)
                 logger.error("Excepción en extracción página %d: %s", page_num, e)
-                extraction = {}
+                page_result["extraction"] = {}
 
-            # Clasificación (con error boundary)
+        if progress_callback is not None:
+            progress_callback("extraction", "done")
+
+        if progress_callback is not None:
+            progress_callback("classification", "start")
+
+        # Paso 3: Clasificación + semántica + contextual por página
+        for page_result in pages_data:
+            page_num = page_result["page_number"]
+            page_text = page_result["text"]
+            extraction = page_result.get("extraction", {}) or {}
+
             try:
                 logger.debug("Clasificando página %d", page_num)
                 classification = self.classifier.predict(page_text)
@@ -239,10 +296,10 @@ class OCRPipeline:
                 classification = {
                     "class": "no_disponible",
                     "confidence": 0.0,
-                    "error": str(e)
+                    "error": str(e),
                 }
+                page_result["classification"] = classification
 
-            # Análisis semántico de página (con error boundary)
             try:
                 logger.debug("Analizando semánticamente página %d", page_num)
                 semantic = self.semantic_analyzer.analyze(
@@ -253,9 +310,10 @@ class OCRPipeline:
                 page_result["semantic"] = semantic
             except Exception as e:  # noqa: BLE001
                 page_result["semantic"] = {"error": str(e)}
-                logger.error("Excepción en análisis semántico página %d: %s", page_num, e)
+                logger.error(
+                    "Excepción en análisis semántico página %d: %s", page_num, e
+                )
 
-            # Extracción contextual de página (con error boundary)
             try:
                 logger.debug("Extracción contextual página %d", page_num)
                 contextual = self.contextual_extractor.extract(
@@ -267,15 +325,25 @@ class OCRPipeline:
                 page_result["contextual"] = contextual
             except Exception as e:  # noqa: BLE001
                 page_result["contextual"] = {"error": str(e)}
-                logger.error("Excepción en extracción contextual página %d: %s", page_num, e)
+                logger.error(
+                    "Excepción en extracción contextual página %d: %s", page_num, e
+                )
 
-            result["pages"].append(page_result)
+        if progress_callback is not None:
+            progress_callback("classification", "done")
+
+        result["pages"] = pages_data
 
         result["status"] = "error" if result["errors"] else "success"
         self.last_result = result
         return result
 
-    def process_file(self, file_path: str, lang: str = "spa") -> Dict[str, Any]:
+    def process_file(
+        self,
+        file_path: str,
+        lang: str = "spa",
+        progress_callback: Optional[ProgressCallback] = None,
+    ) -> Dict[str, Any]:
         """
         Procesa cualquier archivo (imagen o PDF).
 
@@ -295,9 +363,9 @@ class OCRPipeline:
             }
 
         if file_path_obj.suffix.lower() == '.pdf':
-            return self.process_pdf(str(file_path), lang=lang)
+            return self.process_pdf(str(file_path), lang=lang, progress_callback=progress_callback)
         if file_path_obj.suffix.lower() in ['.jpg', '.jpeg', '.png', '.bmp', '.gif']:
-            return self.process_image(str(file_path), lang=lang)
+            return self.process_image(str(file_path), lang=lang, progress_callback=progress_callback)
         return {
             "status": "error",
             "error": f"Formato no soportado: {file_path_obj.suffix}"

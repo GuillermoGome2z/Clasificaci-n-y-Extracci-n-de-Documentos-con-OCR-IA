@@ -3,6 +3,8 @@ Aplicación Streamlit para OCR IA Project
 """
 
 import html as _html
+import importlib
+import inspect
 import json
 import logging
 import sys
@@ -19,6 +21,59 @@ logger = logging.getLogger(__name__)
 import streamlit as st  # pylint: disable=wrong-import-position
 
 from src.pipeline import OCRPipeline  # pylint: disable=wrong-import-position
+
+
+_PIPELINE_STEPS = (
+    ("ocr", "OCR"),
+    ("extraction", "Extracción"),
+    ("classification", "Clasificación"),
+)
+
+
+def _pipeline_stepper_html(
+    *,
+    active_step: str | None,
+    completed_steps: set[str],
+    percent: int,
+    caption: str,
+) -> str:
+    """Render stepper (OCR → Extracción → Clasificación) con barra animada."""
+    steps_html = []
+    for i, (step_id, label) in enumerate(_PIPELINE_STEPS):
+        if step_id in completed_steps:
+            cls = "pipe-step done"
+            dot = "✓"
+        elif active_step == step_id:
+            cls = "pipe-step active"
+            dot = "•"
+        else:
+            cls = "pipe-step pending"
+            dot = str(i + 1)
+
+        steps_html.append(
+            f'<div class="{cls}">'
+            f'<div class="pipe-dot">{_html.escape(dot)}</div>'
+            f'<div class="pipe-label">{_html.escape(label)}</div>'
+            "</div>"
+        )
+        if i < len(_PIPELINE_STEPS) - 1:
+            steps_html.append(
+                '<div class="pipe-connector ' + ("done" if step_id in completed_steps else "") + '"></div>'
+            )
+
+    fill_cls = "pipe-bar-fill active" if active_step is not None else "pipe-bar-fill"
+    safe_pct = max(0, min(100, int(percent)))
+    return (
+        '<div class="pipe-stepper">'
+        '<div class="pipe-steps">'
+        + "".join(steps_html)
+        + "</div>"
+        + f'<div class="pipe-bar" style="--pipe-pct:{safe_pct}%">'
+        + f'<div class="{fill_cls}" style="width:{safe_pct}%"></div>'
+        + "</div>"
+        + f'<div class="pipe-caption">{_html.escape(caption)}</div>'
+        + "</div>"
+    )
 
 
 def _build_export_json(result: dict, original_filename: str) -> str:
@@ -1368,6 +1423,113 @@ hr { border-color: rgba(99,102,241,0.14) !important; }
     transform: translateY(-3px) scale(1.035) !important;
 }
 
+/* ── Pipeline stepper (OCR → Extracción → Clasificación) ─────────────────── */
+.pipe-stepper {
+    margin: 0.25rem 0 0.75rem 0;
+    padding: 0.85rem 1rem;
+    border: 1px solid rgba(99,102,241,0.22);
+    border-radius: var(--radius-md);
+    background: rgba(13,11,38,0.55);
+    box-shadow: 0 4px 16px rgba(99,102,241,0.10);
+    backdrop-filter: blur(10px);
+}
+.pipe-steps {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+.pipe-step {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    min-width: 0;
+}
+.pipe-dot {
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 800;
+    color: #a5b4fc;
+    background: rgba(99,102,241,0.08);
+    border: 2px solid rgba(99,102,241,0.35);
+    flex: 0 0 auto;
+}
+.pipe-label {
+    font-size: 0.86rem;
+    font-weight: 750;
+    color: #e0e7ff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.pipe-step.pending .pipe-label {
+    color: #64748b;
+    font-weight: 650;
+}
+.pipe-step.done .pipe-dot {
+    background: rgba(5,150,105,0.18);
+    border-color: rgba(5,150,105,0.62);
+    color: #6ee7b7;
+}
+.pipe-step.active .pipe-dot {
+    background: rgba(99,102,241,0.18);
+    border-color: rgba(99,102,241,0.92);
+    color: #e0e7ff;
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
+}
+.pipe-connector {
+    height: 2px;
+    flex: 1 1 auto;
+    background: rgba(255,255,255,0.08);
+    border-radius: 999px;
+}
+.pipe-connector.done {
+    background: linear-gradient(90deg, rgba(5,150,105,0.62), rgba(5,150,105,0.18));
+}
+.pipe-bar {
+    margin-top: 0.7rem;
+    height: 8px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(99,102,241,0.18);
+    border-radius: 999px;
+    overflow: hidden;
+}
+.pipe-bar-fill {
+    height: 100%;
+    width: var(--pipe-pct);
+    background: linear-gradient(90deg, #4338ca, #6366f1, #818cf8);
+    border-radius: 999px;
+    position: relative;
+    transition: width 0.25s ease;
+}
+.pipe-bar-fill.active::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        90deg,
+        rgba(255,255,255,0.00),
+        rgba(255,255,255,0.22),
+        rgba(255,255,255,0.00)
+    );
+    transform: translateX(-60%);
+    animation: pipeShimmer 1.2s ease-in-out infinite;
+}
+@keyframes pipeShimmer {
+    0%   { transform: translateX(-60%); }
+    100% { transform: translateX(160%); }
+}
+.pipe-caption {
+    margin-top: 0.45rem;
+    font-size: 0.82rem;
+    color: #94a3b8;
+}
+
 /* ── Descargar JSON — teal themed ────────────────────────────────────────── */
 [data-testid="stDownloadButton"] > button {
     background: linear-gradient(135deg, #0f766e, #0d9488) !important;
@@ -1766,7 +1928,10 @@ if "upload_error" not in st.session_state:
 
 def load_pipeline(tesseract_path=None):
     """Crea una instancia del pipeline por sesión (no compartida entre usuarios)."""
-    return OCRPipeline(tesseract_path=tesseract_path)
+    # Import local para permitir reload del módulo en caliente (Streamlit).
+    from src import pipeline as _pipeline_mod
+
+    return _pipeline_mod.OCRPipeline(tesseract_path=tesseract_path)
 
 
 # ── AUTO-INICIALIZACIÓN ──────────────────────────────────────────────────────
@@ -2188,16 +2353,137 @@ else:
                         tmp_file.write(uploaded_file.getbuffer())
                         temp_path = tmp_file.name
 
+                    _stepper = st.empty()
                     _proc_status = st.empty()
-                    _prog_bar = st.progress(0)
-                    try:
-                        _proc_status.info("⏳ Iniciando reconocimiento óptico…")
-                        _prog_bar.progress(25)
 
-                        result = st.session_state.pipeline.process_file(
-                            temp_path, lang=ocr_lang
+                    step_state: dict = {
+                        "completed": set(),
+                        "active": None,
+                        "caption": "⏳ Preparando…",
+                    }
+
+                    def _calc_percent() -> int:
+                        completed_steps: set[str] = step_state["completed"]
+                        active_step: str | None = step_state["active"]
+
+                        if "classification" in completed_steps:
+                            return 100
+                        if active_step == "classification":
+                            return 66
+                        if "extraction" in completed_steps:
+                            return 66
+                        if active_step == "extraction":
+                            return 33
+                        if "ocr" in completed_steps:
+                            return 33
+                        if active_step == "ocr":
+                            return 0
+                        return 0
+
+                    def _render_stepper() -> None:
+                        _stepper.markdown(
+                            _pipeline_stepper_html(
+                                active_step=step_state["active"],
+                                completed_steps=step_state["completed"],
+                                percent=_calc_percent(),
+                                caption=step_state["caption"],
+                            ),
+                            unsafe_allow_html=True,
                         )
-                        _prog_bar.progress(75)
+
+                    def _on_progress(step: str, event: str) -> None:
+                        if event == "start":
+                            step_state["active"] = step
+                            step_state["caption"] = {
+                                "ocr": "⏳ OCR → reconociendo texto…",
+                                "extraction": "🧩 Extracción → detectando campos…",
+                                "classification": "🧠 Clasificación → prediciendo categoría…",
+                            }.get(step, "⏳ Procesando…")
+                            _proc_status.info(step_state["caption"])
+                        elif event == "done":
+                            step_state["completed"].add(step)
+                            if step_state["active"] == step:
+                                step_state["active"] = None
+                            step_state["caption"] = {
+                                "ocr": "✅ OCR completado",
+                                "extraction": "✅ Extracción completada",
+                                "classification": "✅ Clasificación completada",
+                            }.get(step, step_state["caption"])
+
+                        _render_stepper()
+
+                    _render_stepper()
+                    try:
+                        # Streamlit puede conservar módulos/instancias antiguas tras un hot-reload.
+                        # Esta lógica intenta (1) detectar soporte de progress_callback, (2) forzar
+                        # reload del módulo si es necesario, y (3) caer a ejecución sin callback.
+                        try:
+                            from config import TESSERACT_PATH as _TESS_PATH
+                        except Exception:  # noqa: BLE001
+                            _TESS_PATH = None
+
+                        def _supports_progress_callback(p) -> bool:
+                            try:
+                                return "progress_callback" in inspect.signature(p.process_file).parameters
+                            except (TypeError, ValueError):
+                                return False
+
+                        def _reinit_pipeline() -> None:
+                            from src import pipeline as _pipeline_mod
+
+                            importlib.reload(_pipeline_mod)
+                            st.session_state.pipeline = _pipeline_mod.OCRPipeline(
+                                tesseract_path=tesseract_path or _TESS_PATH
+                            )
+
+                        if not _supports_progress_callback(st.session_state.pipeline):
+                            _reinit_pipeline()
+
+                        if _supports_progress_callback(st.session_state.pipeline):
+                            try:
+                                result = st.session_state.pipeline.process_file(
+                                    temp_path,
+                                    lang=ocr_lang,
+                                    progress_callback=_on_progress,
+                                )
+                            except TypeError as _te:
+                                if (
+                                    "unexpected keyword argument" in str(_te)
+                                    and "progress_callback" in str(_te)
+                                ):
+                                    result = st.session_state.pipeline.process_file(
+                                        temp_path,
+                                        lang=ocr_lang,
+                                    )
+                                else:
+                                    raise
+                        else:
+                            # Fallback: ejecutar sin callback para no bloquear el flujo.
+                            step_state["active"] = "ocr"
+                            step_state["caption"] = "⏳ Procesando (compatibilidad)…"
+                            _proc_status.info(step_state["caption"])
+                            _render_stepper()
+                            result = st.session_state.pipeline.process_file(
+                                temp_path,
+                                lang=ocr_lang,
+                            )
+                            if result.get("status") == "success":
+                                step_state["completed"].update(
+                                    {"ocr", "extraction", "classification"}
+                                )
+                                step_state["caption"] = "✅ Proceso finalizado"
+                            else:
+                                step_state["caption"] = "❌ Error durante el procesamiento"
+                            step_state["active"] = None
+                            _render_stepper()
+
+                        if result.get("status") == "success":
+                            step_state["completed"].update({"ocr", "extraction", "classification"})
+                            step_state["active"] = None
+                            step_state["caption"] = "✅ Proceso finalizado"
+                            _render_stepper()
+                        else:
+                            _render_stepper()
 
                         # Persist result in named session state — decoupled from widget keys
                         st.session_state.resultado_actual = result
@@ -2208,15 +2494,19 @@ else:
                         # Reset page to 1 for new document (set BEFORE selectbox renders)
                         st.session_state.selected_page_idx = 1
 
-                        _prog_bar.progress(100)
                         if result.get("status") == "success":
                             _proc_status.success("✅ ¡Documento procesado correctamente!")
                         else:
+                            step_state["caption"] = "❌ Error durante el procesamiento"
+                            _render_stepper()
                             _proc_status.error(
                                 f"❌ Error: {result.get('error', 'Error desconocido')}"
                             )
 
                     except (ValueError, TypeError, FileNotFoundError, OSError, RuntimeError) as e:
+                        step_state["caption"] = "❌ Error inesperado durante el procesamiento"
+                        step_state["active"] = None
+                        _render_stepper()
                         _proc_status.error(f"❌ Excepción: {e}")
                         st.session_state.processed_file_id = None
 
