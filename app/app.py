@@ -2145,9 +2145,9 @@ else:
 </p>
 """, unsafe_allow_html=True)
 
-        col1, col2 = st.columns([2, 1])
+        col_upload, col_opts = st.columns([2, 1])
 
-        with col1:
+        with col_upload:
             uploaded_files = st.file_uploader(
                 "Arrastra o selecciona tu archivo",
                 type=["pdf", "jpg", "jpeg", "png", "bmp"],
@@ -2156,7 +2156,7 @@ else:
                 help="Sube un único archivo: PDF, JPG, PNG o BMP. No se permiten carpetas.",
             )
 
-        with col2:
+        with col_opts:
             st.markdown('<div class="field-lbl">⚙️ Idioma OCR</div>', unsafe_allow_html=True)
             ocr_lang = st.selectbox(
                 "Idioma",
@@ -2209,6 +2209,57 @@ else:
                 )
                 st.session_state.upload_key_counter += 1
                 st.rerun()
+
+        # ── Preview centrada del documento ───────────────────────────────────
+        if file_valid and uploaded_file is not None:
+            import fitz  # PyMuPDF
+            import io as _io
+
+            _ext_prev = uploaded_file.name.rsplit(".", 1)[-1].lower()
+
+            st.markdown(
+                '<div class="field-lbl" style="margin-top:1rem;">👁️ Vista previa</div>',
+                unsafe_allow_html=True,
+            )
+
+            _, _col_prev, _ = st.columns([1, 3, 1])
+            with _col_prev:
+                if _ext_prev in {"jpg", "jpeg", "png", "bmp"}:
+                    st.image(
+                        uploaded_file.getvalue(),
+                        use_container_width=True,
+                        caption=uploaded_file.name,
+                    )
+                else:
+                    # PDF — renderizar primera página con PyMuPDF
+                    try:
+                        _pdf_bytes = uploaded_file.getvalue()
+                        _pdf_doc = fitz.open(stream=_pdf_bytes, filetype="pdf")
+                        _page_count = _pdf_doc.page_count
+                        _page = _pdf_doc[0]
+                        _mat = fitz.Matrix(2.0, 2.0)  # zoom 2× para alta resolución
+                        _pix = _page.get_pixmap(matrix=_mat, alpha=False)
+                        _img_bytes = _io.BytesIO(_pix.tobytes("png"))
+                        _pdf_doc.close()
+                        st.image(
+                            _img_bytes,
+                            use_container_width=True,
+                            caption=f"{uploaded_file.name}  ·  pág. 1 de {_page_count}",
+                        )
+                    except Exception:
+                        _safe_name = _html.escape(uploaded_file.name)
+                        _size_kb = uploaded_file.size // 1024
+                        st.markdown(
+                            f"""<div style="background:rgba(13,11,38,0.65);border:1px solid
+rgba(99,102,241,0.35);border-radius:12px;padding:1.5rem;text-align:center;
+backdrop-filter:blur(8px);">
+    <div style="font-size:3.5rem;line-height:1;margin-bottom:0.75rem;">📄</div>
+    <div style="color:#a5b4fc;font-weight:700;font-size:0.88rem;
+                word-break:break-all;margin-bottom:0.4rem;">{_safe_name}</div>
+    <div style="color:#64748b;font-size:0.78rem;">PDF · {_size_kb} KB</div>
+</div>""",
+                            unsafe_allow_html=True,
+                        )
 
         # ── Mostrar error (múltiples archivos o formato no válido) ──────────
         if st.session_state.upload_error:
