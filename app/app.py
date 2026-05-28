@@ -25,10 +25,41 @@ from src.pipeline import OCRPipeline  # pylint: disable=wrong-import-position
 
 
 _PIPELINE_STEPS = (
-    ("ocr", "OCR"),
-    ("extraction", "Extracción"),
-    ("classification", "Clasificación"),
+    ("ocr", "OCR", "Reconocimiento óptico"),
+    ("extraction", "Extracción", "Campos y entidades"),
+    ("classification", "Clasificación", "Tipo de documento"),
 )
+
+_STEP_SVG = {
+    "ocr": """<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="8" y="6" width="24" height="30" rx="3" stroke="currentColor" stroke-width="2.2" fill="none"/>
+  <path d="M14 14h12M14 19h12M14 24h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <rect x="28" y="26" width="12" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
+  <path d="M28 30h12M28 34h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity=".6"/>
+  <path d="M36 6v4M36 4v1M42 12h-4M44 12h-1M36 18v-4M36 20v-1M30 12h4M28 12h1" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity=".8"/>
+</svg>""",
+    "extraction": """<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="6" y="8" width="22" height="32" rx="3" stroke="currentColor" stroke-width="2.2" fill="none"/>
+  <path d="M12 15h10M12 20h10M12 25h6M12 30h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <path d="M32 18l8 6-8 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M34 24h8" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="38" cy="36" r="5" stroke="currentColor" stroke-width="2" fill="none"/>
+  <path d="M38 33v3l2 1.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>""",
+    "classification": """<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M8 12a4 4 0 014-4h14l12 12v16a4 4 0 01-4 4H12a4 4 0 01-4-4V12z" stroke="currentColor" stroke-width="2.2" fill="none"/>
+  <path d="M26 8v10h10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="17" cy="28" r="3.5" stroke="currentColor" stroke-width="2" fill="none"/>
+  <path d="M24 28h8M24 33h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <path d="M13 22l3 3 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity=".5"/>
+</svg>""",
+}
+
+_STEP_SUBLABEL = {
+    "ocr": "Reconocimiento óptico",
+    "extraction": "Campos y entidades",
+    "classification": "Tipo de documento",
+}
 
 
 def _pipeline_stepper_html(
@@ -38,36 +69,43 @@ def _pipeline_stepper_html(
     percent: int,
     caption: str,
 ) -> str:
-    """Render stepper (OCR → Extracción → Clasificación) con barra animada."""
-    steps_html = []
-    for i, (step_id, label) in enumerate(_PIPELINE_STEPS):
+    """Render stepper visual con tarjetas SVG por paso."""
+    cards_html = []
+    for i, (step_id, label, sublabel) in enumerate(_PIPELINE_STEPS):
         if step_id in completed_steps:
-            cls = "pipe-step done"
-            dot = "✓"
+            state = "done"
+            badge = '<svg class="pipe-badge-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#059669"/><path d="M5 8.5l2 2 4-4" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'
         elif active_step == step_id:
-            cls = "pipe-step active"
-            dot = "•"
+            state = "active"
+            badge = f'<span class="pipe-badge-num pulse">{i + 1}</span>'
         else:
-            cls = "pipe-step pending"
-            dot = str(i + 1)
+            state = "pending"
+            badge = f'<span class="pipe-badge-num">{i + 1}</span>'
 
-        steps_html.append(
-            f'<div class="{cls}">'
-            f'<div class="pipe-dot">{_html.escape(dot)}</div>'
-            f'<div class="pipe-label">{_html.escape(label)}</div>'
-            "</div>"
+        svg = _STEP_SVG.get(step_id, "")
+        cards_html.append(
+            f'<div class="pipe-card {state}">'
+            f'  <div class="pipe-card-icon">{svg}</div>'
+            f'  <div class="pipe-card-body">'
+            f'    <div class="pipe-card-header">{badge}<span class="pipe-card-label">{_html.escape(label)}</span></div>'
+            f'    <div class="pipe-card-sub">{_html.escape(sublabel)}</div>'
+            f'  </div>'
+            f'</div>'
         )
         if i < len(_PIPELINE_STEPS) - 1:
-            steps_html.append(
-                '<div class="pipe-connector ' + ("done" if step_id in completed_steps else "") + '"></div>'
+            arrow_cls = "pipe-arrow done" if step_id in completed_steps else "pipe-arrow"
+            cards_html.append(
+                f'<div class="{arrow_cls}">'
+                '<svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+                '</div>'
             )
 
     fill_cls = "pipe-bar-fill active" if active_step is not None else "pipe-bar-fill"
     safe_pct = max(0, min(100, int(percent)))
     return (
         '<div class="pipe-stepper">'
-        '<div class="pipe-steps">'
-        + "".join(steps_html)
+        '<div class="pipe-cards">'
+        + "".join(cards_html)
         + "</div>"
         + f'<div class="pipe-bar" style="--pipe-pct:{safe_pct}%">'
         + f'<div class="{fill_cls}" style="width:{safe_pct}%"></div>'
@@ -1519,89 +1557,171 @@ hr { border-color: rgba(99,102,241,0.14) !important; }
     transform: translateY(-3px) scale(1.035) !important;
 }
 
-/* ── Pipeline stepper (OCR → Extracción → Clasificación) ─────────────────── */
+/* ── Pipeline stepper — tarjetas SVG ─────────────────────────────────────── */
 .pipe-stepper {
     margin: 0.25rem 0 0.75rem 0;
-    padding: 0.85rem 1rem;
+    padding: 1rem 1.25rem 0.9rem;
     border: 1px solid rgba(99,102,241,0.22);
     border-radius: var(--radius-md);
-    background: rgba(13,11,38,0.55);
-    box-shadow: 0 4px 16px rgba(99,102,241,0.10);
-    backdrop-filter: blur(10px);
+    background: rgba(13,11,38,0.60);
+    box-shadow: 0 4px 24px rgba(99,102,241,0.12);
+    backdrop-filter: blur(12px);
 }
-.pipe-steps {
+
+/* Fila de tarjetas */
+.pipe-cards {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
+    gap: 0.5rem;
 }
-.pipe-step {
+
+/* Flecha entre pasos */
+.pipe-arrow {
+    flex: 0 0 auto;
+    width: 28px;
+    color: rgba(255,255,255,0.18);
+}
+.pipe-arrow.done { color: rgba(5,150,105,0.7); }
+.pipe-arrow svg { display: block; width: 100%; height: auto; }
+
+/* Tarjeta individual */
+.pipe-card {
+    flex: 1 1 0;
     display: flex;
     align-items: center;
-    gap: 0.55rem;
+    gap: 0.85rem;
+    padding: 0.7rem 1rem;
+    border-radius: 12px;
+    border: 1.5px solid rgba(99,102,241,0.15);
+    background: rgba(255,255,255,0.03);
+    transition: border-color 0.3s, background 0.3s, box-shadow 0.3s;
     min-width: 0;
 }
-.pipe-dot {
-    width: 18px;
-    height: 18px;
-    border-radius: 999px;
+
+/* ── Estados ─────────────────────────────────────────────────────────────── */
+.pipe-card.pending {
+    opacity: 0.45;
+}
+.pipe-card.active {
+    border-color: rgba(99,102,241,0.70);
+    background: rgba(99,102,241,0.10);
+    box-shadow: 0 0 20px rgba(99,102,241,0.18), inset 0 0 12px rgba(99,102,241,0.06);
+}
+.pipe-card.done {
+    border-color: rgba(5,150,105,0.55);
+    background: rgba(5,150,105,0.07);
+}
+
+/* ── Icono SVG ───────────────────────────────────────────────────────────── */
+.pipe-card-icon {
+    flex: 0 0 48px;
+    width: 48px;
+    height: 48px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 12px;
-    font-weight: 800;
-    color: #a5b4fc;
-    background: rgba(99,102,241,0.08);
-    border: 2px solid rgba(99,102,241,0.35);
-    flex: 0 0 auto;
+    border-radius: 10px;
+    background: rgba(99,102,241,0.10);
+    border: 1px solid rgba(99,102,241,0.20);
+    transition: background 0.3s;
 }
-.pipe-label {
-    font-size: 0.86rem;
-    font-weight: 750;
+.pipe-card-icon svg {
+    width: 28px;
+    height: 28px;
+    color: #a5b4fc;
+    display: block;
+}
+.pipe-card.active .pipe-card-icon {
+    background: rgba(99,102,241,0.22);
+    border-color: rgba(99,102,241,0.55);
+}
+.pipe-card.active .pipe-card-icon svg { color: #c7d2fe; }
+.pipe-card.done   .pipe-card-icon {
+    background: rgba(5,150,105,0.14);
+    border-color: rgba(5,150,105,0.45);
+}
+.pipe-card.done   .pipe-card-icon svg { color: #6ee7b7; }
+.pipe-card.pending .pipe-card-icon svg { color: #475569; }
+
+/* ── Cuerpo de texto ─────────────────────────────────────────────────────── */
+.pipe-card-body { min-width: 0; flex: 1; }
+
+.pipe-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin-bottom: 0.18rem;
+}
+
+.pipe-card-label {
+    font-size: 0.9rem;
+    font-weight: 700;
     color: #e0e7ff;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
-.pipe-step.pending .pipe-label {
+.pipe-card.pending .pipe-card-label { color: #475569; }
+.pipe-card.done    .pipe-card-label { color: #a7f3d0; }
+
+.pipe-card-sub {
+    font-size: 0.72rem;
     color: #64748b;
-    font-weight: 650;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
-.pipe-step.done .pipe-dot {
-    background: rgba(5,150,105,0.18);
-    border-color: rgba(5,150,105,0.62);
-    color: #6ee7b7;
-}
-.pipe-step.active .pipe-dot {
-    background: rgba(99,102,241,0.18);
-    border-color: rgba(99,102,241,0.92);
-    color: #e0e7ff;
-    box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
-}
-.pipe-connector {
-    height: 2px;
-    flex: 1 1 auto;
-    background: rgba(255,255,255,0.08);
+.pipe-card.active .pipe-card-sub { color: #818cf8; }
+.pipe-card.done   .pipe-card-sub { color: #34d399; opacity: 0.75; }
+
+/* ── Badge número / check ────────────────────────────────────────────────── */
+.pipe-badge-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
     border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 800;
+    flex: 0 0 auto;
+    background: rgba(99,102,241,0.12);
+    border: 1.5px solid rgba(99,102,241,0.40);
+    color: #a5b4fc;
 }
-.pipe-connector.done {
-    background: linear-gradient(90deg, rgba(5,150,105,0.62), rgba(5,150,105,0.18));
+.pipe-badge-num.pulse {
+    animation: badgePulse 1.4s ease-in-out infinite;
+    border-color: rgba(99,102,241,0.90);
+    background: rgba(99,102,241,0.22);
+    color: #e0e7ff;
 }
+@keyframes badgePulse {
+    0%,100% { box-shadow: 0 0 0 0   rgba(99,102,241,0.4); }
+    50%      { box-shadow: 0 0 0 4px rgba(99,102,241,0.0); }
+}
+.pipe-badge-icon {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 auto;
+    display: block;
+}
+
+/* ── Barra de progreso ───────────────────────────────────────────────────── */
 .pipe-bar {
-    margin-top: 0.7rem;
-    height: 8px;
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(99,102,241,0.18);
+    margin-top: 0.8rem;
+    height: 6px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(99,102,241,0.15);
     border-radius: 999px;
     overflow: hidden;
 }
 .pipe-bar-fill {
     height: 100%;
     width: var(--pipe-pct);
-    background: linear-gradient(90deg, #4338ca, #6366f1, #818cf8);
+    background: linear-gradient(90deg, #3730a3, #6366f1, #818cf8);
     border-radius: 999px;
     position: relative;
-    transition: width 0.25s ease;
+    transition: width 0.35s ease;
 }
 .pipe-bar-fill.active::after {
     content: "";
@@ -1610,7 +1730,7 @@ hr { border-color: rgba(99,102,241,0.14) !important; }
     background: linear-gradient(
         90deg,
         rgba(255,255,255,0.00),
-        rgba(255,255,255,0.22),
+        rgba(255,255,255,0.30),
         rgba(255,255,255,0.00)
     );
     transform: translateX(-60%);
@@ -1620,10 +1740,21 @@ hr { border-color: rgba(99,102,241,0.14) !important; }
     0%   { transform: translateX(-60%); }
     100% { transform: translateX(160%); }
 }
+
 .pipe-caption {
-    margin-top: 0.45rem;
-    font-size: 0.82rem;
-    color: #94a3b8;
+    margin-top: 0.4rem;
+    font-size: 0.78rem;
+    color: #64748b;
+}
+
+/* ── Responsive stepper ──────────────────────────────────────────────────── */
+@media (max-width: 680px) {
+    .pipe-card-icon { width: 36px; height: 36px; flex: 0 0 36px; }
+    .pipe-card-icon svg { width: 20px; height: 20px; }
+    .pipe-card { padding: 0.5rem 0.6rem; gap: 0.5rem; }
+    .pipe-card-label { font-size: 0.78rem; }
+    .pipe-card-sub { display: none; }
+    .pipe-arrow { width: 18px; }
 }
 
 /* ── Descargar JSON — teal themed ────────────────────────────────────────── */
