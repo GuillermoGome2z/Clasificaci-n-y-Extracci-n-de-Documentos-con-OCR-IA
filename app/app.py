@@ -1757,6 +1757,84 @@ hr { border-color: rgba(99,102,241,0.14) !important; }
     .pipe-arrow { width: 18px; }
 }
 
+/* ── Visor PDF multipágina ───────────────────────────────────────────────── */
+.pdf-viewer {
+    height: 680px;
+    overflow-y: auto;
+    background: #080715;
+    border: 1px solid rgba(99,102,241,0.28);
+    border-radius: 14px;
+    padding: 1.1rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(99,102,241,0.45) rgba(255,255,255,0.04);
+}
+.pdf-viewer::-webkit-scrollbar       { width: 7px; }
+.pdf-viewer::-webkit-scrollbar-track { background: rgba(255,255,255,0.03); border-radius: 999px; }
+.pdf-viewer::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.40); border-radius: 999px; }
+.pdf-viewer::-webkit-scrollbar-thumb:hover { background: rgba(99,102,241,0.65); }
+
+.pdf-page-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+.pdf-page-sep {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+.pdf-page-sep-line {
+    flex: 1;
+    height: 1px;
+    background: rgba(99,102,241,0.18);
+}
+.pdf-page-num {
+    font-size: 0.68rem;
+    color: #64748b;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+.pdf-page-img {
+    width: 100%;
+    border-radius: 8px;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.55);
+    display: block;
+}
+.pdf-viewer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+.pdf-viewer-title {
+    font-size: 0.78rem;
+    color: #a5b4fc;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+.pdf-viewer-badge {
+    font-size: 0.68rem;
+    color: #64748b;
+    background: rgba(99,102,241,0.10);
+    border: 1px solid rgba(99,102,241,0.20);
+    border-radius: 999px;
+    padding: 0.15rem 0.65rem;
+    font-weight: 600;
+}
+.pdf-page-limit-note {
+    text-align: center;
+    font-size: 0.75rem;
+    color: #475569;
+    padding: 0.4rem;
+    border-top: 1px solid rgba(99,102,241,0.12);
+    margin-top: 0.2rem;
+}
+
 /* ── Descargar JSON — teal themed ────────────────────────────────────────── */
 [data-testid="stDownloadButton"] > button {
     background: linear-gradient(135deg, #0f766e, #0d9488) !important;
@@ -2474,20 +2552,47 @@ else:
                         caption=uploaded_file.name,
                     )
                 else:
-                    # PDF — renderizar primera página con PyMuPDF
+                    # PDF — renderizar todas las páginas con PyMuPDF (scroll)
                     try:
                         _pdf_bytes = uploaded_file.getvalue()
                         _pdf_doc = fitz.open(stream=_pdf_bytes, filetype="pdf")
                         _page_count = _pdf_doc.page_count
-                        _page = _pdf_doc[0]
-                        _mat = fitz.Matrix(2.0, 2.0)  # zoom 2× para alta resolución
-                        _pix = _page.get_pixmap(matrix=_mat, alpha=False)
-                        _img_bytes = _io.BytesIO(_pix.tobytes("png"))
+                        _max_render = min(_page_count, 30)
+                        _mat = fitz.Matrix(1.6, 1.6)
+
+                        _pages_b64 = []
+                        for _pi in range(_max_render):
+                            _pix = _pdf_doc[_pi].get_pixmap(matrix=_mat, alpha=False)
+                            _pages_b64.append(
+                                base64.b64encode(_pix.tobytes("png")).decode()
+                            )
                         _pdf_doc.close()
-                        st.image(
-                            _img_bytes,
-                            use_container_width=True,
-                            caption=f"{uploaded_file.name}  ·  pág. 1 de {_page_count}",
+
+                        _pages_html = ""
+                        for _pi, _b64 in enumerate(_pages_b64):
+                            _pages_html += (
+                                '<div class="pdf-page-wrap">'
+                                '<div class="pdf-page-sep">'
+                                '<div class="pdf-page-sep-line"></div>'
+                                f'<span class="pdf-page-num">Página {_pi + 1} de {_page_count}</span>'
+                                '<div class="pdf-page-sep-line"></div>'
+                                '</div>'
+                                f'<img src="data:image/png;base64,{_b64}" class="pdf-page-img" />'
+                                '</div>'
+                            )
+
+                        _limit_note = (
+                            f'<div class="pdf-page-limit-note">Se muestran las primeras {_max_render} de {_page_count} páginas</div>'
+                            if _page_count > _max_render else ""
+                        )
+                        _safe_name = _html.escape(uploaded_file.name)
+                        st.markdown(
+                            f'<div class="pdf-viewer-header">'
+                            f'<span class="pdf-viewer-title">📄 {_safe_name}</span>'
+                            f'<span class="pdf-viewer-badge">{_page_count} página{"s" if _page_count != 1 else ""}</span>'
+                            f'</div>'
+                            f'<div class="pdf-viewer">{_pages_html}{_limit_note}</div>',
+                            unsafe_allow_html=True,
                         )
                     except Exception:
                         _safe_name = _html.escape(uploaded_file.name)
