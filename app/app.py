@@ -2,6 +2,7 @@
 Aplicación Streamlit para OCR IA Project
 """
 
+import base64
 import html as _html
 import importlib
 import inspect
@@ -653,13 +654,90 @@ html, body, [class*="css"] {
     animation: shimmer-line 3s ease-in-out infinite;
 }
 
-.hero-content { position: relative; z-index: 1; }
+/* Layout principal del hero: dos columnas */
+.hero-content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+}
+
+.hero-left {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+.hero-right {
+    flex: 0 0 32%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+/* Marca de agua detrás del logo */
+.hero-logo-watermark {
+    position: absolute;
+    width: 230px;
+    height: 230px;
+    object-fit: contain;
+    opacity: 0.08;
+    filter: blur(2px) saturate(0);
+    border-radius: 50%;
+    pointer-events: none;
+    user-select: none;
+}
+
+/* Logo principal */
+.hero-logo {
+    width: 200px;
+    height: 200px;
+    object-fit: contain;
+    border-radius: 50%;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 2;
+    filter:
+        drop-shadow(0 0 28px rgba(99,102,241,0.55))
+        drop-shadow(0 0 60px rgba(8,145,178,0.30))
+        drop-shadow(0 4px 16px rgba(0,0,0,0.5));
+    animation: logoFloat 4s ease-in-out infinite;
+    border: 3px solid rgba(255,255,255,0.15);
+}
+
+@keyframes logoFloat {
+    0%, 100% { transform: translateY(0px);   }
+    50%       { transform: translateY(-8px);  }
+}
+
+/* Anillo de brillo alrededor del logo */
+.hero-logo-ring {
+    position: absolute;
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    border: 1px solid rgba(165,180,252,0.25);
+    box-shadow:
+        0 0 30px rgba(99,102,241,0.2),
+        inset 0 0 30px rgba(99,102,241,0.08);
+    z-index: 1;
+    animation: ringPulse 4s ease-in-out infinite;
+}
+
+@keyframes ringPulse {
+    0%, 100% { opacity: 0.6; transform: scale(1);    }
+    50%       { opacity: 1;   transform: scale(1.04); }
+}
+
+.hero-top-row {
+    margin-bottom: 1rem;
+}
 
 .hero-eyebrow {
     display: flex;
     flex-direction: column;
     gap: 0.2rem;
-    margin-bottom: 1rem;
 }
 .hero-eyebrow-uni {
     font-size: 0.7rem;
@@ -1157,12 +1235,30 @@ html, body, [class*="css"] {
 .animate-pulse-once { animation: pulse-ring 1.5s ease-out 1; }
 
 /* ── Responsive base ─────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+    .hero-right { flex: 0 0 28%; }
+    .hero-logo  { width: 160px; height: 160px; }
+    .hero-logo-watermark { width: 185px; height: 185px; }
+    .hero-logo-ring      { width: 178px; height: 178px; }
+}
+
 @media (max-width: 768px) {
     .hero { padding: 1.75rem 1.25rem; }
+    .hero-content {
+        flex-direction: column-reverse;
+        align-items: center;
+        gap: 1.25rem;
+    }
+    .hero-left  { width: 100%; text-align: center; }
+    .hero-right { flex: 0 0 auto; }
     .hero-title { font-size: 1.6rem; }
-    .hero-stats { gap: 0.5rem; }
-    .stat-pill { min-width: 70px; padding: 0.5rem 0.75rem; }
-    .stat-val { font-size: 1.2rem; }
+    .hero-stats { gap: 0.5rem; justify-content: center; }
+    .stat-pill  { min-width: 70px; padding: 0.5rem 0.75rem; }
+    .stat-val   { font-size: 1.2rem; }
+    .hero-logo  { width: 120px; height: 120px; }
+    .hero-logo-watermark { width: 140px; height: 140px; }
+    .hero-logo-ring      { width: 135px; height: 135px; }
+    .hero-subtitle { max-width: 100%; }
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════
@@ -2053,37 +2149,53 @@ antes de tomar decisiones. No procesar datos sensibles sin autorización.
 # ══════════════════════════════════════════════════════════════════════════════
 #  HERO HEADER
 # ══════════════════════════════════════════════════════════════════════════════
-st.markdown("""
+_logo_path = Path(__file__).resolve().parent / "LogotipoUMG.png"
+_logo_b64 = base64.b64encode(_logo_path.read_bytes()).decode() if _logo_path.exists() else ""
+
+_logo_right = (
+    f'<div class="hero-logo-ring"></div>'
+    f'<img src="data:image/png;base64,{_logo_b64}" class="hero-logo-watermark" alt="" aria-hidden="true" />'
+    f'<img src="data:image/png;base64,{_logo_b64}" class="hero-logo" alt="Logo UMG" />'
+) if _logo_b64 else ""
+
+st.markdown(f"""
 <div class="hero">
     <div class="hero-shimmer"></div>
     <div class="hero-content">
-        <div class="hero-eyebrow">
-            <span class="hero-eyebrow-uni">UNIVERSIDAD MARIANO GÁLVEZ DE GUATEMALA</span>
-            <span class="hero-eyebrow-course">Curso 045 · Inteligencia Artificial · Proyecto 04</span>
+        <div class="hero-left">
+            <div class="hero-top-row">
+                <div class="hero-eyebrow">
+                    <span class="hero-eyebrow-uni">UNIVERSIDAD MARIANO GÁLVEZ DE GUATEMALA</span>
+                    <span class="hero-eyebrow-course">Curso 045 · Inteligencia Artificial · Proyecto 04</span>
+                </div>
+            </div>
+            <h1 class="hero-title">Sistema Inteligente<br>OCR + IA</h1>
+            <p class="hero-subtitle">
+                Clasificación automática y extracción de datos en documentos guatemaltecos
+                mediante Reconocimiento Óptico de Caracteres y Machine Learning.
+                Compatible con facturas FEL / SAT.
+            </p>
+            <div class="hero-stats">
+                <div class="stat-pill">
+                    <div class="stat-val">7</div>
+                    <div class="stat-lbl">Categorías</div>
+                </div>
+                <div class="stat-pill">
+                    <div class="stat-val">99.4%</div>
+                    <div class="stat-lbl">F1-Macro</div>
+                </div>
+                <div class="stat-pill">
+                    <div class="stat-val">490</div>
+                    <div class="stat-lbl">Documentos</div>
+                </div>
+                <div class="stat-pill">
+                    <div class="stat-val">158</div>
+                    <div class="stat-lbl">Tests ✅</div>
+                </div>
+            </div>
         </div>
-        <h1 class="hero-title">Sistema Inteligente<br>OCR + IA</h1>
-        <p class="hero-subtitle">
-            Clasificación automática y extracción de datos en documentos guatemaltecos
-            mediante Reconocimiento Óptico de Caracteres y Machine Learning.
-            Compatible con facturas FEL / SAT.
-        </p>
-        <div class="hero-stats">
-            <div class="stat-pill">
-                <div class="stat-val">7</div>
-                <div class="stat-lbl">Categorías</div>
-            </div>
-            <div class="stat-pill">
-                <div class="stat-val">99.4%</div>
-                <div class="stat-lbl">F1-Macro</div>
-            </div>
-            <div class="stat-pill">
-                <div class="stat-val">490</div>
-                <div class="stat-lbl">Documentos</div>
-            </div>
-            <div class="stat-pill">
-                <div class="stat-val">158</div>
-                <div class="stat-lbl">Tests ✅</div>
-            </div>
+        <div class="hero-right">
+            {_logo_right}
         </div>
     </div>
 </div>
