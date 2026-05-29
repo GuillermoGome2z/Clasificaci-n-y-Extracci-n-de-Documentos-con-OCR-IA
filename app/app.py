@@ -2,6 +2,7 @@
 Aplicación Streamlit para OCR IA Project
 """
 
+import base64
 import html as _html
 import importlib
 import inspect
@@ -23,10 +24,41 @@ import streamlit as st  # pylint: disable=wrong-import-position
 
 
 _PIPELINE_STEPS = (
-    ("ocr", "OCR"),
-    ("extraction", "Extracción"),
-    ("classification", "Clasificación"),
+    ("ocr", "OCR", "Reconocimiento óptico"),
+    ("extraction", "Extracción", "Campos y entidades"),
+    ("classification", "Clasificación", "Tipo de documento"),
 )
+
+_STEP_SVG = {
+    "ocr": """<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="8" y="6" width="24" height="30" rx="3" stroke="currentColor" stroke-width="2.2" fill="none"/>
+  <path d="M14 14h12M14 19h12M14 24h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <rect x="28" y="26" width="12" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
+  <path d="M28 30h12M28 34h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity=".6"/>
+  <path d="M36 6v4M36 4v1M42 12h-4M44 12h-1M36 18v-4M36 20v-1M30 12h4M28 12h1" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity=".8"/>
+</svg>""",
+    "extraction": """<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="6" y="8" width="22" height="32" rx="3" stroke="currentColor" stroke-width="2.2" fill="none"/>
+  <path d="M12 15h10M12 20h10M12 25h6M12 30h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <path d="M32 18l8 6-8 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M34 24h8" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="38" cy="36" r="5" stroke="currentColor" stroke-width="2" fill="none"/>
+  <path d="M38 33v3l2 1.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>""",
+    "classification": """<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M8 12a4 4 0 014-4h14l12 12v16a4 4 0 01-4 4H12a4 4 0 01-4-4V12z" stroke="currentColor" stroke-width="2.2" fill="none"/>
+  <path d="M26 8v10h10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="17" cy="28" r="3.5" stroke="currentColor" stroke-width="2" fill="none"/>
+  <path d="M24 28h8M24 33h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <path d="M13 22l3 3 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity=".5"/>
+</svg>""",
+}
+
+_STEP_SUBLABEL = {
+    "ocr": "Reconocimiento óptico",
+    "extraction": "Campos y entidades",
+    "classification": "Tipo de documento",
+}
 
 
 def _pipeline_stepper_html(
@@ -36,36 +68,43 @@ def _pipeline_stepper_html(
     percent: int,
     caption: str,
 ) -> str:
-    """Render stepper (OCR → Extracción → Clasificación) con barra animada."""
-    steps_html = []
-    for i, (step_id, label) in enumerate(_PIPELINE_STEPS):
+    """Render stepper visual con tarjetas SVG por paso."""
+    cards_html = []
+    for i, (step_id, label, sublabel) in enumerate(_PIPELINE_STEPS):
         if step_id in completed_steps:
-            cls = "pipe-step done"
-            dot = "✓"
+            state = "done"
+            badge = '<svg class="pipe-badge-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#059669"/><path d="M5 8.5l2 2 4-4" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'
         elif active_step == step_id:
-            cls = "pipe-step active"
-            dot = "•"
+            state = "active"
+            badge = f'<span class="pipe-badge-num pulse">{i + 1}</span>'
         else:
-            cls = "pipe-step pending"
-            dot = str(i + 1)
+            state = "pending"
+            badge = f'<span class="pipe-badge-num">{i + 1}</span>'
 
-        steps_html.append(
-            f'<div class="{cls}">'
-            f'<div class="pipe-dot">{_html.escape(dot)}</div>'
-            f'<div class="pipe-label">{_html.escape(label)}</div>'
-            "</div>"
+        svg = _STEP_SVG.get(step_id, "")
+        cards_html.append(
+            f'<div class="pipe-card {state}">'
+            f'  <div class="pipe-card-icon">{svg}</div>'
+            f'  <div class="pipe-card-body">'
+            f'    <div class="pipe-card-header">{badge}<span class="pipe-card-label">{_html.escape(label)}</span></div>'
+            f'    <div class="pipe-card-sub">{_html.escape(sublabel)}</div>'
+            f'  </div>'
+            f'</div>'
         )
         if i < len(_PIPELINE_STEPS) - 1:
-            steps_html.append(
-                '<div class="pipe-connector ' + ("done" if step_id in completed_steps else "") + '"></div>'
+            arrow_cls = "pipe-arrow done" if step_id in completed_steps else "pipe-arrow"
+            cards_html.append(
+                f'<div class="{arrow_cls}">'
+                '<svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+                '</div>'
             )
 
     fill_cls = "pipe-bar-fill active" if active_step is not None else "pipe-bar-fill"
     safe_pct = max(0, min(100, int(percent)))
     return (
         '<div class="pipe-stepper">'
-        '<div class="pipe-steps">'
-        + "".join(steps_html)
+        '<div class="pipe-cards">'
+        + "".join(cards_html)
         + "</div>"
         + f'<div class="pipe-bar" style="--pipe-pct:{safe_pct}%">'
         + f'<div class="{fill_cls}" style="width:{safe_pct}%"></div>'
@@ -652,13 +691,90 @@ html, body, [class*="css"] {
     animation: shimmer-line 3s ease-in-out infinite;
 }
 
-.hero-content { position: relative; z-index: 1; }
+/* Layout principal del hero: dos columnas */
+.hero-content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+}
+
+.hero-left {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+.hero-right {
+    flex: 0 0 32%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+/* Marca de agua detrás del logo */
+.hero-logo-watermark {
+    position: absolute;
+    width: 230px;
+    height: 230px;
+    object-fit: contain;
+    opacity: 0.08;
+    filter: blur(2px) saturate(0);
+    border-radius: 50%;
+    pointer-events: none;
+    user-select: none;
+}
+
+/* Logo principal */
+.hero-logo {
+    width: 200px;
+    height: 200px;
+    object-fit: contain;
+    border-radius: 50%;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 2;
+    filter:
+        drop-shadow(0 0 28px rgba(99,102,241,0.55))
+        drop-shadow(0 0 60px rgba(8,145,178,0.30))
+        drop-shadow(0 4px 16px rgba(0,0,0,0.5));
+    animation: logoFloat 4s ease-in-out infinite;
+    border: 3px solid rgba(255,255,255,0.15);
+}
+
+@keyframes logoFloat {
+    0%, 100% { transform: translateY(0px);   }
+    50%       { transform: translateY(-8px);  }
+}
+
+/* Anillo de brillo alrededor del logo */
+.hero-logo-ring {
+    position: absolute;
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    border: 1px solid rgba(165,180,252,0.25);
+    box-shadow:
+        0 0 30px rgba(99,102,241,0.2),
+        inset 0 0 30px rgba(99,102,241,0.08);
+    z-index: 1;
+    animation: ringPulse 4s ease-in-out infinite;
+}
+
+@keyframes ringPulse {
+    0%, 100% { opacity: 0.6; transform: scale(1);    }
+    50%       { opacity: 1;   transform: scale(1.04); }
+}
+
+.hero-top-row {
+    margin-bottom: 1rem;
+}
 
 .hero-eyebrow {
     display: flex;
     flex-direction: column;
     gap: 0.2rem;
-    margin-bottom: 1rem;
 }
 .hero-eyebrow-uni {
     font-size: 0.7rem;
@@ -1156,12 +1272,30 @@ html, body, [class*="css"] {
 .animate-pulse-once { animation: pulse-ring 1.5s ease-out 1; }
 
 /* ── Responsive base ─────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+    .hero-right { flex: 0 0 28%; }
+    .hero-logo  { width: 160px; height: 160px; }
+    .hero-logo-watermark { width: 185px; height: 185px; }
+    .hero-logo-ring      { width: 178px; height: 178px; }
+}
+
 @media (max-width: 768px) {
     .hero { padding: 1.75rem 1.25rem; }
+    .hero-content {
+        flex-direction: column-reverse;
+        align-items: center;
+        gap: 1.25rem;
+    }
+    .hero-left  { width: 100%; text-align: center; }
+    .hero-right { flex: 0 0 auto; }
     .hero-title { font-size: 1.6rem; }
-    .hero-stats { gap: 0.5rem; }
-    .stat-pill { min-width: 70px; padding: 0.5rem 0.75rem; }
-    .stat-val { font-size: 1.2rem; }
+    .hero-stats { gap: 0.5rem; justify-content: center; }
+    .stat-pill  { min-width: 70px; padding: 0.5rem 0.75rem; }
+    .stat-val   { font-size: 1.2rem; }
+    .hero-logo  { width: 120px; height: 120px; }
+    .hero-logo-watermark { width: 140px; height: 140px; }
+    .hero-logo-ring      { width: 135px; height: 135px; }
+    .hero-subtitle { max-width: 100%; }
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════
@@ -1422,89 +1556,171 @@ hr { border-color: rgba(99,102,241,0.14) !important; }
     transform: translateY(-3px) scale(1.035) !important;
 }
 
-/* ── Pipeline stepper (OCR → Extracción → Clasificación) ─────────────────── */
+/* ── Pipeline stepper — tarjetas SVG ─────────────────────────────────────── */
 .pipe-stepper {
     margin: 0.25rem 0 0.75rem 0;
-    padding: 0.85rem 1rem;
+    padding: 1rem 1.25rem 0.9rem;
     border: 1px solid rgba(99,102,241,0.22);
     border-radius: var(--radius-md);
-    background: rgba(13,11,38,0.55);
-    box-shadow: 0 4px 16px rgba(99,102,241,0.10);
-    backdrop-filter: blur(10px);
+    background: rgba(13,11,38,0.60);
+    box-shadow: 0 4px 24px rgba(99,102,241,0.12);
+    backdrop-filter: blur(12px);
 }
-.pipe-steps {
+
+/* Fila de tarjetas */
+.pipe-cards {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
+    gap: 0.5rem;
 }
-.pipe-step {
+
+/* Flecha entre pasos */
+.pipe-arrow {
+    flex: 0 0 auto;
+    width: 28px;
+    color: rgba(255,255,255,0.18);
+}
+.pipe-arrow.done { color: rgba(5,150,105,0.7); }
+.pipe-arrow svg { display: block; width: 100%; height: auto; }
+
+/* Tarjeta individual */
+.pipe-card {
+    flex: 1 1 0;
     display: flex;
     align-items: center;
-    gap: 0.55rem;
+    gap: 0.85rem;
+    padding: 0.7rem 1rem;
+    border-radius: 12px;
+    border: 1.5px solid rgba(99,102,241,0.15);
+    background: rgba(255,255,255,0.03);
+    transition: border-color 0.3s, background 0.3s, box-shadow 0.3s;
     min-width: 0;
 }
-.pipe-dot {
-    width: 18px;
-    height: 18px;
-    border-radius: 999px;
+
+/* ── Estados ─────────────────────────────────────────────────────────────── */
+.pipe-card.pending {
+    opacity: 0.45;
+}
+.pipe-card.active {
+    border-color: rgba(99,102,241,0.70);
+    background: rgba(99,102,241,0.10);
+    box-shadow: 0 0 20px rgba(99,102,241,0.18), inset 0 0 12px rgba(99,102,241,0.06);
+}
+.pipe-card.done {
+    border-color: rgba(5,150,105,0.55);
+    background: rgba(5,150,105,0.07);
+}
+
+/* ── Icono SVG ───────────────────────────────────────────────────────────── */
+.pipe-card-icon {
+    flex: 0 0 48px;
+    width: 48px;
+    height: 48px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 12px;
-    font-weight: 800;
-    color: #a5b4fc;
-    background: rgba(99,102,241,0.08);
-    border: 2px solid rgba(99,102,241,0.35);
-    flex: 0 0 auto;
+    border-radius: 10px;
+    background: rgba(99,102,241,0.10);
+    border: 1px solid rgba(99,102,241,0.20);
+    transition: background 0.3s;
 }
-.pipe-label {
-    font-size: 0.86rem;
-    font-weight: 750;
+.pipe-card-icon svg {
+    width: 28px;
+    height: 28px;
+    color: #a5b4fc;
+    display: block;
+}
+.pipe-card.active .pipe-card-icon {
+    background: rgba(99,102,241,0.22);
+    border-color: rgba(99,102,241,0.55);
+}
+.pipe-card.active .pipe-card-icon svg { color: #c7d2fe; }
+.pipe-card.done   .pipe-card-icon {
+    background: rgba(5,150,105,0.14);
+    border-color: rgba(5,150,105,0.45);
+}
+.pipe-card.done   .pipe-card-icon svg { color: #6ee7b7; }
+.pipe-card.pending .pipe-card-icon svg { color: #475569; }
+
+/* ── Cuerpo de texto ─────────────────────────────────────────────────────── */
+.pipe-card-body { min-width: 0; flex: 1; }
+
+.pipe-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin-bottom: 0.18rem;
+}
+
+.pipe-card-label {
+    font-size: 0.9rem;
+    font-weight: 700;
     color: #e0e7ff;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
-.pipe-step.pending .pipe-label {
+.pipe-card.pending .pipe-card-label { color: #475569; }
+.pipe-card.done    .pipe-card-label { color: #a7f3d0; }
+
+.pipe-card-sub {
+    font-size: 0.72rem;
     color: #64748b;
-    font-weight: 650;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
-.pipe-step.done .pipe-dot {
-    background: rgba(5,150,105,0.18);
-    border-color: rgba(5,150,105,0.62);
-    color: #6ee7b7;
-}
-.pipe-step.active .pipe-dot {
-    background: rgba(99,102,241,0.18);
-    border-color: rgba(99,102,241,0.92);
-    color: #e0e7ff;
-    box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
-}
-.pipe-connector {
-    height: 2px;
-    flex: 1 1 auto;
-    background: rgba(255,255,255,0.08);
+.pipe-card.active .pipe-card-sub { color: #818cf8; }
+.pipe-card.done   .pipe-card-sub { color: #34d399; opacity: 0.75; }
+
+/* ── Badge número / check ────────────────────────────────────────────────── */
+.pipe-badge-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
     border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 800;
+    flex: 0 0 auto;
+    background: rgba(99,102,241,0.12);
+    border: 1.5px solid rgba(99,102,241,0.40);
+    color: #a5b4fc;
 }
-.pipe-connector.done {
-    background: linear-gradient(90deg, rgba(5,150,105,0.62), rgba(5,150,105,0.18));
+.pipe-badge-num.pulse {
+    animation: badgePulse 1.4s ease-in-out infinite;
+    border-color: rgba(99,102,241,0.90);
+    background: rgba(99,102,241,0.22);
+    color: #e0e7ff;
 }
+@keyframes badgePulse {
+    0%,100% { box-shadow: 0 0 0 0   rgba(99,102,241,0.4); }
+    50%      { box-shadow: 0 0 0 4px rgba(99,102,241,0.0); }
+}
+.pipe-badge-icon {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 auto;
+    display: block;
+}
+
+/* ── Barra de progreso ───────────────────────────────────────────────────── */
 .pipe-bar {
-    margin-top: 0.7rem;
-    height: 8px;
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(99,102,241,0.18);
+    margin-top: 0.8rem;
+    height: 6px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(99,102,241,0.15);
     border-radius: 999px;
     overflow: hidden;
 }
 .pipe-bar-fill {
     height: 100%;
     width: var(--pipe-pct);
-    background: linear-gradient(90deg, #4338ca, #6366f1, #818cf8);
+    background: linear-gradient(90deg, #3730a3, #6366f1, #818cf8);
     border-radius: 999px;
     position: relative;
-    transition: width 0.25s ease;
+    transition: width 0.35s ease;
 }
 .pipe-bar-fill.active::after {
     content: "";
@@ -1513,7 +1729,7 @@ hr { border-color: rgba(99,102,241,0.14) !important; }
     background: linear-gradient(
         90deg,
         rgba(255,255,255,0.00),
-        rgba(255,255,255,0.22),
+        rgba(255,255,255,0.30),
         rgba(255,255,255,0.00)
     );
     transform: translateX(-60%);
@@ -1523,10 +1739,99 @@ hr { border-color: rgba(99,102,241,0.14) !important; }
     0%   { transform: translateX(-60%); }
     100% { transform: translateX(160%); }
 }
+
 .pipe-caption {
-    margin-top: 0.45rem;
-    font-size: 0.82rem;
-    color: #94a3b8;
+    margin-top: 0.4rem;
+    font-size: 0.78rem;
+    color: #64748b;
+}
+
+/* ── Responsive stepper ──────────────────────────────────────────────────── */
+@media (max-width: 680px) {
+    .pipe-card-icon { width: 36px; height: 36px; flex: 0 0 36px; }
+    .pipe-card-icon svg { width: 20px; height: 20px; }
+    .pipe-card { padding: 0.5rem 0.6rem; gap: 0.5rem; }
+    .pipe-card-label { font-size: 0.78rem; }
+    .pipe-card-sub { display: none; }
+    .pipe-arrow { width: 18px; }
+}
+
+/* ── Visor PDF multipágina ───────────────────────────────────────────────── */
+.pdf-viewer {
+    height: 680px;
+    overflow-y: auto;
+    background: #080715;
+    border: 1px solid rgba(99,102,241,0.28);
+    border-radius: 14px;
+    padding: 1.1rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(99,102,241,0.45) rgba(255,255,255,0.04);
+}
+.pdf-viewer::-webkit-scrollbar       { width: 7px; }
+.pdf-viewer::-webkit-scrollbar-track { background: rgba(255,255,255,0.03); border-radius: 999px; }
+.pdf-viewer::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.40); border-radius: 999px; }
+.pdf-viewer::-webkit-scrollbar-thumb:hover { background: rgba(99,102,241,0.65); }
+
+.pdf-page-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+.pdf-page-sep {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+.pdf-page-sep-line {
+    flex: 1;
+    height: 1px;
+    background: rgba(99,102,241,0.18);
+}
+.pdf-page-num {
+    font-size: 0.68rem;
+    color: #64748b;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+.pdf-page-img {
+    width: 100%;
+    border-radius: 8px;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.55);
+    display: block;
+}
+.pdf-viewer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+.pdf-viewer-title {
+    font-size: 0.78rem;
+    color: #a5b4fc;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+.pdf-viewer-badge {
+    font-size: 0.68rem;
+    color: #64748b;
+    background: rgba(99,102,241,0.10);
+    border: 1px solid rgba(99,102,241,0.20);
+    border-radius: 999px;
+    padding: 0.15rem 0.65rem;
+    font-weight: 600;
+}
+.pdf-page-limit-note {
+    text-align: center;
+    font-size: 0.75rem;
+    color: #475569;
+    padding: 0.4rem;
+    border-top: 1px solid rgba(99,102,241,0.12);
+    margin-top: 0.2rem;
 }
 
 /* ── Descargar JSON — teal themed ────────────────────────────────────────── */
@@ -2115,37 +2420,53 @@ antes de tomar decisiones. No procesar datos sensibles sin autorización.
 # ══════════════════════════════════════════════════════════════════════════════
 #  HERO HEADER
 # ══════════════════════════════════════════════════════════════════════════════
-st.markdown("""
+_logo_path = Path(__file__).resolve().parent / "LogotipoUMG.png"
+_logo_b64 = base64.b64encode(_logo_path.read_bytes()).decode() if _logo_path.exists() else ""
+
+_logo_right = (
+    f'<div class="hero-logo-ring"></div>'
+    f'<img src="data:image/png;base64,{_logo_b64}" class="hero-logo-watermark" alt="" aria-hidden="true" />'
+    f'<img src="data:image/png;base64,{_logo_b64}" class="hero-logo" alt="Logo UMG" />'
+) if _logo_b64 else ""
+
+st.markdown(f"""
 <div class="hero">
     <div class="hero-shimmer"></div>
     <div class="hero-content">
-        <div class="hero-eyebrow">
-            <span class="hero-eyebrow-uni">UNIVERSIDAD MARIANO GÁLVEZ DE GUATEMALA</span>
-            <span class="hero-eyebrow-course">Curso 045 · Inteligencia Artificial · Proyecto 04</span>
+        <div class="hero-left">
+            <div class="hero-top-row">
+                <div class="hero-eyebrow">
+                    <span class="hero-eyebrow-uni">UNIVERSIDAD MARIANO GÁLVEZ DE GUATEMALA</span>
+                    <span class="hero-eyebrow-course">Curso 045 · Inteligencia Artificial · Proyecto 04</span>
+                </div>
+            </div>
+            <h1 class="hero-title">Sistema Inteligente<br>OCR + IA</h1>
+            <p class="hero-subtitle">
+                Clasificación automática y extracción de datos en documentos guatemaltecos
+                mediante Reconocimiento Óptico de Caracteres y Machine Learning.
+                Compatible con facturas FEL / SAT.
+            </p>
+            <div class="hero-stats">
+                <div class="stat-pill">
+                    <div class="stat-val">7</div>
+                    <div class="stat-lbl">Categorías</div>
+                </div>
+                <div class="stat-pill">
+                    <div class="stat-val">99.4%</div>
+                    <div class="stat-lbl">F1-Macro</div>
+                </div>
+                <div class="stat-pill">
+                    <div class="stat-val">490</div>
+                    <div class="stat-lbl">Documentos</div>
+                </div>
+                <div class="stat-pill">
+                    <div class="stat-val">158</div>
+                    <div class="stat-lbl">Tests ✅</div>
+                </div>
+            </div>
         </div>
-        <h1 class="hero-title">Sistema Inteligente<br>OCR + IA</h1>
-        <p class="hero-subtitle">
-            Clasificación automática y extracción de datos en documentos guatemaltecos
-            mediante Reconocimiento Óptico de Caracteres y Machine Learning.
-            Compatible con facturas FEL / SAT.
-        </p>
-        <div class="hero-stats">
-            <div class="stat-pill">
-                <div class="stat-val">7</div>
-                <div class="stat-lbl">Categorías</div>
-            </div>
-            <div class="stat-pill">
-                <div class="stat-val">99.4%</div>
-                <div class="stat-lbl">F1-Macro</div>
-            </div>
-            <div class="stat-pill">
-                <div class="stat-val">490</div>
-                <div class="stat-lbl">Documentos</div>
-            </div>
-            <div class="stat-pill">
-                <div class="stat-val">158</div>
-                <div class="stat-lbl">Tests ✅</div>
-            </div>
+        <div class="hero-right">
+            {_logo_right}
         </div>
     </div>
 </div>
@@ -2293,20 +2614,47 @@ else:
                         caption=uploaded_file.name,
                     )
                 else:
-                    # PDF — renderizar primera página con PyMuPDF
+                    # PDF — renderizar todas las páginas con PyMuPDF (scroll)
                     try:
                         _pdf_bytes = uploaded_file.getvalue()
                         _pdf_doc = fitz.open(stream=_pdf_bytes, filetype="pdf")
                         _page_count = _pdf_doc.page_count
-                        _page = _pdf_doc[0]
-                        _mat = fitz.Matrix(2.0, 2.0)  # zoom 2× para alta resolución
-                        _pix = _page.get_pixmap(matrix=_mat, alpha=False)
-                        _img_bytes = _io.BytesIO(_pix.tobytes("png"))
+                        _max_render = min(_page_count, 30)
+                        _mat = fitz.Matrix(1.6, 1.6)
+
+                        _pages_b64 = []
+                        for _pi in range(_max_render):
+                            _pix = _pdf_doc[_pi].get_pixmap(matrix=_mat, alpha=False)
+                            _pages_b64.append(
+                                base64.b64encode(_pix.tobytes("png")).decode()
+                            )
                         _pdf_doc.close()
-                        st.image(
-                            _img_bytes,
-                            use_container_width=True,
-                            caption=f"{uploaded_file.name}  ·  pág. 1 de {_page_count}",
+
+                        _pages_html = ""
+                        for _pi, _b64 in enumerate(_pages_b64):
+                            _pages_html += (
+                                '<div class="pdf-page-wrap">'
+                                '<div class="pdf-page-sep">'
+                                '<div class="pdf-page-sep-line"></div>'
+                                f'<span class="pdf-page-num">Página {_pi + 1} de {_page_count}</span>'
+                                '<div class="pdf-page-sep-line"></div>'
+                                '</div>'
+                                f'<img src="data:image/png;base64,{_b64}" class="pdf-page-img" />'
+                                '</div>'
+                            )
+
+                        _limit_note = (
+                            f'<div class="pdf-page-limit-note">Se muestran las primeras {_max_render} de {_page_count} páginas</div>'
+                            if _page_count > _max_render else ""
+                        )
+                        _safe_name = _html.escape(uploaded_file.name)
+                        st.markdown(
+                            f'<div class="pdf-viewer-header">'
+                            f'<span class="pdf-viewer-title">📄 {_safe_name}</span>'
+                            f'<span class="pdf-viewer-badge">{_page_count} página{"s" if _page_count != 1 else ""}</span>'
+                            f'</div>'
+                            f'<div class="pdf-viewer">{_pages_html}{_limit_note}</div>',
+                            unsafe_allow_html=True,
                         )
                     except Exception:
                         _safe_name = _html.escape(uploaded_file.name)
