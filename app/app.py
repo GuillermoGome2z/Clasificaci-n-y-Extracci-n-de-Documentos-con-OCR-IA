@@ -20,7 +20,6 @@ logger = logging.getLogger(__name__)
 
 import streamlit as st  # pylint: disable=wrong-import-position
 
-from src.pipeline import OCRPipeline  # pylint: disable=wrong-import-position
 
 
 _PIPELINE_STEPS = (
@@ -1924,6 +1923,8 @@ if "upload_key_counter" not in st.session_state:
     st.session_state.upload_key_counter = 0
 if "upload_error" not in st.session_state:
     st.session_state.upload_error = None
+if "history" not in st.session_state:
+    st.session_state.history = []
 
 
 def load_pipeline(tesseract_path=None):
@@ -2018,6 +2019,67 @@ with st.sidebar:
     )
 
     st.divider()
+
+    # ── Historial de sesión ──────────────────────────────────────────────────
+    if st.session_state.history:
+        st.markdown(
+            '<div style="font-size:0.7rem;font-weight:700;letter-spacing:1.5px;'
+            'text-transform:uppercase;color:#818cf8;margin-bottom:0.5rem;">'
+            '📋 Historial de sesión</div>',
+            unsafe_allow_html=True,
+        )
+        for _hi, _h in enumerate(st.session_state.history[:5]):
+            _h_icon  = (_BADGE_MAP.get(_h["doc_type"]) or ("badge-otro", "📁"))[1]
+            _h_disp: str = (
+                _CAT_DISPLAY.get(_h["doc_type"])
+                or str(_h["doc_type"]).replace("_", " ").title()
+            )
+            _h_color: str = _COLOR_MAP.get(_h["doc_type"]) or "#6b7280"
+            _h_fn_s  = (
+                (_h["filename"][:16] + "…")
+                if len(_h["filename"]) > 16
+                else _h["filename"]
+            )
+            _h_conf_s = (
+                f"{_h['confidence'] * 100:.0f}%" if _h["confidence"] else "—"
+            )
+            _hcol, _hbtn = st.columns([4, 1])
+            with _hcol:
+                st.markdown(
+                    f'<div style="background:rgba(255,255,255,0.03);border:1px solid '
+                    f'rgba(99,102,241,0.15);border-radius:7px;padding:0.4rem 0.55rem;'
+                    f'font-size:0.75rem;margin-bottom:0.25rem;">'
+                    f'<div style="color:#c7d2fe;font-weight:600;margin-bottom:0.1rem;">'
+                    f'{_h_icon} {_html.escape(_h_fn_s)}</div>'
+                    f'<div style="display:flex;gap:0.3rem;align-items:center;">'
+                    f'<span style="background:{_h_color}22;color:{_h_color};'
+                    f'border:1px solid {_h_color}55;border-radius:3px;'
+                    f'padding:0.05rem 0.3rem;font-size:0.68rem;font-weight:600;">'
+                    f'{_html.escape(_h_disp)}</span>'
+                    f'<span style="color:#64748b;font-size:0.68rem;">'
+                    f'{_h_conf_s} · {_h["timestamp"]}</span>'
+                    f'</div></div>',
+                    unsafe_allow_html=True,
+                )
+            with _hbtn:
+                if st.button(
+                    "↗",
+                    key=f"hist_ver_{_hi}",
+                    help=f"Ver en Resultados: {_h['filename']}",
+                    use_container_width=True,
+                ):
+                    st.session_state.last_result    = _h["result"]
+                    st.session_state.last_filename  = _h["filename"]
+                    st.session_state.pages_actuales = _h.get("pages", [])
+                    st.session_state.selected_page_idx = 1
+                    st.rerun()
+        _, _hclear = st.columns(2)
+        with _hclear:
+            if st.button("🗑 Limpiar", key="hist_clear", use_container_width=True):
+                st.session_state.history = []
+                st.rerun()
+        st.divider()
+
     st.markdown("""
 <div style="text-align:center;padding:0.5rem 0;">
     <div style="font-size:0.75rem;opacity:0.6;">OCR IA Project</div>
@@ -2547,6 +2609,37 @@ backdrop-filter:blur(8px);">
 
                         if result.get("status") == "success":
                             _proc_status.success("✅ ¡Documento procesado correctamente!")
+                            # ── Historial de sesión ──────────────────────────
+                            _h_clf = result.get("steps", {}).get("classification", {}) or {}
+                            _h_pgs = result.get("pages", [])
+                            if _h_pgs and not _h_clf:
+                                _h_clf = _h_pgs[0].get("classification", {}) or {}
+                            _h_cls = _resolve_cls_label(
+                                (
+                                    _h_clf.get("predicted_class")
+                                    or _h_clf.get("class", "otro")
+                                    or "otro"
+                                ).lower()
+                            )
+                            _h_txt = result.get("extracted_text", "") or " ".join(
+                                p.get("text", "") for p in result.get("pages", [])
+                            )
+                            if not any(
+                                h.get("file_id") == _file_id
+                                for h in st.session_state.history
+                            ):
+                                st.session_state.history.insert(0, {
+                                    "file_id":    _file_id,
+                                    "filename":   uploaded_file.name,
+                                    "timestamp":  datetime.now().strftime("%H:%M:%S"),
+                                    "doc_type":   _h_cls,
+                                    "confidence": _h_clf.get("confidence", 0) or 0,
+                                    "format":     result.get("format", "unknown"),
+                                    "chars":      len(_h_txt.strip()),
+                                    "result":     result,
+                                    "pages":      result.get("pages", []),
+                                })
+                                st.session_state.history = st.session_state.history[:10]
                         else:
                             step_state["caption"] = "❌ Error durante el procesamiento"
                             _render_stepper()
