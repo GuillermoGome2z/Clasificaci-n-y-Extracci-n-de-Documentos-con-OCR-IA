@@ -3,6 +3,7 @@ Aplicación Streamlit para OCR IA Project
 """
 
 import platform
+import tempfile
 import streamlit as st
 import json
 import os
@@ -62,12 +63,13 @@ if "pipeline" not in st.session_state:
 if "last_result" not in st.session_state:
     st.session_state.last_result = None
 
-# Auto-inicializar en la nube (Linux) donde Tesseract ya está instalado
-if IS_CLOUD and st.session_state.pipeline is None:
+# Auto-inicializar siempre al arrancar
+if st.session_state.pipeline is None:
     try:
         model_path = str(MODEL_PATH) if MODEL_PATH.exists() else None
+        tesseract_path = None if not IS_CLOUD else None  # usa PATH en ambos casos
         st.session_state.pipeline = OCRPipeline(
-            tesseract_path=None,
+            tesseract_path=tesseract_path,
             classifier_model_path=model_path,
         )
     except Exception:
@@ -77,35 +79,10 @@ if IS_CLOUD and st.session_state.pipeline is None:
 with st.sidebar:
     st.title("⚙️ Configuración")
 
-    if IS_CLOUD:
-        st.success("✅ Tesseract instalado en el servidor")
+    if st.session_state.pipeline is not None:
+        st.success("✅ Pipeline listo")
     else:
-        # Ruta de Tesseract (solo para Windows local)
-        st.subheader("Configuración de Tesseract")
-        tesseract_installed = st.checkbox(
-            "Tengo Tesseract instalado",
-            value=False,
-            help="Marca si ya instalaste Tesseract-OCR en Windows",
-        )
-
-        tesseract_path = None
-        if tesseract_installed:
-            tesseract_path = st.text_input(
-                "Ruta de Tesseract (opcional)",
-                value="C:\\Program Files\\Tesseract-OCR\\tesseract.exe",
-                help="Por defecto: C:\\Program Files\\Tesseract-OCR\\tesseract.exe",
-            )
-
-        if st.button("🚀 Inicializar Pipeline", use_container_width=True):
-            try:
-                model_path = str(MODEL_PATH) if MODEL_PATH.exists() else None
-                st.session_state.pipeline = OCRPipeline(
-                    tesseract_path=tesseract_path,
-                    classifier_model_path=model_path,
-                )
-                st.success("✅ Pipeline inicializado correctamente")
-            except Exception as e:
-                st.error(f"❌ Error al inicializar: {e}")
+        st.error("❌ Error al inicializar el pipeline")
 
     st.divider()
     
@@ -203,25 +180,23 @@ else:
         # Procesar archivo
         if uploaded_file is not None:
             with st.spinner("⏳ Procesando archivo..."):
-                # Guardar archivo temporal
-                temp_path = f"/tmp/{uploaded_file.name}"
-                with open(temp_path, "wb") as f:
-                    f.write(uploaded_file.getbuffer())
-                
+                suffix = Path(uploaded_file.name).suffix
+                tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
                 try:
+                    tmp_file.write(uploaded_file.getbuffer())
+                    tmp_file.close()
+                    temp_path = tmp_file.name
+
                     # Procesar
                     result = st.session_state.pipeline.process_file(
                         temp_path,
                         lang=st.session_state.ocr_language
                     )
                     st.session_state.last_result = result
-                    
+
                     if result["status"] == "success":
-                        st.markdown('<div class="success-box">', unsafe_allow_html=True)
                         st.success("✅ Archivo procesado exitosamente")
-                        st.markdown('</div>', unsafe_allow_html=True)
-                        
-                        # Mostrar resumen
+
                         with st.expander("📋 Ver Resumen", expanded=True):
                             if "extracted_text" in result:
                                 st.text_area(
@@ -230,24 +205,21 @@ else:
                                     height=200,
                                     disabled=True
                                 )
-                            else:
-                                # Para PDFs, mostrar primer página
-                                if result.get("pages"):
-                                    st.text_area(
-                                        "Texto de la Primera Página",
-                                        value=result["pages"][0]["text"],
-                                        height=200,
-                                        disabled=True
-                                    )
+                            elif result.get("pages"):
+                                st.text_area(
+                                    "Texto de la Primera Página",
+                                    value=result["pages"][0]["text"],
+                                    height=200,
+                                    disabled=True
+                                )
                     else:
                         st.error(f"❌ Error: {result.get('error', 'Error desconocido')}")
-                
+
                 except Exception as e:
                     st.error(f"❌ Error durante el procesamiento: {e}")
                 finally:
-                    # Limpiar archivo temporal
-                    if os.path.exists(temp_path):
-                        os.remove(temp_path)
+                    if os.path.exists(tmp_file.name):
+                        os.remove(tmp_file.name)
     
     # TAB 2: Resultados Detallados
     with tab2:
