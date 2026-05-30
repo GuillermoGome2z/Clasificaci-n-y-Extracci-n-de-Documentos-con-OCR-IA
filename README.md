@@ -376,8 +376,7 @@ Resultado esperado: **`158 passed`** ✅
 ---
 
 ## 🎬 Video de Demostración
-
-> **Pendiente** — Enlace al video demostrativo (3–5 min) será agregado antes de la entrega final.
+https://onedrive.live.com/?qt=allmyphotos&photosData=%2fshare%2f24C0E9E75C918F4B!sccab0f60df584217ae8435984e3f0392%3fithint%3dvideo%26e%3dqBoIOc%26migratedtospo%3dtrue&cid=24C0E9E75C918F4B&id=24C0E9E75C918F4B!sccab0f60df584217ae8435984e3f0392&redeem=aHR0cHM6Ly8xZHJ2Lm1zL3YvYy8yNGMwZTllNzVjOTE4ZjRiL0lRQmdENnZNV044WFFxNkVOWmhPUHdPU0FWdEgwaUNOUkx3UzZQTTdHQUtzd1hjP2U9cUJvSU9j
 
 ---
 
