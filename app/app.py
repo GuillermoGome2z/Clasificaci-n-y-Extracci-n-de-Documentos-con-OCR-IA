@@ -2209,6 +2209,10 @@ _BADGE_MAP = {
 # ══════════════════════════════════════════════════════════════════════════════
 if "pipeline" not in st.session_state:
     st.session_state.pipeline = None
+if "pipeline_ready" not in st.session_state:
+    st.session_state.pipeline_ready = False
+if "pipeline_error" not in st.session_state:
+    st.session_state.pipeline_error = None
 if "last_result" not in st.session_state:
     st.session_state.last_result = None
 if "last_filename" not in st.session_state:
@@ -2240,14 +2244,16 @@ def load_pipeline(tesseract_path=None):
     return _pipeline_mod.OCRPipeline(tesseract_path=tesseract_path)
 
 
-# ── AUTO-INICIALIZACIÓN ──────────────────────────────────────────────────────
+# ── AUTO-INICIALIZACIÓN ROBUSTA ──────────────────────────────────────────────
 if st.session_state.pipeline is None:
     try:
         from config import TESSERACT_PATH as _TESS_PATH
-        if _TESS_PATH:
-            st.session_state.pipeline = load_pipeline(tesseract_path=_TESS_PATH)
-    except (ImportError, OSError, RuntimeError):
-        pass
+        st.session_state.pipeline = load_pipeline(tesseract_path=_TESS_PATH)
+        st.session_state.pipeline_ready = True
+        st.session_state.pipeline_error = None
+    except Exception as e:
+        st.session_state.pipeline_ready = False
+        st.session_state.pipeline_error = str(e)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -2286,28 +2292,51 @@ with st.sidebar:
 """)
 
     st.markdown("---")
-    st.subheader("Tesseract OCR")
-    tesseract_installed = st.checkbox(
-        "Tesseract instalado",
-        value=False,
-        help="Marca si ya instalaste Tesseract-OCR en Windows",
-    )
-
-    tesseract_path = None
-    if tesseract_installed:
-        tesseract_path = st.text_input(
-            "Ruta del ejecutable",
-            value=r"C:\Program Files\Tesseract-OCR\tesseract.exe",
-            help="Ruta por defecto en Windows",
+    st.subheader("🚀 Pipeline Status")
+    
+    if st.session_state.pipeline is not None and st.session_state.pipeline_ready:
+        st.success("✅ Pipeline **ACTIVO** - Listo para procesar")
+    else:
+        col1, col2 = st.columns([1, 1])
+        with col1:
+            if st.session_state.pipeline_error:
+                st.error(f"⚠️ Error:\n{st.session_state.pipeline_error[:100]}")
+            else:
+                st.warning("⏳ Inicializando...")
+        with col2:
+            if st.button("🔄 Reintentar", use_container_width=True):
+                try:
+                    from config import TESSERACT_PATH as _TESS_PATH
+                    st.session_state.pipeline = load_pipeline(tesseract_path=_TESS_PATH)
+                    st.session_state.pipeline_ready = True
+                    st.session_state.pipeline_error = None
+                    st.rerun()
+                except Exception as e:
+                    st.session_state.pipeline_ready = False
+                    st.session_state.pipeline_error = str(e)
+    
+    with st.expander("🔧 Configuración Manual de Tesseract"):
+        from config import TESSERACT_PATH as _AUTO_TESS
+        
+        custom_path = st.text_input(
+            "Ruta personalizada de Tesseract",
+            value=_AUTO_TESS or r"C:\Program Files\Tesseract-OCR\tesseract.exe",
+            help="Deja en blanco para auto-detectar o ingresa la ruta completa",
         )
-
-    if st.button("🚀 Inicializar Pipeline", use_container_width=True):
-        try:
-            pipeline = load_pipeline(tesseract_path=tesseract_path)
-            st.session_state.pipeline = pipeline
-            st.success("✅ Pipeline listo")
-        except (ValueError, TypeError, FileNotFoundError, OSError) as e:
-            st.error(f"❌ Error: {e}")
+        
+        if st.button("✨ Inicializar con ruta personalizada", use_container_width=True):
+            if custom_path.strip():
+                try:
+                    st.session_state.pipeline = load_pipeline(tesseract_path=custom_path)
+                    st.session_state.pipeline_ready = True
+                    st.session_state.pipeline_error = None
+                    st.success("✅ Pipeline inicializado con ruta personalizada")
+                except Exception as e:
+                    st.session_state.pipeline_ready = False
+                    st.session_state.pipeline_error = str(e)
+                    st.error(f"Error: {e}")
+            else:
+                st.warning("Ingresa una ruta válida")
 
     st.divider()
     st.subheader("Idioma OCR")
@@ -2476,16 +2505,29 @@ st.markdown(f"""
 # ══════════════════════════════════════════════════════════════════════════════
 #  PANTALLA SIN PIPELINE
 # ══════════════════════════════════════════════════════════════════════════════
-if st.session_state.pipeline is None:
+if st.session_state.pipeline is None or not st.session_state.pipeline_ready:
     st.markdown("""
 <div class="nx-card nx-warn">
-    <strong>⚠️ Pipeline no inicializado</strong><br/>
+    <strong>⚠️ Pipeline en inicialización</strong><br/>
     <span style="font-size:0.88rem;">
-        Marca "Tesseract instalado" en la barra lateral y presiona
-        <strong>Inicializar Pipeline</strong>.
+        La aplicación se está cargando. Revisa la barra lateral izquierda para ver el estado
+        o usa los controles manuales si necesitas cambiar la configuración de Tesseract.
     </span>
 </div>
 """, unsafe_allow_html=True)
+
+    if st.session_state.pipeline_error:
+        st.error(f"""
+**Error detectado:**
+```
+{st.session_state.pipeline_error}
+```
+
+**Soluciones:**
+1. Verifica que Tesseract-OCR esté instalado en Windows
+2. Utiliza la opción "Configuración Manual de Tesseract" en la barra lateral
+3. Haz clic en "Reintentar" para cargar nuevamente
+        """)
 
     with st.expander("📋 Instrucciones de instalación de Tesseract", expanded=False):
         st.markdown("""
@@ -2894,7 +2936,7 @@ backdrop-filter:blur(8px);">
 
                             importlib.reload(_pipeline_mod)
                             st.session_state.pipeline = _pipeline_mod.OCRPipeline(
-                                tesseract_path=tesseract_path or _TESS_PATH
+                                tesseract_path=_TESS_PATH
                             )
 
                         if not _supports_progress_callback(st.session_state.pipeline):
