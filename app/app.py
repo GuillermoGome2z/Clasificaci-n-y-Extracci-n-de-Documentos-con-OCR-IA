@@ -2295,49 +2295,44 @@ with st.sidebar:
     st.subheader("🚀 Pipeline Status")
     
     if st.session_state.pipeline is not None and st.session_state.pipeline_ready:
-        st.success("✅ Pipeline **ACTIVO** - Listo para procesar")
+        st.success("✅ Pipeline ACTIVO - Listo para procesar")
     else:
         col1, col2 = st.columns([1, 1])
         with col1:
             if st.session_state.pipeline_error:
-                st.error(f"⚠️ Error:\n{st.session_state.pipeline_error[:100]}")
+                st.error(f"⚠️ Error: {st.session_state.pipeline_error[:80]}")
             else:
-                st.warning("⏳ Inicializando...")
+                st.warning("⏳ Cargando...")
         with col2:
-            if st.button("🔄 Reintentar", use_container_width=True):
+            if st.button("🔄 Reintentar", use_container_width=True, key="retry_btn"):
                 try:
                     from config import TESSERACT_PATH as _TESS_PATH
                     st.session_state.pipeline = load_pipeline(tesseract_path=_TESS_PATH)
                     st.session_state.pipeline_ready = True
                     st.session_state.pipeline_error = None
-                    st.rerun()
                 except Exception as e:
                     st.session_state.pipeline_ready = False
                     st.session_state.pipeline_error = str(e)
+                st.rerun()
     
-    with st.expander("🔧 Configuración Manual de Tesseract"):
+    with st.expander("🔧 Tesseract - Configuración Manual"):
         from config import TESSERACT_PATH as _AUTO_TESS
-        
         custom_path = st.text_input(
-            "Ruta personalizada de Tesseract",
+            "Ruta", 
             value=_AUTO_TESS or r"C:\Program Files\Tesseract-OCR\tesseract.exe",
-            help="Deja en blanco para auto-detectar o ingresa la ruta completa",
+            key="tess_path_input"
         )
-        
-        if st.button("✨ Inicializar con ruta personalizada", use_container_width=True):
-            if custom_path.strip():
-                try:
-                    st.session_state.pipeline = load_pipeline(tesseract_path=custom_path)
-                    st.session_state.pipeline_ready = True
-                    st.session_state.pipeline_error = None
-                    st.success("✅ Pipeline inicializado con ruta personalizada")
-                except Exception as e:
-                    st.session_state.pipeline_ready = False
-                    st.session_state.pipeline_error = str(e)
-                    st.error(f"Error: {e}")
-            else:
-                st.warning("Ingresa una ruta válida")
-
+        if st.button("Aplicar", use_container_width=True, key="apply_tess"):
+            try:
+                st.session_state.pipeline = load_pipeline(tesseract_path=custom_path)
+                st.session_state.pipeline_ready = True
+                st.session_state.pipeline_error = None
+                st.success("✅ Tesseract configurado")
+                st.rerun()
+            except Exception as e:
+                st.session_state.pipeline_error = str(e)
+                st.error(f"Error: {e}")
+    
     st.divider()
     st.subheader("Idioma OCR")
     ocr_language = st.selectbox(
