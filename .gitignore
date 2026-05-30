@@ -39,10 +39,10 @@ MANIFEST
 # Datos y modelos
 data/raw/*
 data/processed/*
-models/*.pkl
-models/*.joblib
 *.pkl
 *.joblib
+# Excepción: modelo entrenado del clasificador (necesario en cloud)
+!models/classifier_model.joblib
 
 # Archivos temporales
 temp/

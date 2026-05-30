@@ -2,6 +2,7 @@
 Aplicación Streamlit para OCR IA Project
 """
 
+import platform
 import streamlit as st
 import json
 import os
@@ -9,9 +10,13 @@ import sys
 from pathlib import Path
 
 # Agregar src al path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+ROOT_DIR = Path(__file__).parent.parent
+sys.path.insert(0, str(ROOT_DIR))
 
 from src.pipeline import OCRPipeline
+
+IS_CLOUD = platform.system() != "Windows"
+MODEL_PATH = ROOT_DIR / "models" / "classifier_model.joblib"
 
 # Configuración de la página
 st.set_page_config(
@@ -57,34 +62,51 @@ if "pipeline" not in st.session_state:
 if "last_result" not in st.session_state:
     st.session_state.last_result = None
 
+# Auto-inicializar en la nube (Linux) donde Tesseract ya está instalado
+if IS_CLOUD and st.session_state.pipeline is None:
+    try:
+        model_path = str(MODEL_PATH) if MODEL_PATH.exists() else None
+        st.session_state.pipeline = OCRPipeline(
+            tesseract_path=None,
+            classifier_model_path=model_path,
+        )
+    except Exception:
+        pass
+
 # Sidebar - Configuración
 with st.sidebar:
     st.title("⚙️ Configuración")
-    
-    # Ruta de Tesseract (solo para Windows)
-    st.subheader("Configuración de Tesseract")
-    tesseract_installed = st.checkbox(
-        "Tengo Tesseract instalado",
-        value=False,
-        help="Marca si ya instalaste Tesseract-OCR en Windows"
-    )
-    
-    tesseract_path = None
-    if tesseract_installed:
-        tesseract_path = st.text_input(
-            "Ruta de Tesseract (opcional)",
-            value="C:\\Program Files\\Tesseract-OCR\\tesseract.exe",
-            help="Por defecto: C:\\Program Files\\Tesseract-OCR\\tesseract.exe"
+
+    if IS_CLOUD:
+        st.success("✅ Tesseract instalado en el servidor")
+    else:
+        # Ruta de Tesseract (solo para Windows local)
+        st.subheader("Configuración de Tesseract")
+        tesseract_installed = st.checkbox(
+            "Tengo Tesseract instalado",
+            value=False,
+            help="Marca si ya instalaste Tesseract-OCR en Windows",
         )
-    
-    # Inicializar pipeline
-    if st.button("🚀 Inicializar Pipeline", use_container_width=True):
-        try:
-            st.session_state.pipeline = OCRPipeline(tesseract_path=tesseract_path)
-            st.success("✅ Pipeline inicializado correctamente")
-        except Exception as e:
-            st.error(f"❌ Error al inicializar: {e}")
-    
+
+        tesseract_path = None
+        if tesseract_installed:
+            tesseract_path = st.text_input(
+                "Ruta de Tesseract (opcional)",
+                value="C:\\Program Files\\Tesseract-OCR\\tesseract.exe",
+                help="Por defecto: C:\\Program Files\\Tesseract-OCR\\tesseract.exe",
+            )
+
+        if st.button("🚀 Inicializar Pipeline", use_container_width=True):
+            try:
+                model_path = str(MODEL_PATH) if MODEL_PATH.exists() else None
+                st.session_state.pipeline = OCRPipeline(
+                    tesseract_path=tesseract_path,
+                    classifier_model_path=model_path,
+                )
+                st.success("✅ Pipeline inicializado correctamente")
+            except Exception as e:
+                st.error(f"❌ Error al inicializar: {e}")
+
     st.divider()
     
     # Seleccionar idioma
@@ -112,15 +134,18 @@ st.markdown("**Extrae texto de imágenes y PDFs, extrae datos estructurados y cl
 
 # Verificar si el pipeline está inicializado
 if st.session_state.pipeline is None:
-    st.warning("""
-    ⚠️ **Pipeline no inicializado**
-    
-    Por favor, sigue estos pasos:
-    1. En la barra lateral, marca "Tengo Tesseract instalado" si ya lo instalaste
-    2. Haz clic en "Inicializar Pipeline"
-    
-    Si no tienes Tesseract instalado, sigue las instrucciones en la pestaña "Instalación"
-    """)
+    if IS_CLOUD:
+        st.error("❌ No se pudo inicializar el pipeline. Recarga la página.")
+    else:
+        st.warning("""
+        ⚠️ **Pipeline no inicializado**
+
+        Por favor, sigue estos pasos:
+        1. En la barra lateral, marca "Tengo Tesseract instalado" si ya lo instalaste
+        2. Haz clic en "Inicializar Pipeline"
+
+        Si no tienes Tesseract instalado, sigue las instrucciones en la pestaña "Instalación"
+        """)
     
     # Mostrar instrucciones de instalación
     with st.expander("📋 Ver instrucciones de Instalación", expanded=False):

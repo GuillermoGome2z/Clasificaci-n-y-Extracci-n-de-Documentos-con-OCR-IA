@@ -14,12 +14,14 @@ MODELS_DIR = PROJECT_ROOT / "models"
 for directory in [DATA_DIR, MODELS_DIR]:
     directory.mkdir(exist_ok=True)
 
-# Configuración de Tesseract (Windows)
-# Cambiar esta ruta según tu instalación
-TESSERACT_PATH = os.getenv(
-    "TESSERACT_PATH",
+# Ruta de Tesseract — Windows usa ruta absoluta, Linux/Mac usa el binario del PATH
+import platform as _platform
+_default_tesseract = (
     r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+    if _platform.system() == "Windows"
+    else "tesseract"
 )
+TESSERACT_PATH = os.getenv("TESSERACT_PATH", _default_tesseract)
 
 # Configuración de OCR
 OCR_CONFIG = {

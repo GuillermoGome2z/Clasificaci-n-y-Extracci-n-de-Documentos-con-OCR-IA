@@ -1,0 +1,7 @@
+tesseract-ocr
+tesseract-ocr-spa
+tesseract-ocr-eng
+tesseract-ocr-fra
+tesseract-ocr-deu
+libglib2.0-0
+libgomp1
